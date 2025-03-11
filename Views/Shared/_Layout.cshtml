@@ -50,6 +50,20 @@
                 </div>
             </div>
          </nav>
+            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home"){
+                <ol class="breadcrumb mt-3" aria-label="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li class="breadcrumb-item">
+                        <a asp-area="" asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
+                            @ViewContext.RouteData.Values["controller"]
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">
+                        @ViewContext.RouteData.Values["action"]
+                    </li>
+                </ol>
+            }
+
     </header>
     <div class="container">
         <main role="main" class="pb-3">
