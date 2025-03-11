@@ -76,35 +76,10 @@
             }
         </div>
     </div>
-	<div class="modal-edit-category modal fade" tabindex="-1" role="dialog" aria-labelledby="editCategoryLabel" aria-hidden="true">
-		<div class="modal-dialog" role="document">
-			<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title">Edit Category</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-				<span aria-hidden="true"></span>
-				</button>
-			</div>
-			<div class="modal-body">
-				<form id="editCategory" method="post" asp-controller="Category" asp-action="Edit" asp-route-id="@Model.Id"  class="needs-validation" novalidate>
-					<input type="hidden" id="editCategoryId" name="Id" value="@Model.Id" />
-					<div class="mb-3">
-						<label for="editCategoryName" class="form-label">Category Name</label>
-						<input type="text" class="form-control" id="editCategoryName" name="Name" value="@Model.Name" required>
-						<div class="invalid-feedback">Please provide a valid category name.</div>
-					</div>
-					<div class="mb-3">
-						<label for="editDisplayOrder" class="form-label">Display Order</label>
-						<input type="number" class="form-control" id="editDisplayOrder" name="DisplayOrder" value="@Model.DisplayOrder" required>
-						<div class="invalid-feedback">Please provide a valid display order.</div>
-					</div>
-				</form>
-			</div>
-			<div class="modal-footer">
-				<button type="submit" form="editCategory" class="btn btn-primary">Save Changes</button>
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-			</div>
-			</div>
-		</div>
-	</div>
+	
+	@await Html.PartialAsync("_EditCategoryModal", Model)
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

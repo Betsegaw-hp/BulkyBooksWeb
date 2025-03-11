@@ -29,20 +29,41 @@ namespace BulkyBooksWeb.Controllers
 			return View(category);
 		}
 
+		[HttpGet]
+		[ActionName("IsCategoryNameUnique")]
+		[Route("IsCategoryNameUnique")]
+		public async Task<IActionResult> IsCategoryNameUnique([FromQuery] string name)
+		{
+			var isUnique = await _categoryService.IsCategoryNameUnique(name);
+			if (string.IsNullOrEmpty(name) || isUnique)
+				return Json(true);
+			return Json(false);
+		}
+
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([FromForm] CreateCategoryDto createCategoryDto)
 		{
 			Console.WriteLine("Create method called with DTO: " + createCategoryDto.Name);
+
+			if (string.IsNullOrEmpty(createCategoryDto.Name))
+				ModelState.AddModelError("Name", "Category name is required.");
+
+			var isUnique = await _categoryService.IsCategoryNameUnique(createCategoryDto.Name);
+			if (!isUnique)
+				ModelState.AddModelError("Name", $"Category name '{createCategoryDto.Name}' already exists.");
+
+			if (createCategoryDto.DisplayOrder < 1 || createCategoryDto.DisplayOrder > 100)
+				ModelState.AddModelError("DisplayOrder", "Display Order must be between 1 and 100.");
+
+
 			if (ModelState.IsValid)
 			{
 				await _categoryService.CreateCategory(createCategoryDto);
 				TempData["success"] = "Category created successfully";
 			}
 			else
-			{
 				TempData["error"] = "Failed to create category";
-			}
 
 			return RedirectToAction("Index");
 		}
@@ -53,15 +74,17 @@ namespace BulkyBooksWeb.Controllers
 		public async Task<IActionResult> Edit(int id, [FromForm] CreateCategoryDto editCategoryDto)
 		{
 			Console.WriteLine("Edit method called with DTO: " + editCategoryDto.Name);
+			var isUnique = await _categoryService.IsCategoryNameUnique(editCategoryDto.Name);
+			if (!isUnique)
+				ModelState.AddModelError("Name", $"Category name '{editCategoryDto.Name}' already exists.");
+
 			if (ModelState.IsValid)
 			{
 				await _categoryService.UpdateCategory(id, editCategoryDto);
 				TempData["success"] = "Category updated successfully";
 			}
 			else
-			{
 				TempData["error"] = "Failed to update category";
-			}
 
 			return RedirectToAction("Detail", new { id });
 		}

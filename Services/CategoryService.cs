@@ -14,6 +14,11 @@ namespace BulkyBooksWeb.Services
 			_db = db;
 		}
 
+		public async Task<bool> IsCategoryNameUnique(string name)
+		{
+			return !await _db.Categories.AnyAsync(c => c.Name == name);
+		}
+
 		public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
 		{
 			return await _db.Categories.ToListAsync();
