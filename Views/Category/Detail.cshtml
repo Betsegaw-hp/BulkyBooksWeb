@@ -1,0 +1,110 @@
+@using System.Collections
+@using BulkyBooksWeb.Models
+@model Category
+
+@{
+    ViewData["Title"] = Model.Name + " | Category Detail";
+
+	// Sample data for demonstration purposes
+	var Books = new List<Book>(){
+		
+		new Book { Id = 1, Title = "Book 1", Author = "Author 1", ISBN = "1234567890", Price = 19.99m, PublishedDate = DateTime.Now, CategoryId = 1 },
+		new Book { Id = 2, Title = "Book 2", Author = "Author 2", ISBN = "0987654321", Price = 29.99m, PublishedDate = DateTime.Now, CategoryId = 2 },
+		new Book { Id = 3, Title = "Book 3", Author = "Author 3", ISBN = "1122334455", Price = 39.99m, PublishedDate = DateTime.Now, CategoryId = 3 }	
+		};
+}
+
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">@Model.Name</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h4>Category Information</h4>
+                    <dl class="row">
+                        <dt class="col-sm-4">Display Order:</dt>
+                        <dd class="col-sm-8">@Model.DisplayOrder</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button
+							class="btn btn-primary btn-sm edit-button"
+							data-id="@Model.Id"
+							data-bs-toggle="modal" 
+							data-bs-target=".modal-edit-category">
+						Edit
+					</button>
+					<form asp-controller="Category" asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+						<button type="submit" class="btn btn-danger btn-sm">Delete</button>
+					</form>                
+				</div>
+            </div>
+
+            <h4>Books in this Category</h4>
+            @if (Books?.Any() == true)
+            {
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Author</th>
+                            <th>Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var book in Books)
+                        {
+                            <tr>
+                                <td>@book.Title</td>
+                                <td>@book.Author</td>
+                                <td>@book.Price.ToString("C")</td>
+                                <td>
+                                    <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" 
+                                       class="btn btn-info btn-sm">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">No books found in this category</div>
+            }
+        </div>
+    </div>
+	<div class="modal-edit-category modal fade" tabindex="-1" role="dialog" aria-labelledby="editCategoryLabel" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Edit Category</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+				<span aria-hidden="true"></span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="editCategory" method="post" asp-controller="Category" asp-action="Edit" asp-route-id="@Model.Id"  class="needs-validation" novalidate>
+					<input type="hidden" id="editCategoryId" name="Id" value="@Model.Id" />
+					<div class="mb-3">
+						<label for="editCategoryName" class="form-label">Category Name</label>
+						<input type="text" class="form-control" id="editCategoryName" name="Name" value="@Model.Name" required>
+						<div class="invalid-feedback">Please provide a valid category name.</div>
+					</div>
+					<div class="mb-3">
+						<label for="editDisplayOrder" class="form-label">Display Order</label>
+						<input type="number" class="form-control" id="editDisplayOrder" name="DisplayOrder" value="@Model.DisplayOrder" required>
+						<div class="invalid-feedback">Please provide a valid display order.</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="submit" form="editCategory" class="btn btn-primary">Save Changes</button>
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+			</div>
+			</div>
+		</div>
+	</div>
+</div>
