@@ -17,5 +17,8 @@ namespace BulkyBooksWeb.Models
 		public int DisplayOrder { get; set; }
 		public DateTime CreatedDateTime { get; set; } = DateTime.Now;
 		public DateTime UpdatedDateTime { get; set; } = DateTime.Now;
+
+		// Navigation property
+		public virtual ICollection<Book>? Books { get; set; }
 	}
 }
