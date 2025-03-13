@@ -1,0 +1,58 @@
+@model BulkyBooksWeb.Models.ViewModels.BookCreateViewModel
+@{
+    ViewData["Title"] = "Create Book";
+}
+
+<div class="container">
+    <h1 class="display-4">Create Book</h1>
+    
+    <form asp-controller="Book" asp-action="Create" method="post">
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.Title" class="form-label">Title</label>
+            <input asp-for="CreateBookDto.Title" id="bookTitle" class="form-control" required />
+            <span asp-validation-for="CreateBookDto.Title" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.Author" class="form-label">Author</label>
+            <input asp-for="CreateBookDto.Author" class="form-control" required />
+            <span asp-validation-for="CreateBookDto.Author" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.Description" class="form-label">Description</label>
+            <textarea asp-for="CreateBookDto.Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="CreateBookDto.Description" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.ISBN" class="form-label">ISBN</label>
+            <input asp-for="CreateBookDto.ISBN" id="bookISBN" class="form-control" />
+            <span asp-validation-for="CreateBookDto.ISBN" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.Price" class="form-label">Price</label>
+            <input asp-for="CreateBookDto.Price" class="form-control" type="number" step="0.01" min="0" required />
+            <span asp-validation-for="CreateBookDto.Price" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.CategoryId" class="form-label">Category</label>
+            @* <select asp-for="CreateBookDto.CategoryId" asp-items="@ViewBag.CategoryList" class="form-select" required> *@
+            <select asp-for="CreateBookDto.CategoryId" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))" class="form-select" required>
+                <option disabled>-- Select Category --</option>
+            </select>
+            <span asp-validation-for="CreateBookDto.CategoryId" class="text-danger"></span>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

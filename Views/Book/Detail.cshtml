@@ -1,0 +1,49 @@
+@model Book
+@{
+    ViewData["Title"] = @Model.Title + " | Book Detail";
+}
+
+<div class="container">
+    <div class="card border-dark">
+        <div class="card-header bg-dark text-white">
+            <h2>@Model.Title</h2>
+        </div>
+        <div class="card-body">
+            <h3>Book Information</h3>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Author:</div>
+                <div class="col-md-9">@Model.Author</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Category:</div>
+                <div class="col-md-9">
+                    <a asp-controller="Category" asp-action="Detail" asp-route-id="@Model.CategoryId" class="btn btn-primary btn-sm">
+                        @Model.Category?.Name
+                    </a>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">ISBN:</div>
+                <div class="col-md-9">@(string.IsNullOrEmpty(Model.ISBN) ? "N/A" : Model.ISBN)</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Price:</div>
+                <div class="col-md-9">$@Model.Price.ToString("0.00")</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Description:</div>
+                @* <div class="col-md-9">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</div> *@
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+                <div>
+                    <a asp-controller="Book" asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+                    <form asp-controller="Book" asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

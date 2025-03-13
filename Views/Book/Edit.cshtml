@@ -1,0 +1,59 @@
+@model BulkyBooksWeb.Models.ViewModels.BookUpdateViewModel
+@{
+    ViewData["Title"] = "Edit Book";
+}
+
+<div class="container">
+    <h1 class="display-4">Edit Book</h1>
+    
+    <form asp-controller="Book" asp-action="Edit" method="post" data-book-id="@Model.UpdateBookDto.Id">
+        <input type="hidden" asp-for="UpdateBookDto.Id" />
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.Title" class="form-label">Title</label>
+            <input asp-for="UpdateBookDto.Title" id="bookTitle" class="form-control" required />
+            <span asp-validation-for="UpdateBookDto.Title" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.Author" class="form-label">Author</label>
+            <input asp-for="UpdateBookDto.Author" class="form-control" required />
+            <span asp-validation-for="UpdateBookDto.Author" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.Description" class="form-label">Description</label>
+            <textarea asp-for="UpdateBookDto.Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="UpdateBookDto.Description" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.ISBN" class="form-label">ISBN</label>
+            <input asp-for="UpdateBookDto.ISBN" id="bookISBN" class="form-control" />
+            <span asp-validation-for="UpdateBookDto.ISBN" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.Price" class="form-label">Price</label>
+            <input asp-for="UpdateBookDto.Price" class="form-control" type="number" step="0.01" min="0" required />
+            <span asp-validation-for="UpdateBookDto.Price" class="text-danger"></span>
+        </div>
+        
+        <div class="mb-3">
+            <label asp-for="UpdateBookDto.CategoryId" class="form-label">Category</label>
+            <select asp-for="UpdateBookDto.CategoryId" asp-items="@(new SelectList(Model.Categories, "Id", "Name"))" class="form-select" required>
+                <option disabled selected>-- Select Category --</option> <!-- Add 'selected' -->
+            </select>
+            <span asp-validation-for="UpdateBookDto.CategoryId" class="text-danger"></span>
+        </div>
+        
+        <div class="d-flex justify-content-between">
+            <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
