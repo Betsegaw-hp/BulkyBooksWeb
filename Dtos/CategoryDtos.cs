@@ -1,3 +1,5 @@
+using BulkyBooksWeb.Models;
+
 namespace BulkyBooksWeb.Dtos
 {
 	public class CategoryDto
@@ -7,6 +9,9 @@ namespace BulkyBooksWeb.Dtos
 		public int DisplayOrder { get; set; }
 		public DateTime CreatedDateTime { get; set; }
 		public DateTime UpdatedDateTime { get; set; }
+
+		public virtual ICollection<Book>? Books { get; set; }
+
 	}
 
 	public class CreateCategoryDto

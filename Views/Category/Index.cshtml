@@ -32,7 +32,7 @@
                     <td width="20%">
                         <a asp-controller="Category" asp-action="Detail" asp-route-id="@category.Id" class="btn btn-primary btn-sm edit-button">Edit</a>
                         <form asp-controller="Category" asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
                         </form>
                     </td>
                 </tr>

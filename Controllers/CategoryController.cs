@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using BulkyBooksWeb.Services;
 using BulkyBooksWeb.Dtos;
+using BulkyBooksWeb.Models;
 
 namespace BulkyBooksWeb.Controllers
 {
-	[Route("Category")]
+	[Route("[controller]")]
 	public class CategoryController(CategoryService categoryService) : Controller
 	{
 		private readonly CategoryService _categoryService = categoryService;
@@ -12,16 +13,16 @@ namespace BulkyBooksWeb.Controllers
 		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
-			var categories = await _categoryService.GetAllCategoriesAsync();
+			var categories = await _categoryService.GetAllCategories();
 			return View(categories);
 		}
 
 		[HttpGet]
 		[ActionName("Detail")]
-		[Route("Category/Detail/{id:int}")]
+		[Route("Detail/{id:int}")]
 		public async Task<IActionResult> Detail(int id)
 		{
-			var category = await _categoryService.GetCategoryByIdAsync(id);
+			Category? category = await _categoryService.GetCategoryById(id);
 			if (category == null)
 			{
 				return NotFound();

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BulkyBooksWeb.Models
 {
@@ -15,11 +16,15 @@ namespace BulkyBooksWeb.Models
 		[StringLength(100)]
 		public string Title { get; set; } = string.Empty;
 
+		[MaxLength(500)]
+		public string Description { get; set; } = string.Empty;
+
 		[Required]
 		[StringLength(50)]
 		public string Author { get; set; } = string.Empty;
 
 		[Required]
+		[Remote("IsISBNUnique", "Book", ErrorMessage = "ISBN already exists.")]
 		[RegularExpression(@"^(?:\d{3}-)?\d{1,5}-\d{1,7}-\d{1,7}-[\dX]$",
 			ErrorMessage = "Invalid ISBN format (e.g., 123-45-67890-12-3 or 1234567890123)")]
 		public string ISBN { get; set; } = string.Empty;
@@ -33,5 +38,8 @@ namespace BulkyBooksWeb.Models
 
 		// Navigation property
 		public virtual Category? Category { get; set; }
+
+		public DateTime CreatedDateTime { get; set; } = DateTime.Now;
+		public DateTime UpdatedDateTime { get; set; } = DateTime.Now;
 	}
 }

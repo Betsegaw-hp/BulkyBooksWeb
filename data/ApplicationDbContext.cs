@@ -16,5 +16,14 @@ namespace BulkyBooksWeb.Data
 		// public DbSet<ShoppingCart> ShoppingCarts { get; set; } = default!;
 		// public DbSet<OrderHeader> OrderHeaders { get; set; } = default!;
 		// public DbSet<OrderDetails> OrderDetails { get; set; } = default!;
+
+		protected override void OnModelCreating(ModelBuilder modelBuilder)
+		{
+			modelBuilder.Entity<Book>()
+				.HasIndex(b => b.ISBN)
+				.IsUnique();
+		}
+
+
 	}
 }

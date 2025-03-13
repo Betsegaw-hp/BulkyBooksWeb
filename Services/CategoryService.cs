@@ -19,18 +19,14 @@ namespace BulkyBooksWeb.Services
 			return !await _db.Categories.AnyAsync(c => c.Name == name);
 		}
 
-		public async Task<IEnumerable<Category>> GetAllCategoriesAsync()
+		public async Task<IEnumerable<Category>> GetAllCategories()
 		{
 			return await _db.Categories.ToListAsync();
 		}
 
-		public async Task<Category?> GetCategoryByIdAsync(int id)
+		public async Task<Category?> GetCategoryById(int id)
 		{
-			var category = await _db.Categories.FindAsync(id);
-			if (category == null)
-			{
-				return null;
-			}
+			var category = await _db.Categories.Include(c => c.Books).FirstOrDefaultAsync(c => c.Id == id);
 			return category;
 
 		}
@@ -40,11 +36,9 @@ namespace BulkyBooksWeb.Services
 			{
 				Name = createCategoryDto.Name,
 				DisplayOrder = createCategoryDto.DisplayOrder,
-				CreatedDateTime = DateTime.Now,
-				UpdatedDateTime = DateTime.Now
 			};
 
-			_db.Categories.Add(category);
+			await _db.Categories.AddAsync(category);
 
 			await _db.SaveChangesAsync();
 		}

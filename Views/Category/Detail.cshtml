@@ -37,13 +37,13 @@
 						Edit
 					</button>
 					<form asp-controller="Category" asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
-						<button type="submit" class="btn btn-danger btn-sm">Delete</button>
+						<button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
 					</form>                
 				</div>
             </div>
 
             <h4>Books in this Category</h4>
-            @if (Books?.Any() == true)
+            @if (Model.Books?.Any() == true)
             {
                 <table class="table table-striped">
                     <thead>
@@ -55,17 +55,17 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var book in Books)
+                        @foreach (var book in Model.Books)
                         {
-                            <tr>
-                                <td>@book.Title</td>
-                                <td>@book.Author</td>
-                                <td>@book.Price.ToString("C")</td>
-                                <td>
-                                    <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" 
-                                       class="btn btn-info btn-sm">View</a>
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td>@book.Title</td>
+                                    <td>@book.Author</td>
+                                    <td>@book.Price.ToString("C")</td>
+                                    <td>
+                                        <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" 
+                                           class="btn btn-info btn-sm">View</a>
+                                    </td>
+                                </tr>
                         }
                     </tbody>
                 </table>
