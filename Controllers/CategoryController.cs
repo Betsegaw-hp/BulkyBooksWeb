@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using BulkyBooksWeb.Services;
 using BulkyBooksWeb.Dtos;
 using BulkyBooksWeb.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBooksWeb.Controllers
 {
+	[Authorize(Roles = "admin, author")]
 	[Route("[controller]")]
 	public class CategoryController(CategoryService categoryService) : Controller
 	{
@@ -69,9 +71,9 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Index");
 		}
 
-		[HttpPost]
+		[Authorize(Policy = "AdminOnly")]
+		[HttpPost("Edit/{id:int}")]
 		[ValidateAntiForgeryToken]
-		[Route("Edit/{id:int}")]
 		public async Task<IActionResult> Edit(int id, [FromForm] CreateCategoryDto editCategoryDto)
 		{
 			Console.WriteLine("Edit method called with DTO: " + editCategoryDto.Name);
@@ -90,8 +92,8 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Detail", new { id });
 		}
 
-		[HttpPost]
-		[Route("Delete/{id:int}")]
+		[Authorize(Policy = "AdminOnly")]
+		[HttpPost("Delete/{id:int}")]
 		public async Task<IActionResult> Delete(int id)
 		{
 			Console.WriteLine("Delete method called for ID: " + id);

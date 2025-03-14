@@ -22,6 +22,9 @@
     @* <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /> *@
     <link rel="stylesheet" href="~/css/bootswatch/sketchy.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BulkyBooksWeb.styles.css" asp-append-version="true" />
+    
+    <!-- Add Font Awesome for icons -->
+	<script src="https://kit.fontawesome.com/75c9ecad4c.js" ></script>
 </head>
 <body>
     <header class="sticky-top">
@@ -33,29 +36,60 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarColor01">
                 <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Home", "Index")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Category")" asp-area="" asp-controller="Category" asp-action="Index">Category</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Book")" asp-area="" asp-controller="Book" asp-action="Index">Book</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @IsActive("Home", "Privacy")" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                </li>
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Home", "Index")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Category")" asp-area="" asp-controller="Category" asp-action="Index">Category</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Book")" asp-area="" asp-controller="Book" asp-action="Index">Book</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @IsActive("Home", "Privacy")" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    </li>
                 </ul>
-                <form class="d-flex">
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <div class="d-flex align-items-center text-white">
+                        @if (User.IsInRole("admin")) {
+                            <i class="fas fa-user-tie me-2" style="font-size: 1.5rem;"></i> 
+                        }
+                        @if (User.IsInRole("author")) {
+                            <i class="fas fa-feather me-2" style="font-size: 1.5rem;"></i> 
+                        }
+                        @if (User.IsInRole("user")) {
+                            <i class="fas fa-user-circle me-2" style="font-size: 1.5rem;"></i> 
+                        }
+                        <span>Welcome, @User.Identity.Name!</span>
+                        <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
+                            <button type="submit" class="btn btn-danger d-flex ms-3 align-items-center gap-2">
+                                <span>Logout</span>
+                                <i class="fas fa-sign-out-alt" style="font-size: 1.5rem;"></i>
+                            </button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                    <div class="navbar-nav">
+                        <button class="nav-item btn btn-primary  me-2" type="button">
+                            <a class="nav-link text-white @IsActive("Auth", "Login")" asp-area="" asp-controller="Auth" asp-action="Login">Join</a>
+                        </button>
+                    </div>
+                }
+                @* <form class="d-flex">
                 <input class="form-control me-sm-2" type="search" placeholder="Search">
                 <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-                </form>
+                </form> *@
             </div>
             </div>
          </nav>
 
         </header>
-            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home"){
+            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home"
+                 && ViewContext.RouteData.Values["controller"]?.ToString() != "Auth" )
+            {
             <ol class="breadcrumb mt-3" aria-label="breadcrumb">
                 <li class="breadcrumb-item"><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
                 <li class="breadcrumb-item">

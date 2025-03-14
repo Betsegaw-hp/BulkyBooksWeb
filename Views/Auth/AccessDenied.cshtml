@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white text-center">
+                    <h2 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Access Denied</h2>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-4">
+                        <div class="position-relative d-inline-block">
+                            <i class="fas fa-lock fa-5x text-danger mb-3"></i>
+                            <div class="position-absolute" style="top: -15px; right: -15px;">
+                                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                        
+                        <h3 class="mt-3">Oops! You don't have permission to access this page.</h3>
+                        <p class="text-muted">Sorry, but you don't have the necessary permissions to view this resource.</p>
+                    </div>
+                    
+                    <div class="border border-danger p-4 mb-4" style="border-style: dashed !important;">
+                        <h5>Why am I seeing this?</h5>
+                        <ul class="text-start">
+                            <li>You might not be logged in</li>
+                            <li>Your account doesn't have the required permissions</li>
+                            <li>You might need to contact an administrator</li>
+                            <li>The resource might be restricted to specific user roles</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="d-grid gap-3">
+                                <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                                    <i class="fas fa-home me-2"></i> Return to Home
+                                </a>
+                                <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-secondary">
+                                    <i class="fas fa-sign-in-alt me-2"></i> Login with Different Account
+                                </a>
+                                <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#helpModal">
+                                    <i class="fas fa-question-circle me-2"></i> Need Help?
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer text-center text-muted">
+                    <small>If you believe this is an error, please contact the site administrator.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="helpModalLabel">Need Help?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Common Access Issues:</h6>
+                <ol>
+                    <li>
+                        <strong>Not logged in</strong>
+                        <p>Make sure you're logged in with an active account.</p>
+                    </li>
+                    <li>
+                        <strong>Insufficient permissions</strong>
+                        <p>Your account may not have the necessary role or permissions to access this resource.</p>
+                    </li>
+                    <li>
+                        <strong>Session expired</strong>
+                        <p>Your login session may have expired. Try logging in again.</p>
+                    </li>
+                </ol>
+                
+                <h6>Contact Information:</h6>
+                <p>
+                    For assistance, please contact the administrator at:<br>
+                    <a href="mailto:admin@bulkybooks.com">admin@bulkybooks.com</a>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+

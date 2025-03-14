@@ -3,9 +3,12 @@ using BulkyBooksWeb.Services;
 using BulkyBooksWeb.Models;
 using BulkyBooksWeb.Dtos;
 using BulkyBooksWeb.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBooksWeb.Controllers
 {
+
+	[Authorize(Roles = "admin, author")]
 	[Route("[controller]")]
 	public class BookController : Controller
 	{

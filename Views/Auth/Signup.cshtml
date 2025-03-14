@@ -1,0 +1,125 @@
+@model BulkyBooksWeb.Models.SignUpModel
+@{
+    ViewData["Title"] = "Signup";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white text-center">
+                    <h2 class="mb-0">Join BulkyBooks</h2>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-block p-3 rounded-circle mb-3" style="background-color: #f8f9fa; border: 2px dashed #17a2b8;">
+                            <i class="fas fa-user-plus fa-3x" style="color: #17a2b8;"></i>
+                        </div>
+                        <p class="text-muted">Create your admin account to manage books and categories</p>
+                    </div>
+
+                    <form asp-controller="Auth" asp-action="Signup" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Username" class="form-label">Usernamee</label>
+                                <input asp-for="Username" class="form-control" placeholder="Enter your Username" />
+                                <span asp-validation-for="Username" class="text-danger"></span>
+                            </div>
+
+							<div class="col-md-6">
+								<label asp-for="FullName" class="form-label">Full Name</label>
+								<input asp-for="FullName" class="form-control" placeholder="Enter your full name" />
+								<span asp-validation-for="FullName" class="text-danger"></span>
+							</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label">Email</label>
+                            <input asp-for="Email" class="form-control" placeholder="Enter your email" />
+                            <span asp-validation-for="Email" class="text-danger"></span>
+                        </div>
+
+						<div class="mb-3">
+							<label asp-for="Role" class="form-label">Have an Account as</label>
+							<select asp-for="Role" class="form-select">
+								<option disabled selected> -- Select Role -- </option>
+								<option value="User">Reader</option>
+								<option value="Author">Author</option>
+							</select>
+							<span asp-validation-for="Role" class="text-danger"></span>
+						</div>
+                
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label asp-for="Password" class="form-label">Password</label>
+                                <input asp-for="Password" type="password" class="form-control" placeholder="Create a password" />
+                                <span asp-validation-for="Password" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="ConfirmPassword" class="form-label">Confirm Password</label>
+                                <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="Confirm your password" />
+                                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            <input asp-for="AcceptTerms" type="checkbox" class="form-check-input" />
+                            <label asp-for="AcceptTerms" class="form-check-label">
+                                I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
+                            </label>
+                            <span asp-validation-for="AcceptTerms" class="d-block text-danger"></span>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">Create Account</button>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4" style="border-style: dashed;">
+                    
+                    <div class="text-center">
+                        <p>Already have an account?</p>
+                        <a asp-controller="Auth" asp-action="Login" class="btn btn-outline-primary">Login</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms and Conditions Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>1. Introduction</h6>
+                <p>Welcome to BulkyBooks! These terms and conditions outline the rules and regulations for the use of our website.</p>
+                
+                <h6>2. Admin Responsibilities</h6>
+                <p>As an admin user, you will have access to manage books, categories, and other content. You agree to:</p>
+                <ul>
+                    <li>Maintain accurate information</li>
+                    <li>Keep your login credentials secure</li>
+                    <li>Use the system responsibly</li>
+                </ul>
+                
+                <h6>3. Privacy Policy</h6>
+                <p>Your privacy is important to us. We will only collect information necessary for the functioning of the system.</p>
+                <a asp-controller="Home" asp-action="Privacy">Learn more about polices. </a>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
