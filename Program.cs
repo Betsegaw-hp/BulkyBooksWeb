@@ -1,6 +1,8 @@
 using BulkyBooksWeb.Data;
+using BulkyBooksWeb.Policies;
 using BulkyBooksWeb.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<BookService>();
+builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -24,8 +28,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
     options.AddPolicy("AuthorOnly", policy => policy.RequireRole("Author"));
     options.AddPolicy("UserOnly", policy => policy.RequireRole("user"));
+    options.AddPolicy("BookOwnerOrAdmin", policy =>
+        policy.Requirements.Add(new BookOwnerOrAdminRequirement()));
+    options.AddPolicy("OrderOwnerOrAdmin", policy =>
+        policy.Requirements.Add(new OrderOwnerOrAdminRequirement()));
 });
 
+builder.Services.AddSingleton<IAuthorizationHandler, BookOwnerOrAdminHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, OrderOwnerOrAdminHandler>();
 
 var app = builder.Build();
 

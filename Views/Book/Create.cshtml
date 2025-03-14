@@ -14,12 +14,6 @@
         </div>
         
         <div class="mb-3">
-            <label asp-for="CreateBookDto.Author" class="form-label">Author</label>
-            <input asp-for="CreateBookDto.Author" class="form-control" required />
-            <span asp-validation-for="CreateBookDto.Author" class="text-danger"></span>
-        </div>
-        
-        <div class="mb-3">
             <label asp-for="CreateBookDto.Description" class="form-label">Description</label>
             <textarea asp-for="CreateBookDto.Description" class="form-control" rows="3"></textarea>
             <span asp-validation-for="CreateBookDto.Description" class="text-danger"></span>
@@ -29,6 +23,12 @@
             <label asp-for="CreateBookDto.ISBN" class="form-label">ISBN</label>
             <input asp-for="CreateBookDto.ISBN" id="bookISBN" class="form-control" />
             <span asp-validation-for="CreateBookDto.ISBN" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CreateBookDto.PublishedDate" class="form-label">Published Date</label>
+            <input  asp-for="CreateBookDto.PublishedDate" id="bookISBN" class="form-control" />
+            <span asp-validation-for="CreateBookDto.PublishedDate" class="text-danger"></span>
         </div>
         
         <div class="mb-3">

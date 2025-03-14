@@ -41,8 +41,9 @@ public class AuthController : Controller
 			// Create claims for the authenticated user
 			var claims = new List<Claim>
 			{
-				new Claim(ClaimTypes.Name, user.Username),
-				new Claim(ClaimTypes.Role, user.Role.ToString().ToLowerInvariant())
+				new(ClaimTypes.Name, user.Username),
+				new(ClaimTypes.Role, user.Role.ToString().ToLowerInvariant()),
+				new(ClaimTypes.NameIdentifier, user.Id.ToString())
 			};
 
 			var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

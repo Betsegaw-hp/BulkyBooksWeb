@@ -30,7 +30,9 @@
                             @book.Title
                         </a>
                     </td>
-                    <td width="20%">@book.Author</td>
+                    <td width="20%">
+                        @book.Author?.FullName - (@book.Author?.Username)
+                    </td>
                     <td width="15%">
                         <a asp-controller="Category" asp-action="Detail" asp-route-id="@book.CategoryId" class="btn btn-primary btn-sm">
                             @book.Category?.Name

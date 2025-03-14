@@ -12,7 +12,11 @@
             <h3>Book Information</h3>
             <div class="row mb-3">
                 <div class="col-md-3 fw-bold">Author:</div>
-                <div class="col-md-9">@Model.Author</div>
+                <div class="col-md-9">@Model.Author.FullName - (@Model.Author.Username)</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-3 fw-bold">Published Date:</div>
+                <div class="col-md-9">@Model.PublishedDate.ToLocalTime()</div>
             </div>
             <div class="row mb-3">
                 <div class="col-md-3 fw-bold">Category:</div>
@@ -32,7 +36,7 @@
             </div>
             <div class="row mb-3">
                 <div class="col-md-3 fw-bold">Description:</div>
-                @* <div class="col-md-9">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</div> *@
+                <div class="col-md-9">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</div>
             </div>
             
             <div class="d-flex justify-content-between mt-4">

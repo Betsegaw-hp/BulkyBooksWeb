@@ -19,9 +19,10 @@ namespace BulkyBooksWeb.Dtos
 			ErrorMessage = "Invalid ISBN format (e.g., 123-45-67890-12-3 or 1234567890123)")]
 		public virtual string ISBN { get; set; } = string.Empty;
 
-		[Required]
-		[StringLength(50)]
-		public string Author { get; set; } = string.Empty;
+		// because I am getting autor id from session
+		// [Required]
+		// [ForeignKey("Author")]
+		// public int AuthorId { get; set; }
 
 		public DateTime PublishedDate { get; set; }
 

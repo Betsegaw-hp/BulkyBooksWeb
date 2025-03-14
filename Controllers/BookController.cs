@@ -4,6 +4,9 @@ using BulkyBooksWeb.Models;
 using BulkyBooksWeb.Dtos;
 using BulkyBooksWeb.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using BulkyBooksWeb.Policies;
+using BulkyBooksWeb.Data;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -14,11 +17,20 @@ namespace BulkyBooksWeb.Controllers
 	{
 		private readonly BookService _bookService;
 		private readonly CategoryService _categoryService;
+		private readonly IAuthorizationService _authorizationService;
+		private readonly IUserContext _userContext;
 
-		public BookController(BookService bookService, CategoryService categoryService)
+
+		public BookController(
+			BookService bookService,
+			CategoryService categoryService,
+			IAuthorizationService authorizationService,
+			IUserContext userContext)
 		{
 			_bookService = bookService;
 			_categoryService = categoryService;
+			_authorizationService = authorizationService;
+			_userContext = userContext;
 		}
 
 		[HttpGet]
@@ -66,8 +78,15 @@ namespace BulkyBooksWeb.Controllers
 		{
 			if (ModelState.IsValid)
 			{
-				await _bookService.CreateBook(createBookDto);
-				return RedirectToAction(nameof(Index));
+				var authorId = _userContext.GetCurrentUserId();
+				if (authorId != null)
+				{
+					Console.WriteLine("Author ID: " + authorId);
+					await _bookService.CreateBook(createBookDto, (int)authorId);
+					return RedirectToAction(nameof(Index));
+				}
+
+				return BadRequest("Author ID is null.");
 			}
 			return View(createBookDto);
 		}
@@ -88,7 +107,6 @@ namespace BulkyBooksWeb.Controllers
 					Id = book.Id,
 					Title = book.Title,
 					ISBN = book.ISBN,
-					Author = book.Author,
 					Price = book.Price,
 					Description = book.Description,
 					// CoverImageUrl = book.CoverImageUrl,
@@ -103,6 +121,12 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto)
 		{
+			if (id != updateBookDto.Id || id > 0) return NotFound();
+
+			var authResult = await _authorizationService.AuthorizeAsync(User, id, new BookOwnerOrAdminRequirement());
+			if (!authResult.Succeeded)
+				return Forbid();
+
 			Console.WriteLine(updateBookDto.CategoryId);
 			if (ModelState.IsValid)
 			{
@@ -111,7 +135,6 @@ namespace BulkyBooksWeb.Controllers
 			}
 			else
 			{
-				// Log errors: check why CategoryId is 0
 				var errors = ModelState.Values.SelectMany(v => v.Errors);
 				Console.WriteLine("ModelState errors:");
 				foreach (var error in errors)
@@ -126,6 +149,11 @@ namespace BulkyBooksWeb.Controllers
 		public async Task<IActionResult> Delete(int id)
 		{
 			if (id <= 0) return NotFound();
+
+
+			var authResult = await _authorizationService.AuthorizeAsync(User, id, new BookOwnerOrAdminRequirement());
+			if (!authResult.Succeeded)
+				return Forbid();
 
 			Book? book = await _bookService.GetBookById(id);
 			if (book == null) return NotFound();

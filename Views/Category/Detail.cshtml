@@ -5,13 +5,6 @@
 @{
     ViewData["Title"] = Model.Name + " | Category Detail";
 
-	// Sample data for demonstration purposes
-	var Books = new List<Book>(){
-		
-		new Book { Id = 1, Title = "Book 1", Author = "Author 1", ISBN = "1234567890", Price = 19.99m, PublishedDate = DateTime.Now, CategoryId = 1 },
-		new Book { Id = 2, Title = "Book 2", Author = "Author 2", ISBN = "0987654321", Price = 29.99m, PublishedDate = DateTime.Now, CategoryId = 2 },
-		new Book { Id = 3, Title = "Book 3", Author = "Author 3", ISBN = "1122334455", Price = 39.99m, PublishedDate = DateTime.Now, CategoryId = 3 }	
-		};
 }
 
 <div class="container py-4">
@@ -49,7 +42,7 @@
                     <thead>
                         <tr>
                             <th>Book Title</th>
-                            <th>Author</th>
+                            <th>Author(username)</th>
                             <th>Price</th>
                             <th>Actions</th>
                         </tr>
@@ -59,7 +52,7 @@
                         {
                                 <tr>
                                     <td>@book.Title</td>
-                                    <td>@book.Author</td>
+                                    <td>@book.Author.Username</td>
                                     <td>@book.Price.ToString("C")</td>
                                     <td>
                                         <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" 
