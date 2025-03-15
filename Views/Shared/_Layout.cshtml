@@ -61,7 +61,7 @@
                         @if (User.IsInRole("user")) {
                             <i class="fas fa-user-circle me-2" style="font-size: 1.5rem;"></i> 
                         }
-                        <span>Welcome, @User.Identity.Name!</span>
+                        <a class="btn btn-link text-white bg-primary" asp-Controller="Auth" asp-action="Profile">Welcome, @User.Identity.Name!</a>
                         <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
                             <button type="submit" class="btn btn-danger d-flex ms-3 align-items-center gap-2">
                                 <span>Logout</span>

@@ -1,0 +1,290 @@
+@model BulkyBooksWeb.Models.User
+@{
+    ViewData["Title"] = "My Account";
+}
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0">My Account</h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="position-relative mb-3">
+                        @* @if (string.IsNullOrEmpty(Model.ProfilePictureUrl))
+                        { *@
+                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" style="width: 120px; height: 120px; border: 2px dashed #6c757d;">
+                                <i class="fas fa-user fa-4x text-secondary"></i>
+                            </div>
+                        @* }
+                        else
+                        {
+                            <img src="@Model.ProfilePictureUrl" alt="Profile Picture" class="rounded-circle mx-auto d-block" style="width: 120px; height: 120px; object-fit: cover; border: 2px solid #6c757d;" />
+                        } *@
+                        <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#profilePictureModal">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                    <h5>@Model.FullName</h5>
+                    <p class="text-muted mb-2">@Model.Email</p>
+                    <div class="badge bg-success mb-3">@Model.Role</div>
+                    
+                    <div class="d-grid gap-2">
+                        <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    @* <small class="text-muted">Member since: @n.ToString("MMMM yyyy")</small> *@
+                </div>
+            </div>
+            
+            <div class="card border-dark mt-3">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Account Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Last login:</small>
+                        @* <p class="mb-0">@Model.LastLoginDate.ToString("MMM dd, yyyy h:mm tt")</p> *@
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Last password change:</small>
+                        @* <p class="mb-0">@Model.LastPasswordChangeDate.ToString("MMM dd, yyyy")</p> *@
+                    </div>
+                    <div>
+                        <small class="text-muted">Login count:</small>
+                        @* <p class="mb-0">@Model.LoginCount</p> *@
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <ul class="nav nav-tabs card-header-tabs" id="profileTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="personal-info-tab" data-bs-toggle="tab" data-bs-target="#personal-info" type="button" role="tab" aria-controls="personal-info" aria-selected="true">
+                                <i class="fas fa-user me-2"></i> Personal Info
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">
+                                <i class="fas fa-lock me-2"></i> Security
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" aria-controls="preferences" aria-selected="false">
+                                <i class="fas fa-cog me-2"></i> Preferences
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="profileTabsContent">
+                        <!-- Personal Information Tab -->
+                        <div class="tab-pane fade show active" id="personal-info" role="tabpanel" aria-labelledby="personal-info-tab">
+                            <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Personal Information</h4>
+                            
+                            <form asp-controller="Account" asp-action="UpdateProfile" method="post">
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label asp-for="FullName" class="form-label">FullName</label>
+                                        <input asp-for="FullName" class="form-control" />
+                                        <span asp-validation-for="FullName" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label">Email Address</label>
+                                    <input asp-for="Email" class="form-control" readonly />
+                                    <small class="form-text text-muted">Email address cannot be changed. Contact support for assistance.</small>
+                                </div>
+                                
+                                
+                                @* <div class="mb-3">
+                                    <label asp-for="Bio" class="form-label">Bio</label>
+                                    <textarea asp-for="Bio" class="form-control" rows="3" placeholder="Tell us a little about yourself..."></textarea>
+                                    <span asp-validation-for="Bio" class="text-danger"></span>
+                                </div> *@
+                                
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i> Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Security Tab -->
+                        <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                            <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Security Settings</h4>
+                            
+                            <div class="card mb-4 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">Change Password</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form asp-controller="Account" asp-action="ChangePassword" method="post">
+                                        <div class="mb-3">
+                                            <label for="currentPassword" class="form-label">Current Password</label>
+                                            <input type="password" id="currentPassword" name="CurrentPassword" class="form-control" required />
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="newPassword" class="form-label">New Password</label>
+                                            <input type="password" id="newPassword" name="NewPassword" class="form-control" required />
+                                            <div class="form-text">
+                                                Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                            <input type="password" id="confirmPassword" name="ConfirmPassword" class="form-control" required />
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-end">
+                                            <button type="submit" class="btn btn-warning">
+                                                <i class="fas fa-key me-2"></i> Update Password
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">Two-Factor Authentication</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        @* <input class="form-check-input" type="checkbox" id="enable2fa" @(Model.TwoFactorEnabled ? "checked" : "") /> *@
+                                        <label class="form-check-label" for="enable2fa">Enable Two-Factor Authentication</label>
+                                    </div>
+                                    
+                                    <p class="mb-3">Two-factor authentication adds an extra layer of security to your account by requiring more than just a password to sign in.</p>
+                                    
+                                    @* <button class="btn btn-outline-info" id="configure2fa" @(Model.TwoFactorEnabled ? "" : "disabled")>
+                                        <i class="fas fa-qrcode me-2"></i> Configure 2FA
+                                    </button> *@
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Preferences Tab -->
+                        <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
+                            <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Account Preferences</h4>
+                            
+                            <form asp-controller="Account" asp-action="UpdatePreferences" method="post">
+                                <div class="mb-4">
+                                    <h5>Notifications</h5>
+                                    <div class="form-check mb-2">
+                                        @* <input class="form-check-input" type="checkbox" id="emailNotifications" name="EmailNotifications" @(Model.EmailNotificationsEnabled ? "checked" : "") /> *@
+                                        <label class="form-check-label" for="emailNotifications">
+                                            Email Notifications
+                                        </label>
+                                        <div class="form-text">Receive notifications about system updates and new features.</div>
+                                    </div>
+                                    
+                                    <div class="form-check">
+                                        @* <input class="form-check-input" type="checkbox" id="activityAlerts" name="ActivityAlerts" @(Model.ActivityAlertsEnabled ? "checked" : "") /> *@
+                                        <label class="form-check-label" for="activityAlerts">
+                                            Activity Alerts
+                                        </label>
+                                        <div class="form-text">Receive alerts about important account activity.</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <h5>Display Settings</h5>
+                                    <div class="mb-3">
+                                        <label for="itemsPerPage" class="form-label">Items per page</label>
+                                        <select class="form-select" id="itemsPerPage" name="ItemsPerPage">
+                                            @* <option value="10" @(Model.ItemsPerPage == 10 ? "selected" : "")>10</option>
+                                            <option value="25" @(Model.ItemsPerPage == 25 ? "selected" : "")>25</option>
+                                            <option value="50" @(Model.ItemsPerPage == 50 ? "selected" : "")>50</option> *@
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i> Save Preferences
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Profile Picture Upload Modal -->
+<div class="modal fade" id="profilePictureModal" tabindex="-1" aria-labelledby="profilePictureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="profilePictureModalLabel">Update Profile Picture</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form asp-controller="Account" asp-action="UpdateProfilePicture" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="profilePicture" class="form-label">Choose a new profile picture</label>
+                        <input class="form-control" type="file" id="profilePicture" name="ProfilePicture" accept="image/*" required>
+                        <div class="form-text">Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.</div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <div id="imagePreview" class="d-none mb-3">
+                            <img src="#" alt="Preview" class="img-thumbnail" style="max-height: 200px;" />
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i> Upload Picture
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        // Image preview functionality
+        document.getElementById('profilePicture').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                const preview = document.getElementById('imagePreview');
+                const previewImage = preview.querySelector('img');
+                
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    preview.classList.remove('d-none');
+                }
+                
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Toggle 2FA configuration button based on checkbox
+        document.getElementById('enable2fa').addEventListener('change', function(e) {
+            document.getElementById('configure2fa').disabled = !e.target.checked;
+        });
+    </script>
+}

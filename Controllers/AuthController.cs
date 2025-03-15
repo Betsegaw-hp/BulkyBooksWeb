@@ -18,6 +18,23 @@ public class AuthController : Controller
 		_context = context;
 	}
 
+
+	public async Task<IActionResult> Profile()
+	{
+		var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+		{
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+			if (user == null)
+			{
+				return NotFound();
+			}
+			return View(user);
+		}
+
+		return RedirectToAction("Login");
+	}
+
 	public IActionResult Login()
 	{
 		return View();
