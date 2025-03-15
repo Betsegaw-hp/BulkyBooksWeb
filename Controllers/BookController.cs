@@ -121,9 +121,12 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto)
 		{
-			if (id != updateBookDto.Id || id > 0) return NotFound();
+			if (id != updateBookDto.Id || id <= 0) return NotFound();
 
-			var authResult = await _authorizationService.AuthorizeAsync(User, id, new BookOwnerOrAdminRequirement());
+			var book = await _bookService.GetBookById(id);
+			if (book == null) return NotFound();
+
+			var authResult = await _authorizationService.AuthorizeAsync(User, book.AuthorId, new BookOwnerOrAdminRequirement());
 			if (!authResult.Succeeded)
 				return Forbid();
 
@@ -150,15 +153,15 @@ namespace BulkyBooksWeb.Controllers
 		{
 			if (id <= 0) return NotFound();
 
+			Book? book = await _bookService.GetBookById(id);
+			if (book == null) return Ok();  // if the book doesn't exist, the job is done ;)
 
-			var authResult = await _authorizationService.AuthorizeAsync(User, id, new BookOwnerOrAdminRequirement());
+			var authResult = await _authorizationService.AuthorizeAsync(User, book.AuthorId, new BookOwnerOrAdminRequirement());
 			if (!authResult.Succeeded)
 				return Forbid();
+			await _bookService.DeleteBook(id);
 
-			Book? book = await _bookService.GetBookById(id);
-			if (book == null) return NotFound();
-
-			return View(book);
+			return RedirectToAction(nameof(Index));
 		}
 	}
 }
