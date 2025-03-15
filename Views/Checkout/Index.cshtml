@@ -1,0 +1,109 @@
+@model BulkyBooksWeb.Models.ViewModels.CheckoutViewModel
+@{
+    ViewData["Title"] = "Checkout";
+}
+
+<div class="container py-4">
+    <h1 class="display-4 text-center mb-4">Secure Checkout</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-dark mb-4">
+                <div class="card-body">
+                    <form asp-controller="Checkout" asp-action="ProcessCheckout" method="post">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label"></label>
+                                    <input asp-for="Email" class="form-control" />
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="PhoneNumber" class="form-label"></label>
+                                    <input asp-for="PhoneNumber" class="form-control" />
+                                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="FirstName" class="form-label">FirstName</label>
+                                    <input asp-for="FirstName" class="form-control" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="LastName" class="form-label">LastName</label>
+                                    <input asp-for="LastName" class="form-control" />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                Proceed to Payment <i class="fas fa-lock ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        @foreach (var item in Model.CartItems)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h6 class="mb-1">@item.Title</h6>
+                                        <small class="text-muted">UnitPrice: @item.Price.ToString("C")</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="text-success fw-bold">@((item.Price * item.Quantity).ToString("C"))</span><br>
+                                        <span class="text-muted text-end"> x @item.Quantity</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@item.Quantity - 1" class="btn btn-sm btn-outline-secondary">-</a>
+                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@item.Quantity + 1" class="btn btn-sm btn-outline-secondary">+</a>
+                                    </div>
+                                    <div class="text-end">
+                                        <a asp-controller="Home" asp-action="RemoveFromCart" asp-route-id="@item.BookId" class="text-danger">Remove</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Subtotal:</span>
+                            <span>@Model.Subtotal.ToString("C")</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Tax:</span>
+                            <span>@Model.TaxAmount.ToString("C")</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold">
+                            <span>Total:</span>
+                            <span>@Model.OrderTotal.ToString("C")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
