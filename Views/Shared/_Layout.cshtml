@@ -11,6 +11,12 @@
         bool actionMatch = action.IsNullOrEmpty() || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
         return (controllerMatch && actionMatch) ? "active" : "";
     }
+    
+    int cartCount = 0;
+    @* if (Context.Session.GetString("CartItems") != null)
+    {
+        cartCount = 3; // Placeholder value
+    } *@
 }
 
 <!DOCTYPE html>
@@ -21,112 +27,232 @@
     <title>@ViewData["Title"] - BulkyBooksWeb</title>
     @* <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /> *@
     <link rel="stylesheet" href="~/css/bootswatch/sketchy.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BulkyBooksWeb.styles.css" asp-append-version="true" />
     
     <!-- Add Font Awesome for icons -->
-	<script src="https://kit.fontawesome.com/75c9ecad4c.js" ></script>
+    <script src="https://kit.fontawesome.com/75c9ecad4c.js"></script>
+    
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <header class="sticky-top">
         <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
             <div class="container-fluid">
-            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">BulkyBooksWeb</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarColor01">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Home", "Index")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Category")" asp-area="" asp-controller="Category" asp-action="Index">Category</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Book")" asp-area="" asp-controller="Book" asp-action="Index">Book</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @IsActive("Home", "Privacy")" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                    </li>
-                </ul>
-                @if (User.Identity != null && User.Identity.IsAuthenticated)
-                {
-                    <div class="d-flex align-items-center text-white">
-                        @if (User.IsInRole("admin")) {
-                            <i class="fas fa-user-tie me-2" style="font-size: 1.5rem;"></i> 
-                        }
-                        @if (User.IsInRole("author")) {
-                            <i class="fas fa-feather me-2" style="font-size: 1.5rem;"></i> 
-                        }
-                        @if (User.IsInRole("user")) {
-                            <i class="fas fa-user-circle me-2" style="font-size: 1.5rem;"></i> 
-                        }
-                        <a class="btn btn-link text-white bg-primary" asp-Controller="Auth" asp-action="Profile">Welcome, @User.Identity.Name!</a>
-                        <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
-                            <button type="submit" class="btn btn-danger d-flex ms-3 align-items-center gap-2">
-                                <span>Logout</span>
-                                <i class="fas fa-sign-out-alt" style="font-size: 1.5rem;"></i>
-                            </button>
-                        </form>
-                    </div>
-                }
-                else
-                {
-                    <div class="navbar-nav">
-                        <button class="nav-item btn btn-primary  me-2" type="button">
-                            <a class="nav-link text-white @IsActive("Auth", "Login")" asp-area="" asp-controller="Auth" asp-action="Login">Join</a>
-                        </button>
-                    </div>
-                }
-                @* <form class="d-flex">
-                <input class="form-control me-sm-2" type="search" placeholder="Search">
-                <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
-                </form> *@
-            </div>
-            </div>
-         </nav>
-
-        </header>
-            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home"
-                 && ViewContext.RouteData.Values["controller"]?.ToString() != "Auth" )
-            {
-            <ol class="breadcrumb mt-3" aria-label="breadcrumb">
-                <li class="breadcrumb-item"><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item">
-                <a asp-area="" asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
-                    @ViewContext.RouteData.Values["controller"]
+                <a class="navbar-brand d-flex align-items-center" asp-area="" asp-controller="Home" asp-action="Index">
+                    <i class="fas fa-book-open me-2"></i>
+                    <span class="fw-bold">BulkyBooks</span>
                 </a>
-                </li>
-                <li class="breadcrumb-item active">
-                @ViewContext.RouteData.Values["action"]
-                </li>
-            </ol>
-            }
-    <div class="container">
-        @if (TempData["success"] != null)
-        {
-            <div class="alert alert-dismissible alert-success position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050;">
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                @TempData["success"]
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarColor01">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link @IsActive("Home", "Index")" asp-area="" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home me-1"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle @IsActive("Category") @IsActive("Book") " 
+                               data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-book me-1"></i> Books
+                            </a>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item @IsActive("Book")" asp-area="" asp-controller="Book" asp-action="Index">All Books</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item @IsActive("Category")" asp-area="" asp-controller="Category" asp-action="Index">Categories</a>
+                                
+                            </div>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @IsActive("Home", "Privacy")" asp-area="" asp-controller="Home" asp-action="Privacy">
+                                <i class="fas fa-shield-alt me-1"></i> Privacy
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <form class="d-flex me-2 my-2 my-lg-0" action="@Url.Action("Index", "Home")" method="get">
+                        <div class="input-group">
+                            <input class="form-control" type="search" name="searchQuery" placeholder="Search books..." aria-label="Search">
+                            <button class="btn btn-light" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Shopping Cart -->
+                    <div class="d-flex me-2">
+                        <a href="@Url.Action("Index", "Checkout")" class="btn btn-light position-relative">
+                            <i class="fas fa-shopping-cart"></i>
+                            @if (cartCount > 0)
+                            {
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    @cartCount
+                                    <span class="visually-hidden">items in cart</span>
+                                </span>
+                            }
+                        </a>
+                    </div>
+                    
+                    <!-- Authentication Section -->
+                    @if (User.Identity != null && User.Identity.IsAuthenticated)
+                    {
+                        <div class="d-flex align-items-center text-white">
+                            <div class="dropdown">
+                                <a class="btn btn-primary dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @if (User.IsInRole("admin")) {
+                                        <i class="fas fa-user-tie me-2" style="font-size: 1.2rem;"></i> 
+                                    }
+                                    else if (User.IsInRole("author")) {
+                                        <i class="fas fa-feather me-2" style="font-size: 1.2rem;"></i> 
+                                    }
+                                    else if (User.IsInRole("user")) {
+                                        <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i> 
+                                    }
+                                    <span class="d-none d-md-inline">@User.Identity.Name</span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Auth" asp-action="Profile">
+                                            <i class="fas fa-user me-2"></i> My Profile
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Order" asp-action="History">
+                                            <i class="fas fa-history me-2"></i> Order History
+                                        </a>
+                                    </li>
+                                    @if (User.IsInRole("admin"))
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" asp-controller="Admin" asp-action="Dashboard">
+                                                <i class="fas fa-tachometer-alt me-2"></i> Admin Dashboard
+                                            </a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex">
+                            <a class="btn btn-outline-light me-2" asp-controller="Auth" asp-action="Login">
+                                <i class="fas fa-sign-in-alt me-1"></i> Login
+                            </a>
+                            <a class="btn btn-light" asp-controller="Auth" asp-action="SignUp">
+                                <i class="fas fa-user-plus me-1"></i> Sign Up
+                            </a>
+                        </div>
+                    }
+                </div>
             </div>
-        }
-        @if (TempData["error"] != null)
-        {
-            <div class="alert alert-dismissible alert-danger position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050;">
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                @TempData["error"]
-            </div>
-        }
+        </nav>
+    </header>
+    
+    <!-- Breadcrumbs -->
+    @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Home"
+         && ViewContext.RouteData.Values["controller"]?.ToString() != "Auth" )
+    {
+        <div class="container mt-3">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb border-bottom pb-2" style="border-bottom-style: dashed !important;">
+                    <li class="breadcrumb-item"><a asp-area="" asp-controller="Home" asp-action="Index">Home</a></li>
+                    <li class="breadcrumb-item">
+                        <a asp-area="" asp-controller="@ViewContext.RouteData.Values["controller"]" asp-action="Index">
+                            @ViewContext.RouteData.Values["controller"]
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">
+                        @ViewContext.RouteData.Values["action"]
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    }
+    
+    <!-- Alerts -->
+    @if (TempData["success"] != null)
+    {
+        <div class="alert alert-dismissible alert-success position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-check-circle me-2"></i> @TempData["success"]
+        </div>
+    }
+    @if (TempData["error"] != null)
+    {
+        <div class="alert alert-dismissible alert-danger position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-exclamation-circle me-2"></i> @TempData["error"]
+        </div>
+    }
+    
+    <!-- Main Content -->
+    <div class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "" : "container")">
         <main role="main" class="pb-3" style="min-height: 80dvh;">
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top text-muted py-2 ">
+    <!-- Footer -->
+    <footer class="border-top text-muted py-4 bg-light mt-4">
         <div class="container">
-            &copy; 2025 - BulkyBooksWeb - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            <div class="row">
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <h5 class="mb-3">BulkyBooks</h5>
+                    <p class="small">Your one-stop destination for all your reading needs. We offer a wide selection of books across all genres.</p>
+                </div>
+                <div class="col-md-2 mb-3 mb-md-0">
+                    <h5 class="mb-3">Shop</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="@Url.Action("Index", "Book")" class="text-decoration-none">All Books</a></li>
+                        <li><a href="@Url.Action("Index", "Category")" class="text-decoration-none">Categories</a></li>
+                        <li><a href="#" class="text-decoration-none">New Arrivals</a></li>
+                        <li><a href="#" class="text-decoration-none">Best Sellers</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-3 mb-md-0">
+                    <h5 class="mb-3">About</h5>
+                    <ul class="list-unstyled small">
+                        <li><a href="#" class="text-decoration-none">About Us</a></li>
+                        <li><a href="#" class="text-decoration-none">Contact</a></li>
+                        <li><a href="@Url.Action("Index", "Privacy")" class="text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" class="text-decoration-none">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5 class="mb-3">Stay Connected</h5>
+                    <div class="d-flex gap-3 mb-3">
+                        <a href="#" class="text-decoration-none"><i class="fab fa-facebook-f fa-lg"></i></a>
+                        <a href="#" class="text-decoration-none"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-decoration-none"><i class="fab fa-instagram fa-lg"></i></a>
+                        <a href="#" class="text-decoration-none"><i class="fab fa-pinterest fa-lg"></i></a>
+                    </div>
+                    <p class="small">Subscribe to our newsletter for updates on new releases and promotions.</p>
+                    <div class="input-group">
+                        <input type="email" class="form-control" placeholder="Your email">
+                        <button class="btn btn-primary" type="button">Subscribe</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <p class="small mb-0">&copy; @DateTime.Now.Year - BulkyBooksWeb</p>
+                <p class="small mb-0">Made with <i class="fas fa-heart text-danger"></i> for book lovers</p>
+            </div>
         </div>
     </footer>
+    
+    <!-- Scripts -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     @* <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script> *@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>

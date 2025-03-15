@@ -21,6 +21,30 @@ namespace BulkyBooksWeb.Services
 			return await _db.Books.Include(b => b.Category).Include(b => b.Author).ToListAsync();
 		}
 
+		public async Task<IEnumerable<Book>> GetBooksByCategory(int categoryId)
+		{
+			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.CategoryId == categoryId).ToListAsync();
+		}
+
+		public async Task<IEnumerable<Book>> GetBooksByAuthor(int authorId)
+		{
+			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.AuthorId == authorId).ToListAsync();
+		}
+
+		public async Task<IEnumerable<Book>> GetBooksBySearch(string searchQuery)
+		{
+			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.Title.Contains(searchQuery) || b.Description.Contains(searchQuery)).ToListAsync();
+		}
+		public async Task<IEnumerable<Book>> GetFeaturedBooks(int count)
+		{
+			return await _db.Books.Include(b => b.Category).Include(b => b.Author).OrderByDescending(b => b.CreatedDateTime).Take(count).ToListAsync();
+		}
+
+		public IQueryable<Book> GetBooksQuery()
+		{
+			return _db.Books.Include(b => b.Category).AsQueryable();
+		}
+
 		public async Task<Book?> GetBookById(int id)
 		{
 			Book? book = await _db.Books.Include(b => b.Category).Include(b => b.Author).FirstOrDefaultAsync(b => b.Id == id);

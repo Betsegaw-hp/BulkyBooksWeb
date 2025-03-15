@@ -2,6 +2,7 @@ using BulkyBooksWeb.Data;
 using BulkyBooksWeb.Models;
 using Microsoft.EntityFrameworkCore;
 using BulkyBooksWeb.Dtos;
+using BulkyBooksWeb.Models.ViewModels;
 
 namespace BulkyBooksWeb.Services
 {
@@ -22,6 +23,18 @@ namespace BulkyBooksWeb.Services
 		public async Task<IEnumerable<Category>> GetAllCategories()
 		{
 			return await _db.Categories.ToListAsync();
+		}
+
+		public async Task<IEnumerable<CategoryViewModel>> GetAllCategoriesWithBookCount()
+		{
+			return await _db.Categories
+				.Select(c => new CategoryViewModel
+				{
+					Id = c.Id,
+					Name = c.Name,
+					BookCount = _db.Books.Count(b => b.CategoryId == c.Id)
+				})
+				.ToListAsync();
 		}
 
 		public async Task<Category?> GetCategoryById(int id)

@@ -1,8 +1,575 @@
-﻿@{
+﻿@model BulkyBooksWeb.Models.ViewModels.BookListViewModel
+@{
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome here</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!-- Hero Section -->
+<section class="hero-section py-5 bg-light border-bottom border-dark" style="border-bottom-style: dashed !important;">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold">Discover Your Next Favorite Book</h1>
+                <p class="lead mb-4">Welcome to BulkyBooks, where stories come to life. Browse our extensive collection of books across all genres.</p>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <a href="#book-listing" class="btn btn-primary btn-lg px-4 me-md-2">Browse Books</a>
+                    <a href="#featured-categories" class="btn btn-outline-secondary btn-lg px-4">Explore Categories</a>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="position-relative" style="height: 350px;">
+                   <div class="position-absolute" style="top: 0; left: 10%; transform: rotate(-5deg);">
+                        <img src="/images/Brown_Rusty_Mystery_Novel_Book_Cover.png" alt="Book 1" class="img-fluid rounded shadow" style="max-width: 150px;">
+                    </div>
+                    <div class="position-absolute" style="top: 50px; left: 40%; transform: rotate(3deg);">
+                        <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" alt="Book 2" class="img-fluid rounded shadow" style="max-width: 180px;">
+                    </div>
+                    <div class="position-absolute" style="top: 150px; left: 20%; transform: rotate(-8deg);">
+                        <img src="/images/Black_Modern_Photographic_Man_Silhouette_Novel_Book_Cover.png" alt="Book 3" class="img-fluid rounded shadow" style="max-width: 160px;">
+                    </div>
+                    <div class="position-absolute" style="top: 100px; left: 65%; transform: rotate(5deg);">
+                        <img src="/images/Black_and_White_Minimalist_Memoir_Book_Cover.png" alt="Book 4" class="img-fluid rounded shadow" style="max-width: 140px;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Categories Section -->
+<section id="featured-categories" class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Popular Categories</h2>
+        <div class="row g-4">
+            @foreach (var category in Model.FeaturedCategories)
+            {
+                <div class="col-6 col-md-4 col-lg-3">
+                    <div class="card h-100 border-dark">
+                        <div class="card-body text-center">
+                            <div class="category-icon mb-3">
+                                @switch (category.Name.ToLower())
+                                {
+                                    case "fiction":
+                                        <i class="fas fa-book fa-3x text-primary"></i>
+                                        break;
+                                    case "fantasy":
+                                        <i class="fas fa-dragon fa-3x text-danger"></i>
+                                        break;
+                                    case "non-fictional":
+                                        <i class="fas fa-landmark fa-3x text-success"></i>
+                                        break;
+                                    default:
+                                        <i class="fas fa-bookmark fa-3x text-info"></i>
+                                        break;
+                                }
+                            </div>
+                            <h5 class="card-title">@category.Name</h5>
+                            <p class="card-text text-muted">@category.BookCount books</p>
+                            <a href="#" class="stretched-link category-filter" data-category-id="@category.Id">Browse</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Book Listing Section with Filters -->
+<section id="book-listing" class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar Filters -->
+            <div class="col-lg-3 mb-4">
+                <div class="card border-dark sticky-top" style="top: 20px;">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0">Filters</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="filterForm" method="get">
+                            <!-- Search Box -->
+                            <div class="mb-4">
+                                <label for="searchQuery" class="form-label">Search Books</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchQuery" name="SearchQuery" value="@Model.CurrentFilter.SearchQuery" placeholder="Title, author, ISBN...">
+                                    <button class="btn btn-outline-secondary" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Category Filter -->
+                            <div class="mb-4">
+                                <label class="form-label">Categories</label>
+                                <div class="overflow-auto" style="max-height: 200px;">
+                                    @foreach (var category in Model.AllCategories)
+                                    {
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="CategoryIds" value="@category.Id" id="category-@category.Id" 
+                                                   @(Model.CurrentFilter.CategoryIds != null && Model.CurrentFilter.CategoryIds.Contains(category.Id) ? "checked" : "")>
+                                            <label class="form-check-label" for="category-@category.Id">
+                                                @category.Name
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            
+                            <!-- Price Range Filter -->
+                            <div class="mb-4">
+                                <label class="form-label">Price Range</label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" name="MinPrice" value="@Model.CurrentFilter.MinPrice" placeholder="Min" min="0">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" name="MaxPrice" value="@Model.CurrentFilter.MaxPrice" placeholder="Max" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sort Options -->
+                            <div class="mb-4">
+                                <label for="sortOption" class="form-label">Sort By</label>
+                                <select class="form-select" id="sortOption" name="SortOption">
+                                    @* <option value="newest" @(Model.CurrentFilter.SortOption == "newest" ? "selected" : "")>Newest Arrivals</option>
+                                    <option value="price_asc" @(Model.CurrentFilter.SortOption == "price_asc" ? "selected" : "")>Price: Low to High</option>
+                                    <option value="price_desc" @(Model.CurrentFilter.SortOption == "price_desc" ? "selected" : "")>Price: High to Low</option>
+                                    <option value="title_asc" @(Model.CurrentFilter.SortOption == "title_asc" ? "selected" : "")>Title: A to Z</option>
+                                    <option value="title_desc" @(Model.CurrentFilter.SortOption == "title_desc" ? "selected" : "")>Title: Z to A</option> *@
+                                </select>
+                            </div>
+                            
+                            <!-- Filter Actions -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                <a href="@Url.Action("Index")" class="btn btn-outline-secondary">Clear Filters</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Book Listing -->
+            <div class="col-lg-9">
+                <!-- Active Filters Display -->
+                @if (Model.HasActiveFilters)
+                {
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center">
+                            <h5 class="me-3 mb-0">Active Filters:</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                @if (!string.IsNullOrEmpty(Model.CurrentFilter.SearchQuery))
+                                {
+                                    <span class="badge bg-primary">
+                                        Search: @Model.CurrentFilter.SearchQuery
+                                        <a href="#" class="text-white ms-1 remove-filter" data-filter-type="search"><i class="fas fa-times"></i></a>
+                                    </span>
+                                }
+                                
+                                @if (Model.CurrentFilter.CategoryIds != null && Model.CurrentFilter.CategoryIds.Any())
+                                {
+                                    foreach (var categoryId in Model.CurrentFilter.CategoryIds)
+                                    {
+                                        var category = Model.AllCategories.FirstOrDefault(c => c.Id == categoryId);
+                                        if (category != null)
+                                        {
+                                            <span class="badge bg-info">
+                                                Category: @category.Name
+                                                <a href="#" class="text-white ms-1 remove-filter" data-filter-type="category" data-category-id="@categoryId"><i class="fas fa-times"></i></a>
+                                            </span>
+                                        }
+                                    }
+                                }
+                                
+                                @if (Model.CurrentFilter.MinPrice.HasValue)
+                                {
+                                    <span class="badge bg-success">
+                                        Min Price: $@Model.CurrentFilter.MinPrice.Value.ToString("0.00")
+                                        <a href="#" class="text-white ms-1 remove-filter" data-filter-type="min-price"><i class="fas fa-times"></i></a>
+                                    </span>
+                                }
+                                
+                                @if (Model.CurrentFilter.MaxPrice.HasValue)
+                                {
+                                    <span class="badge bg-success">
+                                        Max Price: $@Model.CurrentFilter.MaxPrice.Value.ToString("0.00")
+                                        <a href="#" class="text-white ms-1 remove-filter" data-filter-type="max-price"><i class="fas fa-times"></i></a>
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                
+                <!-- Results Count and View Toggle -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <p class="mb-0">Showing <strong>@Model.Books.Count()</strong> of <strong>@Model.TotalBooks</strong> books</p>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary active" id="gridViewBtn">
+                            <i class="fas fa-th-large"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="listViewBtn">
+                            <i class="fas fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Grid View (default) -->
+                <div id="gridView" class="row g-4">
+                    @foreach (var book in Model.Books)
+                    {
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-dark">
+                                <div class="position-relative">
+                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
+                                    <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
+                                    @if (book.CreatedDateTime.Year < book.UpdatedDateTime.Year)
+                                    {
+                                        <div class="position-absolute top-0 end-0 m-2">
+                                            <span class="badge bg-success">New</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">@book.Title</h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">@book.Author.FullName</h6>
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge bg-light text-dark">@book.Category.Name</span>
+                                        <strong class="text-primary">$@book.Price.ToString("0.00")</strong>
+                                    </div>
+                                    <p class="card-text small">@(book.Description?.Length > 100 ? book.Description.Substring(0, 100) + "..." : book.Description)</p>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <div class="d-grid gap-2">
+                                        <a href="@Url.Action("Details", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
+                                        <button class="btn btn-primary btn-sm add-to-cart" data-book-id="@book.Id">
+                                            <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                <!-- List View (initially hidden) -->
+                <div id="listView" class="d-none">
+                    @foreach (var book in Model.Books)
+                    {
+                        <div class="card mb-3 border-dark">
+                            <div class="row g-0">
+                                <div class="col-md-3">
+                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
+                                         class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;"> *@
+                                        <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                         class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;">
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h5 class="card-title">@book.Title</h5>
+                                                <h6 class="card-subtitle mb-2 text-muted">@book.Author.FullName</h6>
+                                            </div>
+                                            <div>
+                                                <span class="badge bg-light text-dark">@book.Category.Name</span>
+                                                @if (book.CreatedDateTime.Year < book.UpdatedDateTime.Year)
+                                                {
+                                                    <span class="badge bg-success ms-1">New</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <p class="card-text">@(book.Description?.Length > 200 ? book.Description.Substring(0, 200) + "..." : book.Description)</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong class="text-primary fs-5">$@book.Price.ToString("0.00")</strong>
+                                            <div class="btn-group">
+                                                <a href="@Url.Action("Details", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
+                                                <button class="btn btn-primary btn-sm add-to-cart" data-book-id="@book.Id">
+                                                    <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                <!-- Pagination -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage - 1, searchQuery = Model.CurrentFilter.SearchQuery, categoryIds = Model.CurrentFilter.CategoryIds, minPrice = Model.CurrentFilter.MinPrice, maxPrice = Model.CurrentFilter.MaxPrice, sortOption = Model.CurrentFilter.SortOption })" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            
+                            @for (int i = 1; i <= Model.TotalPages; i++)
+                            {
+                                <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
+                                    <a class="page-link" href="@Url.Action("Index", new { page = i, searchQuery = Model.CurrentFilter.SearchQuery, categoryIds = Model.CurrentFilter.CategoryIds, minPrice = Model.CurrentFilter.MinPrice, maxPrice = Model.CurrentFilter.MaxPrice, sortOption = Model.CurrentFilter.SortOption })">@i</a>
+                                </li>
+                            }
+                            
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { page = Model.CurrentPage + 1, searchQuery = Model.CurrentFilter.SearchQuery, categoryIds = Model.CurrentFilter.CategoryIds, minPrice = Model.CurrentFilter.MinPrice, maxPrice = Model.CurrentFilter.MaxPrice, sortOption = Model.CurrentFilter.SortOption })" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Newsletter Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="mb-3">Subscribe to Our Newsletter</h2>
+                <p class="mb-4">Stay updated with our latest book releases, author events, and exclusive offers.</p>
+                <form class="row g-3 justify-content-center">
+                    <div class="col-md-8">
+                        <input type="email" class="form-control form-control-lg" placeholder="Your email address">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-light btn-lg w-100">Subscribe</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Books Section -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Featured Books</h2>
+        <div class="row">
+            <div class="col-12">
+                <div class="featured-books-carousel">
+                    @foreach (var book in Model.FeaturedBooks)
+                    {
+                        <div class="featured-book-item px-2">
+                            <div class="card h-100 border-dark">
+                                <div class="position-relative">
+                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
+                                    <img src="/images/Black_Modern_Photographic_Man_Silhouette_Novel_Book_Cover.png" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <span class="badge bg-danger">Featured</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">@book.Title</h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">@book.Author.FullName</h6>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-light text-dark">@book.Category.Name</span>
+                                        <strong class="text-primary">$@book.Price.ToString("0.00")</strong>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <div class="d-grid">
+                                        <a href="@Url.Action("Detail", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Testimonials Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">What Our Customers Say</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-dark">
+                    <div class="card-body">
+                        <div class="mb-3 text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="card-text">"BulkyBooks has the best selection of books I've ever seen. Their website makes it so easy to find exactly what I'm looking for!"</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <span>JD</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Jane Doe</h6>
+                                <small class="text-muted">Book Lover</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-dark">
+                    <div class="card-body">
+                        <div class="mb-3 text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <p class="card-text">"I love how easy it is to filter through categories and find new authors. The delivery is always prompt and the books arrive in perfect condition."</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <span>JS</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">John Smith</h6>
+                                <small class="text-muted">Avid Reader</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-dark">
+                    <div class="card-body">
+                        <div class="mb-3 text-warning">
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <p class="card-text">"The search functionality is amazing! I can find books by title, author, or even just keywords. BulkyBooks has become my go-to online bookstore."</p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                <span>AJ</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">Amanda Johnson</h6>
+                                <small class="text-muted">Literature Professor</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <!-- Add Slick Carousel for featured books -->
+    <script src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize featured books carousel
+            $('.featured-books-carousel').slick({
+                dots: true,
+                infinite: true,
+                speed: 300,
+                slidesToShow: 4,
+                slidesToScroll: 1,
+                autoplay: true,
+                autoplaySpeed: 3000,
+                responsive: [
+                    {
+                        breakpoint: 1200,
+                        settings: {
+                            slidesToShow: 3
+                        }
+                    },
+                    {
+                        breakpoint: 992,
+                        settings: {
+                            slidesToShow: 2
+                        }
+                    },
+                    {
+                        breakpoint: 576,
+                        settings: {
+                            slidesToShow: 1
+                        }
+                    }
+                ]
+            });
+            
+            // Toggle between grid and list view
+            $('#gridViewBtn').click(function() {
+                $(this).addClass('active');
+                $('#listViewBtn').removeClass('active');
+                $('#gridView').removeClass('d-none');
+                $('#listView').addClass('d-none');
+            });
+            
+            $('#listViewBtn').click(function() {
+                $(this).addClass('active');
+                $('#gridViewBtn').removeClass('active');
+                $('#listView').removeClass('d-none');
+                $('#gridView').addClass('d-none');
+            });
+            
+            // Category filter from featured categories
+            $('.category-filter').click(function(e) {
+                e.preventDefault();
+                var categoryId = $(this).data('category-id');
+                
+                // Check the corresponding checkbox
+                $('#category-' + categoryId).prop('checked', true);
+                
+                // Submit the form
+                $('#filterForm').submit();
+            });
+            
+            // Remove filter functionality
+            $('.remove-filter').click(function(e) {
+                e.preventDefault();
+                var filterType = $(this).data('filter-type');
+                
+                switch(filterType) {
+                    case 'search':
+                        $('#searchQuery').val('');
+                        break;
+                    case 'category':
+                        var categoryId = $(this).data('category-id');
+                        $('#category-' + categoryId).prop('checked', false);
+                        break;
+                    case 'min-price':
+                        $('input[name="MinPrice"]').val('');
+                        break;
+                    case 'max-price':
+                        $('input[name="MaxPrice"]').val('');
+                        break;
+                }
+                
+                // Submit the form to apply the updated filters
+                $('#filterForm').submit();
+            });
+            
+            // Add to cart functionality
+            $('.add-to-cart').click(function() {
+                var bookId = $(this).data('book-id');
+                // This would normally make an AJAX call to add the item to cart
+                // For demo purposes, we'll just show a success message
+                alert('Book added to cart successfully!');
+            });
+        });
+    </script>
+}

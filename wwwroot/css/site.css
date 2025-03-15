@@ -1,4 +1,8 @@
-html {
+
+@import url('https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css');
+@import url('https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css');
+
+/* html {
   font-size: 14px;
 }
 
@@ -19,4 +23,59 @@ html {
 
 body {
   margin-bottom: 60px;
+} */
+
+
+/* Custom styles for the landing page */
+.hero-section {
+  background-image: url('/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.85);
+  z-index: 0;
+}
+
+.hero-section .container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Sticky sidebar adjustments */
+@media (min-width: 992px) {
+  .sticky-top {
+      top: 20px;
+      z-index: 1000;
+  }
+  header.sticky-top {
+      top: 0;
+      z-index: 2000;
+  }
+}
+
+/* Featured books carousel */
+.featured-books-carousel {
+  margin: 0 -15px;
+}
+
+.featured-book-item {
+  margin-bottom: 20px;
+}
+
+/* Category icons */
+.category-icon {
+  transition: transform 0.3s ease;
+}
+
+.card:hover .category-icon {
+  transform: scale(1.1);
 }
