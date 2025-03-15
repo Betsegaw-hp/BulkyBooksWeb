@@ -4,6 +4,7 @@ using BulkyBooksWeb.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using ChapaNET;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,8 +14,25 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<BookService>();
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
+// Add Chapa configuration
+var chapaSecretKey = builder.Configuration["Chapa:SecretKey"];
+if (string.IsNullOrEmpty(chapaSecretKey))
+{
+    throw new ArgumentNullException(nameof(chapaSecretKey), "Chapa secret key is not configured.");
+}
+builder.Services.AddSingleton(new Chapa(chapaSecretKey));
+
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -58,6 +76,8 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseSession();
 
 app.MapControllerRoute(
     name: "default",

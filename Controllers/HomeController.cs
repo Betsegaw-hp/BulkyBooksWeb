@@ -5,6 +5,8 @@ using BulkyBooksWeb.Services;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using BulkyBooksWeb.Models.ViewModels;
+using BulkyBooksWeb.Extensions;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBooksWeb.Controllers;
 
@@ -20,12 +22,6 @@ public class HomeController : Controller
         _bookService = bookService;
         _categoryService = categoryService;
     }
-
-    // public async Task<IActionResult> Index()
-    // {
-    //     var books = (ICollection<Book>)await _bookService.GetAllBooks();
-    //     return View(books);
-    // }
 
 
     public async Task<IActionResult> Index(string searchQuery, int[] categoryIds, decimal? minPrice, decimal? maxPrice, string sortOption = "newest", int page = 1)
@@ -43,8 +39,6 @@ public class HomeController : Controller
             SortOption = sortOption
         };
 
-        // Start with all books
-        // var booksQuery = _bookService.Books.Include(b => b.Category).AsQueryable();
         var booksQuery = _bookService.GetBooksQuery();
 
         // Apply search filter
@@ -133,6 +127,35 @@ public class HomeController : Controller
         };
 
         return View(model);
+    }
+
+    [Authorize(Roles = "user,admin,author")]
+    [HttpPost]
+    public async Task<IActionResult> AddToCart(int id)
+    {
+        var book = await _bookService.GetBookById(id);
+        if (book == null)
+        {
+            return NotFound();
+        }
+
+        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
+
+        // Find the cart item or create a new one
+        var cartItem = cart.FirstOrDefault(i => i.BookId == id);
+        if (cartItem != null)
+        {
+            cartItem.Quantity++;
+        }
+        else
+        {
+            cart.Add(new CartItemDTO { BookId = id, Title = book.Title, Price = book.Price, Quantity = 1 });
+        }
+
+        HttpContext.Session.Set("Cart", cart);
+
+        TempData["Success"] = "Book added to cart successfully!";
+        return RedirectToAction("Index", "Checkout");
     }
 
     public IActionResult Privacy()

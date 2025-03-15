@@ -242,7 +242,7 @@
                                 </div>
                                 <div class="card-footer bg-transparent border-top-0">
                                     <div class="d-grid gap-2">
-                                        <a href="@Url.Action("Details", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
+                                        <a href="@Url.Action("Detail", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
                                         <button class="btn btn-primary btn-sm add-to-cart" data-book-id="@book.Id">
                                             <i class="fas fa-shopping-cart me-1"></i> Add to Cart
                                         </button>
@@ -284,7 +284,7 @@
                                         <div class="d-flex justify-content-between align-items-center">
                                             <strong class="text-primary fs-5">$@book.Price.ToString("0.00")</strong>
                                             <div class="btn-group">
-                                                <a href="@Url.Action("Details", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
+                                                <a href="@Url.Action("Detail", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">View Details</a>
                                                 <button class="btn btn-primary btn-sm add-to-cart" data-book-id="@book.Id">
                                                     <i class="fas fa-shopping-cart me-1"></i> Add to Cart
                                                 </button>
@@ -534,7 +534,6 @@
                 // Check the corresponding checkbox
                 $('#category-' + categoryId).prop('checked', true);
                 
-                // Submit the form
                 $('#filterForm').submit();
             });
             
@@ -563,12 +562,22 @@
                 $('#filterForm').submit();
             });
             
-            // Add to cart functionality
+
             $('.add-to-cart').click(function() {
                 var bookId = $(this).data('book-id');
-                // This would normally make an AJAX call to add the item to cart
-                // For demo purposes, we'll just show a success message
-                alert('Book added to cart successfully!');
+                $.ajax({
+                    @* include bookid in the url *@
+                    url: '@Url.Action("AddToCart", "Home", new { id = "__bookId__" })'.replace('__bookId__', bookId),
+                    type: 'POST',
+                    success: function(response) {
+                        alert('Book added to cart!');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(xhr);
+                        alert('Error adding book to cart. Please try again.');
+                        window.location.href = '@Url.Action("Login", "Auth")';
+                    }
+                });
             });
         });
     </script>

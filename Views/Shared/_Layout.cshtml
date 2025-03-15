@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Mvc.Rendering
 @using Microsoft.IdentityModel.Tokens
+@using Microsoft.AspNetCore.Http
 @{
     // Helper function to check active route
     string IsActive(string controller, string action = "")
@@ -13,10 +14,15 @@
     }
     
     int cartCount = 0;
-    @* if (Context.Session.GetString("CartItems") != null)
+    if (Context.Session.GetString("Cart") != null)
     {
-        cartCount = 3; // Placeholder value
-    } *@
+        var cartItems = Context.Session.GetString("Cart");
+        if (!string.IsNullOrEmpty(cartItems))
+        {
+            var items = cartItems.Split(',');
+            cartCount = items.Length / 4;
+        }
+    }
 }
 
 <!DOCTYPE html>
@@ -83,7 +89,7 @@
                     
                     <!-- Shopping Cart -->
                     <div class="d-flex me-2">
-                        <a href="@Url.Action("Index", "Checkout")" class="btn btn-light position-relative">
+                        <a asp-controller="Checkout" asp-action="Index" class="btn btn-light position-relative">
                             <i class="fas fa-shopping-cart"></i>
                             @if (cartCount > 0)
                             {
