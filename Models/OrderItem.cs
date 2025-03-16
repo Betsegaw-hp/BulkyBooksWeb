@@ -8,6 +8,10 @@ namespace BulkyBooksWeb.Models
 		[Key]
 		public int Id { get; set; }
 
+		[ForeignKey("Order")]
+		[Required]
+		public int OrderId { get; set; }
+
 		[ForeignKey("Book")]
 		[Required]
 		public int BookId { get; set; }
@@ -22,7 +26,6 @@ namespace BulkyBooksWeb.Models
 		public int Quantity { get; set; }
 
 		// Navigation properties
-		public int OrderId { get; set; }
 		public virtual Order Order { get; set; } = null!;
 	}
 }

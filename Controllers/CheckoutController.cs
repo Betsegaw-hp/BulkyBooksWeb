@@ -7,6 +7,8 @@ using BulkyBooksWeb.Extensions;
 using BulkyBooksWeb.Models;
 using BulkyBooksWeb.Services;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using BulkyBooksWeb.Policies;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -17,16 +19,19 @@ namespace BulkyBooksWeb.Controllers
 		private readonly Chapa _chapa;
 		private readonly ApplicationDbContext _context;
 		private readonly OrderService _orderService;
+		private readonly IAuthorizationService _authorizationService;
 		private readonly ILogger<CheckoutController> _logger;
 
 		public CheckoutController(
 			Chapa chapa, ApplicationDbContext context,
-			OrderService orderService, ILogger<CheckoutController> logger)
+			OrderService orderService, ILogger<CheckoutController> logger,
+			IAuthorizationService authorizationService)
 		{
 			_chapa = chapa;
 			_context = context;
 			_orderService = orderService;
 			_logger = logger;
+			_authorizationService = authorizationService;
 		}
 
 		[HttpGet]
@@ -45,18 +50,59 @@ namespace BulkyBooksWeb.Controllers
 			return View(model);
 		}
 
+		[HttpGet]
+		[Route("PaymentFailed")]
+		public IActionResult PaymentFailed()
+		{
+			return View("PaymentFailed");
+		}
+
+		[HttpGet]
+		[Route("OrderConfirmation/{id}")]
+		public async Task<IActionResult> OrderConfirmation(int id)
+		{
+			try
+			{
+				var orderDto = await _orderService.GetOrderConfirmationDtoAsync(id);
+				if (orderDto == null) return NotFound();
+				var authResult = await _authorizationService.AuthorizeAsync(User, orderDto.UserId, new OrderOwnerOrAdminRequirement());
+				if (!authResult.Succeeded)
+				{
+					_logger.LogWarning("User {UserId} is not authorized to view order {OrderId}", User.FindFirstValue(ClaimTypes.NameIdentifier), id);
+					return Forbid();
+				}
+
+				return View(orderDto);
+			}
+			catch (Exception ex)
+			{
+				return NotFound(ex.Message);
+			}
+		}
+
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> ProcessCheckout(CheckoutViewModel model)
 		{
 			Console.WriteLine("Processing checkout...");
 
+			var cart = GetCartItemDTOs(HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? []);
+			model.CartItems = cart;
+			model.Subtotal = model.CartItems.Sum(i => i.Price * i.Quantity);
+			model.TaxAmount = CalculateTax(cart);
+			model.OrderTotal = model.Subtotal + model.TaxAmount;
+
 			if (!ModelState.IsValid)
 			{
-				model.CartItems = GetCartItemDTOs(HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? []);
+				var errors = ModelState
+					.Where(x => x.Value?.Errors.Count > 0)
+					.Select(x => new { x.Key, x.Value?.Errors })
+					.ToList();
+
+				_logger.LogError("Validation errors: {@Errors}", errors);
 				return View("Index", model);
 			}
-			Console.WriteLine("Model is valid");
+			Console.WriteLine(model.OrderTotal);
 
 			try
 			{
@@ -70,6 +116,7 @@ namespace BulkyBooksWeb.Controllers
 					tx_ref: GenerateTransactionReference(),
 					currency: model.Currency,
 					callback_url: model.CallbackURL,
+					// return_url: model.ReturnURL,
 					phoneNo: model.PhoneNumber,
 					customTitle: $"Bulky Books - Order #{txRef}"
 				);

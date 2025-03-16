@@ -1,7 +1,10 @@
+@{
+    ViewData["Title"] = "Payment Failed";
+}
 <div class="container text-center py-5">
     <h1 class="text-danger mb-4"><i class="fas fa-times-circle"></i> Payment Failed</h1>
     <p class="lead">There was an issue processing your payment</p>
-    <a asp-controller="Checkout" asp-action="Checkout" class="btn btn-warning">
+    <a asp-controller="Checkout" asp-action="Index" class="btn btn-warning">
         Try Again
     </a>
 </div>

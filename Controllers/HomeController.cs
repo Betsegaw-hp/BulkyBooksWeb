@@ -26,10 +26,8 @@ public class HomeController : Controller
 
     public async Task<IActionResult> Index(string searchQuery, int[] categoryIds, decimal? minPrice, decimal? maxPrice, string sortOption = "newest", int page = 1)
     {
-        // Set page size
         int pageSize = 9;
 
-        // Create filter view model
         var filter = new FilterViewModel
         {
             SearchQuery = searchQuery,
@@ -68,7 +66,6 @@ public class HomeController : Controller
             booksQuery = booksQuery.Where(b => b.Price <= maxPrice.Value);
         }
 
-        // Get total count before pagination
         int totalBooks = await booksQuery.CountAsync();
 
         // Apply sorting
@@ -98,18 +95,14 @@ public class HomeController : Controller
             .Take(pageSize)
             .ToListAsync();
 
-        // Calculate total pages
         int totalPages = (int)Math.Ceiling(totalBooks / (double)pageSize);
 
-        // Get featured books (e.g., books marked as featured or most popular)
         var featuredBooks = await _bookService.GetFeaturedBooks(6); // Get top 6 featured books
 
-        // Get all categories for the filter sidebar
         var allCategories = await _categoryService.GetAllCategoriesWithBookCount();
 
-        // Get featured categories (e.g., categories with most books)
         var featuredCategories = allCategories
-            .OrderByDescending(c => c.BookCount)
+            .OrderByDescending(c => c.DisplayOrder)
             .Take(8)
             .ToList();
 

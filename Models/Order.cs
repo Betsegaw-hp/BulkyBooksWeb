@@ -7,7 +7,8 @@ namespace BulkyBooksWeb.Models
 	public enum OrderStatus
 	{
 		Pending,
-		Processing,
+		Completed,
+		Refunded,
 		Cancelled
 	}
 	public class Order

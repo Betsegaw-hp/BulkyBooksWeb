@@ -4,7 +4,7 @@ namespace BulkyBooksWeb.Models.ViewModels
 {
 	public class CheckoutViewModel
 	{
-		public List<CartItemDTO> CartItems { get; set; } = null!;
+		public List<CartItemDTO> CartItems { get; set; } = [];
 		public decimal Subtotal { get; set; }
 		public decimal TaxAmount { get; set; }
 		public decimal OrderTotal { get; set; }
@@ -23,8 +23,8 @@ namespace BulkyBooksWeb.Models.ViewModels
 
 		public string? Currency { get; set; } = "ETB";
 
-		public string CallbackURL { get; set; } = "https://mysite.com/callback";
-		public string ReturnURL { get; set; } = "https://mysite.com/success";
+		public string CallbackURL { get; set; } = "https://webhook.site/2383e50c-0c90-4e08-b3d3-6e0af8128c4e";
+		public string ReturnURL { get; set; } = "https://webhook.site/ee6f7284-bc5f-4f56-88fc-16a0569afb97";
 	}
 
 	public class CartItemDTO

@@ -32,6 +32,7 @@ namespace BulkyBooksWeb.Services
 				{
 					Id = c.Id,
 					Name = c.Name,
+					DisplayOrder = c.DisplayOrder,
 					BookCount = _db.Books.Count(b => b.CategoryId == c.Id)
 				})
 				.ToListAsync();
