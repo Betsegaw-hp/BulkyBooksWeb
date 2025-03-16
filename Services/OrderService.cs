@@ -27,6 +27,18 @@ namespace BulkyBooksWeb.Services
 			_context = context;
 			_logger = logger;
 		}
+
+		public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
+		{
+			var orders = await _context.Orders
+				.Include(o => o.OrderItems)
+				.Where(o => o.UserId == userId)
+				.ToListAsync();
+
+			return orders;
+		}
+
+
 		public async Task<OrderConfirmationDto?> GetOrderConfirmationDtoAsync(int id)
 		{
 			var order = await _context.Orders
@@ -97,6 +109,20 @@ namespace BulkyBooksWeb.Services
 							.FirstOrDefaultAsync(o => o.Id == id)
 							?? throw new Exception($"Order with id {id} not found.");
 			return order;
+		}
+
+		public async Task UpdateOrderAsync(Order order)
+		{
+			try
+			{
+				_context.Orders.Update(order);
+				await _context.SaveChangesAsync();
+			}
+			catch (DbUpdateConcurrencyException ex)
+			{
+				_logger.LogError(ex, "Error updating order with id {OrderId}", order.Id);
+				throw;
+			}
 		}
 	}
 }
