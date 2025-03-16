@@ -72,8 +72,8 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@item.Quantity - 1" class="btn btn-sm btn-outline-secondary">-</a>
-                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@item.Quantity + 1" class="btn btn-sm btn-outline-secondary">+</a>
+                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@(item.Quantity - 1)" class="btn btn-sm btn-outline-secondary">-</a>
+                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@(item.Quantity + 1)" class="btn btn-sm btn-outline-secondary">+</a>
                                     </div>
                                     <div class="text-end">
                                         <a asp-controller="Home" asp-action="RemoveFromCart" asp-route-id="@item.BookId" class="text-danger">Remove</a>

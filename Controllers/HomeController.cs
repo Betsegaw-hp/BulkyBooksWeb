@@ -158,6 +158,44 @@ public class HomeController : Controller
         return RedirectToAction("Index", "Checkout");
     }
 
+    [Authorize(Roles = "user,admin,author")]
+    public IActionResult RemoveFromCart(int id)
+    {
+        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
+
+        var cartItem = cart.FirstOrDefault(i => i.BookId == id);
+        if (cartItem != null)
+        {
+            cart.Remove(cartItem);
+            HttpContext.Session.Set("Cart", cart);
+            TempData["Success"] = "Book removed from cart successfully!";
+        }
+
+        return RedirectToAction("Index", "Checkout");
+    }
+
+    [Authorize(Roles = "user,admin,author")]
+    public IActionResult UpdateCart(int id, [FromQuery] int Quantity)
+    {
+        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
+
+        var cartItem = cart.FirstOrDefault(i => i.BookId == id);
+        if (cartItem != null)
+        {
+            if (Quantity <= 0)
+            {
+                cart.Remove(cartItem);
+            }
+            else
+            {
+                cartItem.Quantity = Quantity;
+            }
+            HttpContext.Session.Set("Cart", cart);
+        }
+
+        return RedirectToAction("Index", "Checkout");
+    }
+
     public IActionResult Privacy()
     {
         return View();
