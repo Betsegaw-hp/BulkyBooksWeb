@@ -12,7 +12,7 @@ namespace BulkyBooksWeb.Policies
 			int orderOwnerId)
 		{
 
-			if (context.User.IsInRole("Admin"))
+			if (context.User.IsInRole("admin"))
 			{
 				context.Succeed(requirement);
 				return Task.CompletedTask;

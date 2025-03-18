@@ -28,6 +28,15 @@ namespace BulkyBooksWeb.Services
 			_logger = logger;
 		}
 
+		public async Task<IEnumerable<Order>> GetAllOrders()
+		{
+			var orders = await _context.Orders
+				.Include(o => o.OrderItems)
+				.ToListAsync();
+
+			return orders;
+		}
+
 		public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
 		{
 			var orders = await _context.Orders

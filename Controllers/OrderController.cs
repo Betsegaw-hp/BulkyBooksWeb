@@ -2,40 +2,77 @@ using Microsoft.AspNetCore.Mvc;
 using BulkyBooksWeb.Services;
 using BulkyBooksWeb.Data;
 using BulkyBooksWeb.Models;
+using BulkyBooksWeb.Models.ViewModels;
+using Microsoft.AspNetCore.Authorization;
+using BulkyBooksWeb.Policies;
 
 namespace BulkyBooksWeb.Controllers
 {
+	[Authorize(Roles = "admin, author, user")]
 	public class OrderController : Controller
 	{
 		private readonly ILogger<OrderController> _logger;
 		private readonly OrderService _orderService;
 		private readonly IUserContext _userContext;
+		private readonly IAuthorizationService _authorizationService;
+
 		public OrderController(
 			ILogger<OrderController> logger,
 			OrderService orderService,
-			IUserContext userContext)
+			IUserContext userContext,
+			IAuthorizationService authorizationService)
 		{
 			_userContext = userContext;
 			_logger = logger;
 			_orderService = orderService;
+			_authorizationService = authorizationService;
 		}
 
-		public async Task<IActionResult> Index()
+		[Authorize(Roles = "admin")]
+		public async Task<IActionResult> Index([FromQuery] OrderFilterViewModel orderFilter)
 		{
 			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return NotFound("User not found");
+			if (userId == null) return RedirectToAction("Login", "Auth");
 
-			var orders = await _orderService.GetOrdersByUserIdAsync((int)userId);
-			return View(orders);
+
+			var orders = await _orderService.GetAllOrders();
+			// filter
+			if (orderFilter.OrderId > 0)
+				orders = [.. orders.Where(o => o.Id == orderFilter.OrderId)];
+			if (!string.IsNullOrEmpty(orderFilter.CustomerName))
+				orders = [.. orders.Where(o => o.User.Username.Contains(orderFilter.CustomerName, StringComparison.CurrentCultureIgnoreCase))];
+			if (orderFilter.DateFrom != DateOnly.FromDateTime(DateTime.MinValue) && orderFilter.DateTo != DateOnly.FromDateTime(DateTime.MinValue))
+				orders = [.. orders.Where(o => o.OrderDate >= orderFilter.DateFrom.ToDateTime(new TimeOnly(0, 0))
+											&& o.OrderDate <= orderFilter.DateTo.ToDateTime(new TimeOnly(23, 59)))];
+
+			orders = [.. orders.OrderByDescending(o => o.OrderDate)];
+			OrderManagementViewModel orderManagmentViewModel = new()
+			{
+				Orders = orders,
+				TotalOrdersMonthly = orders.Count(o => o.OrderDate.Month == DateTime.Now.Month && o.OrderDate.Year == DateTime.Now.Year),
+				MonthlyRevenue = orders.Where(o => o.OrderDate.Month == DateTime.Now.Month && o.OrderDate.Year == DateTime.Now.Year).Sum(o => o.OrderTotal),
+				PendingOrders = orders.Count(o => o.Status == OrderStatus.Pending),
+				CompletedOrders = orders.Count(o => o.Status == OrderStatus.Completed),
+				RefundedOrders = orders.Count(o => o.Status == OrderStatus.Refunded),
+				CancelledOrders = orders.Count(o => o.Status == OrderStatus.Cancelled)
+			};
+
+			return View(orderManagmentViewModel);
 		}
 
-		public async Task<IActionResult> Details(int id)
+		public async Task<IActionResult> Detail(int id)
 		{
 			var order = await _orderService.GetOrderByIdAsync(id);
 			if (order == null) return NotFound("Order not found");
 
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null || order.UserId != userId) return Forbid("You do not have permission to view this order.");
+			var isAuth = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
+			if (!isAuth.Succeeded)
+			{
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null) return RedirectToAction("Login", "Auth");
+				_logger.LogWarning(" User {userId} is not authorized to view otder {OrderId}", userId, order.Id);
+				return Forbid();
+			}
 
 			return View(order);
 		}
@@ -66,8 +103,14 @@ namespace BulkyBooksWeb.Controllers
 			var order = await _orderService.GetOrderByIdAsync(orderId);
 			if (order == null) return NotFound("Order not found");
 
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null || order.UserId != userId) return Forbid("You do not have permission to cancel this order.");
+			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
+			if (!isValid.Succeeded)
+			{
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null) return RedirectToAction("Login", "Auth");
+				_logger.LogWarning("User {userId} is not authorized to cancel order {OrderId}", userId, orderId);
+				return Forbid();
+			}
 
 			if (order.Status != OrderStatus.Pending) return BadRequest("Only pending orders can be cancelled.");
 

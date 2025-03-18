@@ -1,0 +1,216 @@
+@model BulkyBooksWeb.Models.Order
+@{
+    ViewData["Title"] = "Order Details";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-4">Order Details #@Model.Id</h1>
+        <div class="btn-group">
+            @if(!User.IsInRole("admin")) 
+            {
+                <a asp-controller="Order" asp-action="History" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Orders
+                </a>
+            } else 
+            {
+            <a asp-controller="Order" asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Orders
+            </a>
+            }
+            <a asp-controller="Order" asp-action="PrintInvoice" asp-route-id="@Model.Id" class="btn btn-outline-primary" target="_blank">
+                <i class="fas fa-print me-2"></i> Print Invoice
+            </a>
+            <a asp-controller="Order" asp-action="EmailForm" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                <i class="fas fa-envelope me-2"></i> Email Customer
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-dark mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i> Order Items
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Book</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th class="text-end">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.OrderItems)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3" style="width: 50px; height: 70px; background-color: #f8f9fa; border: 1px solid #dee2e6; display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-book text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0">@item.BookTitle</h6>
+                                                    @* <small class="text-muted">@item.Author</small> *@
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@item.Price.ToString("C")</td>
+                                        <td>@item.Quantity</td>
+                                        <td class="text-end">@((item.Price * item.Quantity).ToString("C"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                @* <tr>
+                                    <th colspan="3" class="text-end">Subtotal:</th>
+                                    <td class="text-end">@Model.OrderSubtotal.ToString("C")</td>
+                                </tr>
+                                <tr>
+                                    <th colspan="3" class="text-end">Tax:</th>
+                                    <td class="text-end">@Model.OrderTax.ToString("C")</td>
+                                </tr> *@
+                                <tr>
+                                    <th colspan="3" class="text-end">Total(15% taxed):</th>
+                                    <td class="text-end"><strong>@Model.OrderTotal.ToString("C")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sticky-note me-2"></i> Order Notes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (User.IsInRole("admin"))
+                    {
+                        <form asp-controller="Order" asp-action="UpdateOrderNotes" method="post">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="returnUrl" value="@Url.Action("Detail", "Order", new { id = Model.Id })" />
+                            <div class="mb-3">
+                                <textarea class="form-control" name="notes" rows="4" placeholder="Add notes about this order...">@@Model.Notes</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Notes</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p>@@Model.Notes</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-dark mb-4">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i> Order Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Order ID:</th>
+                            <td>#@Model.Id</td>
+                        </tr>
+                        <tr>
+                            <th>Order Date:</th>
+                            <td>@Model.OrderDate.ToString("MMMM dd, yyyy")</td>
+                        </tr>
+                        <tr>
+                            <th>Transaction Ref:</th>
+                            <td><code>@Model.TransactionReference</code></td>
+                        </tr>
+                        <tr>
+                            <th>Status:</th>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    @if(User.IsInRole("admin"))
+                                    {
+                                        @if (Model.Status == OrderStatus.Pending)
+                                        {
+                                            <form asp-controller="Order" asp-action="CancelOrder" method="post">
+                                                <input type="hidden" name="id" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-sm btn-danger">Cancel Order</button>
+                                            </form>
+
+                                            <form asp-controller="Order" asp-action="MarkAsPaid" method="post">
+                                                <input type="hidden" name="id" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
+                                            </form>
+                                        }
+                                        else if (Model.Status == OrderStatus.Completed)
+                                        {
+                                            <form asp-controller="Order" asp-action="RefundOrder" method="post">
+                                                <input type="hidden" name="id" value="@Model.Id" />
+                                                <button type="submit" class="btn btn-sm btn-warning">Refund Order</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@Model.Status</span>
+                                        }
+                                    } else
+                                    {
+                                        <span class="badge 
+                                        @(Model.Status.ToString() == "Pending" ? "bg-warning" : 
+                                          Model.Status.ToString() == "Completed" ? "bg-success" : 
+                                          Model.Status.ToString() == "Cancelled" ? "bg-danger" : 
+                                          Model.Status.ToString() == "Refunded" ? "bg-info" : "bg-secondary")">
+                                        @Model.Status.ToString()
+                                        </span>
+                                    }
+                                        
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            @if(User.IsInRole("admin"))
+            {
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user me-2"></i> Customer Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="40%">Name:</th>
+                            <td>@Model.User.FullName</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>
+                                <a href="mailto:@Model.User.Email">@Model.User.Email</a>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="card-footer">
+                    <a asp-controller="Order" asp-action="EmailForm" asp-route-id="@Model.Id" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-envelope me-2"></i> Contact Customer
+                    </a>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+}

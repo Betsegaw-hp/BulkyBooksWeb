@@ -12,7 +12,7 @@ namespace BulkyBooksWeb.Policies
             int authorId)
         {
             // Check if the user is an admin
-            if (context.User.IsInRole("Admin"))
+            if (context.User.IsInRole("admin"))
             {
                 context.Succeed(requirement);
                 return Task.CompletedTask;
