@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ChapaNET;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,8 +26,16 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SameSite = SameSiteMode.Lax; // Allow redirects from external sites
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always; //  'Always' for secure cookies in production
+});
+
+builder.Services.AddControllersWithViews()
+    .AddCookieTempDataProvider();
+builder.Services.Configure<CookieTempDataProviderOptions>(options =>
+{
+    options.Cookie.Name = "TempDataCookie";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
 // Add Chapa configuration
