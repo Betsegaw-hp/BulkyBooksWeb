@@ -9,7 +9,7 @@ namespace BulkyBooksWeb.Services
 {
 	public interface IOrderService
 	{
-		Task<Order> CreateOrderFromCartAsync(List<CartItemDTO> cartItems, string transactionReference, decimal amount);
+		Task<Order> CreateTempOrderFromCartAsync(List<CartItemDTO> cartItems, string transactionReference, decimal amount);
 		Task<Order> GetOrderByIdAsync(int id);
 	}
 
@@ -72,7 +72,7 @@ namespace BulkyBooksWeb.Services
 				}).ToList()
 			};
 		}
-		public async Task<Order> CreateOrderFromCartAsync(List<CartItemDTO> cartItems, string transactionReference, decimal amount)
+		public async Task<Order> CreateTempOrderFromCartAsync(List<CartItemDTO> cartItems, string transactionReference, decimal amount)
 		{
 			var currentUser = _userContext.GetCurrentUserId();
 			if (currentUser == null)
@@ -85,10 +85,10 @@ namespace BulkyBooksWeb.Services
 				var order = new Order
 				{
 					UserId = (int)currentUser,
-					Status = OrderStatus.Completed,
+					Status = OrderStatus.Pending,
 					TransactionReference = transactionReference,
 					OrderTotal = amount,
-					PaymentDate = DateTime.UtcNow,
+					OrderDate = DateTime.UtcNow,
 
 					OrderItems = cartItems.Select(ci => new OrderItem
 					{
@@ -109,6 +109,37 @@ namespace BulkyBooksWeb.Services
 				_logger.LogError(ex, "Error creating order");
 				throw; // Or handle specific exceptions
 			}
+		}
+
+		public async Task<Order> UpdateOrderPaymentStatusAsync(string tx_ref, OrderStatus status)
+		{
+			var order = await _context.Orders.FirstOrDefaultAsync(o => o.TransactionReference == tx_ref) ?? throw new Exception("Order not found");
+			order.Status = status;
+			order.PaymentDate = DateTime.UtcNow;
+
+			await _context.SaveChangesAsync();
+			return order;
+		}
+
+		public async Task CancelOrderAsync(int orderId)
+		{
+			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			order.Status = OrderStatus.Cancelled;
+			await _context.SaveChangesAsync();
+		}
+
+		public async Task RefundOrderAsync(int orderId)
+		{
+			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			order.Status = OrderStatus.Refunded;
+			await _context.SaveChangesAsync();
+		}
+
+		public async Task FailOrderAsync(int orderId)
+		{
+			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			order.Status = OrderStatus.Failed;
+			await _context.SaveChangesAsync();
 		}
 
 		public async Task<Order> GetOrderByIdAsync(int id)

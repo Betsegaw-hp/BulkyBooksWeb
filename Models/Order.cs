@@ -9,7 +9,8 @@ namespace BulkyBooksWeb.Models
 		Pending,
 		Completed,
 		Refunded,
-		Cancelled
+		Cancelled,
+		Failed
 	}
 	public class Order
 	{

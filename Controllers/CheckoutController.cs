@@ -10,9 +10,13 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using BulkyBooksWeb.Policies;
 using BulkyBooksWeb.Dtos;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace BulkyBooksWeb.Controllers
 {
+
 	[Authorize(Roles = "admin, author, user")]
 	[Route("[controller]")]
 	public class CheckoutController : Controller
@@ -22,17 +26,23 @@ namespace BulkyBooksWeb.Controllers
 		private readonly OrderService _orderService;
 		private readonly IAuthorizationService _authorizationService;
 		private readonly ILogger<CheckoutController> _logger;
+		private readonly IConfiguration _configuration;
+		private readonly IUserContext _userContext;
+
 
 		public CheckoutController(
 			Chapa chapa, ApplicationDbContext context,
 			OrderService orderService, ILogger<CheckoutController> logger,
-			IAuthorizationService authorizationService)
+			IAuthorizationService authorizationService, IConfiguration configuration,
+			IUserContext userContext)
 		{
 			_chapa = chapa;
 			_context = context;
 			_orderService = orderService;
 			_logger = logger;
+			_configuration = configuration;
 			_authorizationService = authorizationService;
+			_userContext = userContext;
 		}
 
 		[HttpGet]
@@ -59,17 +69,24 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpGet]
-		[Route("OrderConfirmation/{id}")]
-		public async Task<IActionResult> OrderConfirmation(int id)
+		[Route("OrderConfirmation")]
+		public async Task<IActionResult> OrderConfirmation()
 		{
 			try
 			{
-				var orderDto = await _orderService.GetOrderConfirmationDtoAsync(id);
+				var orderId = TempData["OrderId"] as int?;
+				if (orderId == null)
+				{
+					_logger.LogWarning("Order ID not found in TempData.");
+					return RedirectToAction("Index");
+				}
+
+				var orderDto = await _orderService.GetOrderConfirmationDtoAsync(orderId.Value);
 				if (orderDto == null) return NotFound();
 				var authResult = await _authorizationService.AuthorizeAsync(User, orderDto.UserId, new OrderOwnerOrAdminRequirement());
 				if (!authResult.Succeeded)
 				{
-					_logger.LogWarning("User {UserId} is not authorized to view order {OrderId}", User.FindFirstValue(ClaimTypes.NameIdentifier), id);
+					_logger.LogWarning("User {UserId} is not authorized to view order {OrderId}", User.FindFirstValue(ClaimTypes.NameIdentifier), orderId);
 					return Forbid();
 				}
 
@@ -79,6 +96,28 @@ namespace BulkyBooksWeb.Controllers
 			{
 				return NotFound(ex.Message);
 			}
+		}
+
+		[HttpGet]
+		[AllowAnonymous]
+		[Route("PaymentSuccess")]
+		public IActionResult PaymentSuccess([FromQuery] string token)
+		{
+			if (!ValidateToken(token, out int orderId, out var userId))
+			{
+				_logger.LogError("Invalid token: {Token}", token);
+				return BadRequest("Invalid token.");
+			}
+			if (userId == null)
+			{
+				_logger.LogWarning("User ID not found in token.");
+				return BadRequest("User ID not found in token.");
+			}
+
+			// Store the orderId in TempData for the next request
+			TempData["OrderId"] = orderId;
+
+			return RedirectToAction("OrderConfirmation");
 		}
 
 		[HttpPost]
@@ -103,84 +142,104 @@ namespace BulkyBooksWeb.Controllers
 				_logger.LogError("Validation errors: {@Errors}", errors);
 				return View("Index", model);
 			}
-			Console.WriteLine(model.OrderTotal);
 
 			try
 			{
-				// Create Chapa transaction request
 				var txRef = Chapa.GetUniqueRef();
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null)
+				{
+					_logger.LogWarning("User not found while creating order.");
+					return RedirectToAction("Login", "Auth");
+				}
+
+				var order = await _orderService.CreateTempOrderFromCartAsync(
+							cart,
+							txRef,
+							model.OrderTotal);
+
+				var callbackUrl = _configuration["PaymentGateway:CallbackUrl"];
+				var token = GenerateToken(order.Id, userId.Value);
+				var returnUrl = $"{_configuration["PaymentGateway:ReturnRootUrl"]}?token={token}";
+
+				// Create Chapa transaction request
 				var request = new ChapaRequest(
 					amount: (double)model.OrderTotal,
 					email: model.Email,
 					firstName: model.FirstName,
 					lastName: model.LastName,
-					tx_ref: GenerateTransactionReference(),
+					tx_ref: txRef,
 					currency: model.Currency,
-					callback_url: model.CallbackURL,
-					// return_url: model.ReturnURL,
+					callback_url: callbackUrl,
+					return_url: returnUrl + $"/{order.Id}",
 					phoneNo: model.PhoneNumber,
 					customTitle: $"Bulky Books - Order #{txRef}"
 				);
 
 				var response = await _chapa.RequestAsync(request);
-				if (response.Status == "success")
+				if (response.Status?.ToLower() == "success")
 				{
 					// Store transaction reference in session
 					HttpContext.Session.SetString("ChapaTxRef", request.TransactionReference);
 					if (response.CheckoutUrl != null)
+					{
 						return Redirect(response.CheckoutUrl);
+					}
 					return RedirectToAction("PaymentError");
 				}
 
+				await _orderService.FailOrderAsync(order.Id);
+
+				_logger.LogError("Chapa payment initialization failed: {Response}", response);
 				ModelState.AddModelError("", "Payment initialization failed");
 				return View("Index", model);
 			}
 			catch
 			{
-				ModelState.AddModelError("", "An error occurred while processing your payment. Please try again.");
+				ModelState.AddModelError("PaymentProcessingError", "An error occurred while processing your payment. Please try again.");
 				return View("Index", model);
 			}
 		}
 
 		[HttpGet]
+		[AllowAnonymous]
 		[Route("VerifyPayment")]
-		public async Task<IActionResult> VerifyPayment([FromBody] TrxResponseDto trxRes)
+		public async Task<IActionResult> VerifyPayment([FromQuery] TrxResponseDto trxRes)
 		{
 			if (trxRes == null)
 			{
-				_logger.LogError("Invalid JSON response from Chapa");
-				return RedirectToAction("PaymentFailed");
+				_logger.LogError("Invalid JSON response from Chapa.");
+				return BadRequest("Invalid JSON response.");
 			}
-			_logger.LogInformation("Verifying payment with response: {JsonResponse}", trxRes.ToString());
+
+			_logger.LogInformation("Verifying payment with response: {JsonResponse}", trxRes.ref_id);
+
 			try
 			{
 				var tx_ref = trxRes.ref_id;
 				var isValid = await _chapa.VerifyAsync(tx_ref);
+
 				if (isValid == null || !isValid.IsSuccess)
-					return RedirectToAction("PaymentFailed");
+				{
+					await _orderService.UpdateOrderPaymentStatusAsync(tx_ref, OrderStatus.Failed);
+					_logger.LogError("Payment verification failed: {TransactionReference}", tx_ref);
+					return BadRequest("Payment verification failed.");
+				}
 
-				var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? [];
+				_logger.LogInformation("Payment verified successfully: {TransactionReference}", tx_ref);
 
-				var order = await _orderService.CreateOrderFromCartAsync(
-					cart,
-					tx_ref,
-					(decimal)isValid.data.amount
-				);
+				var order = await _orderService.UpdateOrderPaymentStatusAsync(tx_ref, OrderStatus.Completed);
 
-				// Clear cart after successful order creation
+				// Clear the cart after successful order creation
 				HttpContext.Session.Remove("Cart");
 
-				return RedirectToAction("OrderConfirmation", new { id = order.Id });
+				return Ok("Payment verified successfully.");
 			}
 			catch (Exception ex)
 			{
-				_logger.LogError(ex, "Payment verification failed");
-				return RedirectToAction("PaymentFailed");
+				_logger.LogError(ex, "Payment verification failed.");
+				return StatusCode(500, "An error occurred while verifying the payment.");
 			}
-		}
-		private static string GenerateTransactionReference()
-		{
-			return $"TX-{Guid.NewGuid().ToString()[..8]}";
 		}
 
 		private List<CartItemDTO> GetCartItemDTOs(List<CartItemDTO> cartItems)
@@ -200,6 +259,79 @@ namespace BulkyBooksWeb.Controllers
 		private static decimal CalculateTax(List<CartItemDTO> cart)
 		{
 			return cart.Sum(i => i.Price * i.Quantity) * 0.15m; // 15% tax
+		}
+
+		private string GenerateToken(int orderId, int userId)
+		{
+			var jwtConfig = _configuration.GetSection("JwtConfig");
+			if (string.IsNullOrEmpty(jwtConfig["Key"]) || string.IsNullOrEmpty(jwtConfig["Issuer"]) || string.IsNullOrEmpty(jwtConfig["Audience"]))
+			{
+				throw new Exception("JWT configuration is missing required values.");
+			}
+
+			var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig["Key"] ?? ""));
+			var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+			var claims = new[]
+			{
+				new Claim("orderId", orderId.ToString()),
+				new Claim("userId", userId.ToString()),
+				new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+				new Claim(JwtRegisteredClaimNames.Exp, DateTimeOffset.UtcNow.AddMinutes(jwtConfig.GetValue<int>("DurationInMinutes")).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+			};
+
+			var token = new JwtSecurityToken(
+				issuer: jwtConfig["Issuer"],
+				audience: jwtConfig["Audience"],
+				claims: claims,
+				expires: DateTime.UtcNow.AddMinutes(jwtConfig.GetValue<int>("DurationInMinutes")),
+				signingCredentials: credentials
+			);
+
+			return new JwtSecurityTokenHandler().WriteToken(token);
+		}
+
+		private bool ValidateToken(string token, out int orderId, out int? userId)
+		{
+			var tokenHandler = new JwtSecurityTokenHandler();
+			var jwtConfig = _configuration.GetSection("JwtConfig");
+			if (string.IsNullOrEmpty(jwtConfig["Key"]) || string.IsNullOrEmpty(jwtConfig["Issuer"]) || string.IsNullOrEmpty(jwtConfig["Audience"]))
+			{
+				throw new Exception("JWT configuration is missing required values.");
+			}
+
+			var validationParameters = new TokenValidationParameters
+			{
+				ValidateIssuer = true,
+				ValidIssuer = jwtConfig["Issuer"],
+				ValidateAudience = true,
+				ValidAudience = jwtConfig["Audience"],
+				ValidateIssuerSigningKey = true,
+				IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig["Key"] ?? "")),
+				ValidateLifetime = true
+			};
+
+			try
+			{
+				var claimsPrincipal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+				var orderClaim = claimsPrincipal.FindFirst("orderId")?.Value;
+				var userClaim = claimsPrincipal.FindFirst("userId")?.Value;
+				if (orderClaim == null || userClaim == null)
+				{
+					orderId = 0;
+					userId = null;
+					return false;
+				}
+				orderId = int.Parse(orderClaim);
+				userId = int.Parse(userClaim);
+				return true;
+			}
+			catch
+			{
+				orderId = 0;
+				userId = null;
+				return false;
+			}
 		}
 	}
 }
