@@ -77,9 +77,21 @@ namespace BulkyBooksWeb.Controllers
 				var orderId = TempData["OrderId"] as int?;
 				if (orderId == null)
 				{
-					_logger.LogWarning("Order ID not found in TempData.");
-					ModelState.AddModelError("", "Order ID not found.");
-					return RedirectToAction("Index");
+					_logger.LogWarning("Order ID not found in TempData. Checking query string for token.");
+					// Attempt to recover from query string (i.e, after login)
+					if (!Request.Query.TryGetValue("token", out var token))
+					{
+						return RedirectToAction("Index");
+					}
+
+					if (!ValidateToken(token, out int parsedOrderId, out int? userId))
+					{
+						_logger.LogError("Invalid token after login attempt.");
+						return RedirectToAction("PaymentFailed");
+					}
+
+					orderId = parsedOrderId;
+					TempData["OrderId"] = orderId; // Reset TempData for subsequent requests
 				}
 
 				var orderDto = await _orderService.GetOrderConfirmationDtoAsync(orderId.Value);
@@ -117,6 +129,11 @@ namespace BulkyBooksWeb.Controllers
 
 			// Store the orderId in TempData for the next request
 			TempData["OrderId"] = orderId;
+
+			if (!(User?.Identity?.IsAuthenticated ?? false))
+			{
+				return RedirectToAction("Login", "Auth", new { returnUrl = $"/Checkout/OrderConfirmation?token={token}" });
+			}
 
 			return RedirectToAction("OrderConfirmation");
 		}
@@ -292,8 +309,14 @@ namespace BulkyBooksWeb.Controllers
 			return new JwtSecurityTokenHandler().WriteToken(token);
 		}
 
-		private bool ValidateToken(string token, out int orderId, out int? userId)
+		private bool ValidateToken(string? token, out int orderId, out int? userId)
 		{
+			if (string.IsNullOrEmpty(token))
+			{
+				orderId = 0;
+				userId = null;
+				return false;
+			}
 			var tokenHandler = new JwtSecurityTokenHandler();
 			var jwtConfig = _configuration.GetSection("JwtConfig");
 			if (string.IsNullOrEmpty(jwtConfig["Key"]) || string.IsNullOrEmpty(jwtConfig["Issuer"]) || string.IsNullOrEmpty(jwtConfig["Audience"]))
