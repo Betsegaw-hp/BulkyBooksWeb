@@ -23,8 +23,8 @@ namespace BulkyBooksWeb.Models.ViewModels
 
 		public string? Currency { get; set; } = "ETB";
 
-		public string CallbackURL { get; set; } = "https://webhook.site/2383e50c-0c90-4e08-b3d3-6e0af8128c4e";
-		public string ReturnURL { get; set; } = "https://webhook.site/ee6f7284-bc5f-4f56-88fc-16a0569afb97";
+		public string CallbackURL { get; set; } = "https://bulkybooks-webapp-bsd0h3gfdad2bvag.eastus-01.azurewebsites.net/Checkout/VerifyPayment";
+		public string ReturnURL { get; set; } = "https://bulkybooks-webapp-bsd0h3gfdad2bvag.eastus-01.azurewebsites.net/Checkout/OrderConfirmation";
 	}
 
 	public class CartItemDTO
