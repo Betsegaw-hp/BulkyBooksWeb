@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace BulkyBooksWeb.Controllers
 {
 
-	[Authorize(Roles = "admin, author")]
+	[Authorize(Roles = "admin, author, user")]
 	[Route("[controller]")]
 	public class BookController : Controller
 	{
@@ -33,6 +33,7 @@ namespace BulkyBooksWeb.Controllers
 			_userContext = userContext;
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
@@ -58,6 +59,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(book);
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpGet("Create")]
 		public async Task<IActionResult> Create()
 		{
@@ -72,6 +74,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(bookViewModel);
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpPost("Create")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([FromForm] CreateBookDto createBookDto)
@@ -91,6 +94,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(createBookDto);
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpGet("Edit/{id:int}")]
 		public async Task<IActionResult> Edit(int id)
 		{
@@ -117,6 +121,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(bookViewModel);
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpPost("Edit/{id:int}")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto)
@@ -148,6 +153,7 @@ namespace BulkyBooksWeb.Controllers
 			}
 		}
 
+		[Authorize(Roles = "admin, author")]
 		[HttpPost("Delete/{id:int}")]
 		public async Task<IActionResult> Delete(int id)
 		{
