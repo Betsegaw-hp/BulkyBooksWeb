@@ -63,7 +63,7 @@ namespace BulkyBooksWeb.Controllers
 		{
 			IEnumerable<Category> categories = await _categoryService.GetAllCategories();
 
-			BookCreateViewModel bookViewModel = new BookCreateViewModel()
+			BookCreateViewModel bookViewModel = new()
 			{
 				Categories = categories,
 				CreateBookDto = new CreateBookDto()
@@ -109,7 +109,7 @@ namespace BulkyBooksWeb.Controllers
 					ISBN = book.ISBN,
 					Price = book.Price,
 					Description = book.Description,
-					// CoverImageUrl = book.CoverImageUrl,
+					CoverImageUrl = book.CoverImageUrl,
 					CategoryId = book.CategoryId,
 				}
 			};

@@ -15,6 +15,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
@@ -44,7 +45,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
-    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("Author"));
+    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("author"));
     options.AddPolicy("UserOnly", policy => policy.RequireRole("user"));
     options.AddPolicy("BookOwnerOrAdmin", policy =>
         policy.Requirements.Add(new BookOwnerOrAdminRequirement()));

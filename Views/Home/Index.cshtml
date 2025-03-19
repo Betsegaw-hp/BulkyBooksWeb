@@ -54,8 +54,11 @@
                                     case "fantasy":
                                         <i class="fas fa-dragon fa-3x text-danger"></i>
                                         break;
-                                    case "non-fictional":
+                                    case "non-fiction":
                                         <i class="fas fa-landmark fa-3x text-success"></i>
+                                        break;
+                                    case "romance":
+                                        <i class="fas fa-heart fa-3x text-success"></i>
                                         break;
                                     default:
                                         <i class="fas fa-bookmark fa-3x text-info"></i>
@@ -77,7 +80,6 @@
 <section id="book-listing" class="py-5 bg-light">
     <div class="container">
         <div class="row">
-            <!-- Sidebar Filters -->
             <div class="col-lg-3 mb-4">
                 <div class="card border-dark sticky-top" style="top: 20px;">
                     <div class="card-header bg-dark text-white">
@@ -85,7 +87,6 @@
                     </div>
                     <div class="card-body">
                         <form id="filterForm" method="get">
-                            <!-- Search Box -->
                             <div class="mb-4">
                                 <label for="searchQuery" class="form-label">Search Books</label>
                                 <div class="input-group">
@@ -96,7 +97,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Category Filter -->
                             <div class="mb-4">
                                 <label class="form-label">Categories</label>
                                 <div class="overflow-auto" style="max-height: 200px;">
@@ -113,7 +113,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Price Range Filter -->
                             <div class="mb-4">
                                 <label class="form-label">Price Range</label>
                                 <div class="row g-2">
@@ -130,11 +129,11 @@
                             <div class="mb-4">
                                 <label for="sortOption" class="form-label">Sort By</label>
                                 <select class="form-select" id="sortOption" name="SortOption">
-                                    @* <option value="newest" @(Model.CurrentFilter.SortOption == "newest" ? "selected" : "")>Newest Arrivals</option>
-                                    <option value="price_asc" @(Model.CurrentFilter.SortOption == "price_asc" ? "selected" : "")>Price: Low to High</option>
-                                    <option value="price_desc" @(Model.CurrentFilter.SortOption == "price_desc" ? "selected" : "")>Price: High to Low</option>
-                                    <option value="title_asc" @(Model.CurrentFilter.SortOption == "title_asc" ? "selected" : "")>Title: A to Z</option>
-                                    <option value="title_desc" @(Model.CurrentFilter.SortOption == "title_desc" ? "selected" : "")>Title: Z to A</option> *@
+                                    <option value="newest" selected="@(Model.CurrentFilter.SortOption == "newest" ? "selected" : null)">Newest Arrivals</option>
+                                    <option value="price_asc" selected="@(Model.CurrentFilter.SortOption == "price_asc" ? "selected" : null)">Price: Low to High</option>
+                                    <option value="price_desc" selected="@(Model.CurrentFilter.SortOption == "price_desc" ? "selected" : null)">Price: High to Low</option>
+                                    <option value="title_asc" selected="@(Model.CurrentFilter.SortOption == "title_asc" ? "selected" : null)">Title: A to Z</option>
+                                    <option value="title_desc" selected="@(Model.CurrentFilter.SortOption == "title_desc" ? "selected" : null)">Title: Z to A</option>
                                 </select>
                             </div>
                             
@@ -220,10 +219,10 @@
                         <div class="col-md-6 col-lg-4">
                             <div class="card h-100 border-dark">
                                 <div class="position-relative">
-                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
-                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
-                                    <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
+                                    @* <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
                                     @if (book.CreatedDateTime.Year < book.UpdatedDateTime.Year)
                                     {
                                         <div class="position-absolute top-0 end-0 m-2">
@@ -260,10 +259,10 @@
                         <div class="card mb-3 border-dark">
                             <div class="row g-0">
                                 <div class="col-md-3">
-                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
-                                         class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;"> *@
-                                        <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
                                          class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;">
+                                    @* <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
+                                        class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;"> *@
                                 </div>
                                 <div class="col-md-9">
                                     <div class="card-body">
@@ -348,7 +347,7 @@
     </div>
 </section>
 
-<!-- Featured Books Section -->
+<!-- Featured Books Saction -->
 <section class="py-5">
     <div class="container">
         <h2 class="text-center mb-4">Featured Books</h2>
@@ -360,10 +359,10 @@
                         <div class="featured-book-item px-2">
                             <div class="card h-100 border-dark">
                                 <div class="position-relative">
-                                    @* <img src="@(string.IsNullOrEmpty(book.ImageUrl) ? "/images/placeholder-book.png" : book.ImageUrl)" 
-                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
-                                    <img src="/images/Black_Modern_Photographic_Man_Silhouette_Novel_Book_Cover.png" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
+                                    @* <img src="/images/Black_Modern_Photographic_Man_Silhouette_Novel_Book_Cover.png" 
+                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
                                     <div class="position-absolute top-0 start-0 m-2">
                                         <span class="badge bg-danger">Featured</span>
                                     </div>

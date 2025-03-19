@@ -6,33 +6,51 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using BulkyBooksWeb.Data;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using BulkyBooksWeb.Models.ViewModels;
+using BulkyBooksWeb.Services;
+using System.Text.Json;
 
 namespace BulkyBooksWeb.Controllers;
 
 public class AuthController : Controller
 {
 	private readonly ApplicationDbContext _context;
+	private readonly IAuthorizationService _authService;
+	private readonly IUserContext _userContext;
+	private readonly UserService _userService;
 
-	public AuthController(ApplicationDbContext context)
+	public AuthController(
+		ApplicationDbContext context,
+		IAuthorizationService authorizationService,
+		IUserContext userContext,
+		UserService userService)
 	{
 		_context = context;
+		_authService = authorizationService;
+		_userContext = userContext;
+		_userService = userService;
 	}
 
 
 	public async Task<IActionResult> Profile()
 	{
-		var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-		if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var userId))
-		{
-			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-			if (user == null)
-			{
-				return NotFound();
-			}
-			return View(user);
-		}
+		var userId = _userContext.GetCurrentUserId();
+		if (userId == null) return RedirectToAction("Login");
 
-		return RedirectToAction("Login");
+		var user = await _userService.GetUserById((int)userId);
+		if (user == null) return NotFound();
+		UserProfileViewModel userProfileViewModel = new()
+		{
+			User = user,
+			UpdateProfile = new UpdateProfileViewModel
+			{
+				FullName = user.FullName,
+				Email = user.Email
+			}
+		};
+
+		return View(userProfileViewModel);
 	}
 
 	public IActionResult Login()
@@ -144,7 +162,7 @@ public class AuthController : Controller
 	public async Task<IActionResult> Logout()
 	{
 		await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-		return RedirectToAction("Index", "Home"); // Redirect to home page after logout
+		return RedirectToAction("Index", "Home");
 	}
 
 	public IActionResult IsUsernameUnique(string username)
@@ -161,6 +179,111 @@ public class AuthController : Controller
 		}
 		ViewData["ReturnUrl"] = ReturnUrl;
 		return View();
+	}
+
+	[HttpPost]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> UpdateProfile(UpdateProfileViewModel model)
+	{
+		var userId = _userContext.GetCurrentUserId();
+		if (userId == null) return RedirectToAction("Login");
+
+		if (!ModelState.IsValid)
+		{
+			var errors = ModelState
+				.Where(x => x.Value.Errors.Count > 0)
+				.Select(x => new
+				{
+					Field = x.Key,
+					Errors = string.Join(", ", x.Value.Errors.Select(e => e.ErrorMessage))
+				});
+
+			Console.WriteLine($"Validation errors: {JsonSerializer.Serialize(errors)}");
+			var userProfileViewModel = new UserProfileViewModel
+			{
+				UpdateProfile = model,
+				User = await _userService.GetUserById((int)userId) ?? new()
+			};
+			return View("Profile", userProfileViewModel);
+		}
+
+
+		var user = await _userService.GetUserById((int)userId);
+		if (user == null) return NotFound();
+
+		user.FullName = model.FullName;
+		user.Email = model.Email;
+
+		await _context.SaveChangesAsync();
+
+		return RedirectToAction("Profile");
+	}
+
+	[HttpPost]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+	{
+		var userId = _userContext.GetCurrentUserId();
+		if (userId == null) return RedirectToAction("Login");
+		if (!ModelState.IsValid)
+		{
+
+			var userProfileViewModel = new UserProfileViewModel
+			{
+				ChangePassword = model,
+				User = await _userService.GetUserById((int)userId) ?? new()
+			};
+			return View("Profile", userProfileViewModel);
+		}
+
+
+		var user = await _userService.GetUserById((int)userId);
+		if (user == null) return NotFound();
+
+		if (!VerifyPassword(model.CurrentPassword, user.PasswordHash))
+		{
+			ModelState.AddModelError(string.Empty, "Current password is incorrect.");
+			return View("Profile", new UserProfileViewModel
+			{
+				ChangePassword = model,
+				User = user
+			});
+		}
+
+		user.PasswordHash = HashPassword(model.NewPassword);
+		await _context.SaveChangesAsync();
+
+		return RedirectToAction("Logout");
+	}
+
+	[HttpPost]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> UpdatePreferences(UpdatePreferencesViewModel model)
+	{
+
+		var userId = _userContext.GetCurrentUserId();
+		if (userId == null) return RedirectToAction("Login");
+
+		if (!ModelState.IsValid)
+		{
+			var userProfileViewModel = new UserProfileViewModel
+			{
+				UpdatePreferences = model,
+				User = await _userService.GetUserById((int)userId) ?? new()
+			};
+			return View("Profile", userProfileViewModel);
+		}
+
+		var user = await _userService.GetUserById((int)userId);
+		if (user == null) return NotFound();
+
+		// user.EmailNotificationEnabled = model.EmailNotificationEnabled;
+		// user.ActivityAlertEnabled = model.ActivityAlertEnabled;
+		// user.ItemsPerPage = model.ItemsPerPage;
+
+		// await _context.SaveChangesAsync();
+
+		return RedirectToAction("Profile");
 	}
 
 	private static string HashPassword(string password)

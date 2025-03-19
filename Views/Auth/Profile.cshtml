@@ -1,4 +1,4 @@
-@model BulkyBooksWeb.Models.User
+@model BulkyBooksWeb.Models.ViewModels.UserProfileViewModel
 @{
     ViewData["Title"] = "My Account";
 }
@@ -12,32 +12,34 @@
                 </div>
                 <div class="card-body text-center">
                     <div class="position-relative mb-3">
-                        @* @if (string.IsNullOrEmpty(Model.ProfilePictureUrl))
-                        { *@
+                        @if (string.IsNullOrEmpty(Model.User.AvatarUrl))
+                        { 
                             <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto" style="width: 120px; height: 120px; border: 2px dashed #6c757d;">
                                 <i class="fas fa-user fa-4x text-secondary"></i>
                             </div>
-                        @* }
+                        }
                         else
                         {
-                            <img src="@Model.ProfilePictureUrl" alt="Profile Picture" class="rounded-circle mx-auto d-block" style="width: 120px; height: 120px; object-fit: cover; border: 2px solid #6c757d;" />
-                        } *@
+                            <img src="@Model.User.AvatarUrl" alt="Profile Picture" class="rounded-circle mx-auto d-block" style="width: 120px; height: 120px; object-fit: cover; border: 2px solid #6c757d;" />
+                        } 
                         <button class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" style="width: 32px; height: 32px;" data-bs-toggle="modal" data-bs-target="#profilePictureModal">
                             <i class="fas fa-camera"></i>
                         </button>
                     </div>
-                    <h5>@Model.FullName</h5>
-                    <p class="text-muted mb-2">@Model.Email</p>
-                    <div class="badge bg-success mb-3">@Model.Role</div>
+                    <h5>@Model.User.FullName</h5>
+                    <p class="text-muted mb-2">@Model.User.Email</p>
+                    <div class="badge bg-success mb-3">@Model.User.Role.ToString()</div>
                     
                     <div class="d-grid gap-2">
-                        <a asp-controller="Account" asp-action="Logout" class="btn btn-outline-danger">
-                            <i class="fas fa-sign-out-alt me-2"></i> Logout
-                        </a>
+                        <form asp-controller="Auth" asp-action="Logout" method="post" class="">
+                             <button type="submit" class=" btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </button>
+                        </form>
                     </div>
                 </div>
                 <div class="card-footer text-center">
-                    @* <small class="text-muted">Member since: @n.ToString("MMMM yyyy")</small> *@
+                    <small class="text-muted">Member since: @Model.User.CreatedAt.ToString("MMMM yyyy")</small>
                 </div>
             </div>
             
@@ -45,20 +47,20 @@
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Account Activity</h5>
                 </div>
-                <div class="card-body">
+                @* <div class="card-body">
                     <div class="mb-2">
                         <small class="text-muted">Last login:</small>
-                        @* <p class="mb-0">@Model.LastLoginDate.ToString("MMM dd, yyyy h:mm tt")</p> *@
+                        <p class="mb-0">@Model.User.LastLoginDate.ToString("MMM dd, yyyy h:mm tt")</p>
                     </div>
                     <div class="mb-2">
                         <small class="text-muted">Last password change:</small>
-                        @* <p class="mb-0">@Model.LastPasswordChangeDate.ToString("MMM dd, yyyy")</p> *@
+                        <p class="mb-0">@Model.User.LastPasswordChangeDate.ToString("MMM dd, yyyy")</p>
                     </div>
                     <div>
                         <small class="text-muted">Login count:</small>
-                        @* <p class="mb-0">@Model.LoginCount</p> *@
+                        <p class="mb-0">@Model.User.LoginCount</p>
                     </div>
-                </div>
+                </div> *@
             </div>
         </div>
         
@@ -89,29 +91,23 @@
                         <div class="tab-pane fade show active" id="personal-info" role="tabpanel" aria-labelledby="personal-info-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Personal Information</h4>
                             
-                            <form asp-controller="Account" asp-action="UpdateProfile" method="post">
+                            <form asp-controller="Auth" asp-action="UpdateProfile" method="post">
                                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                                
+                                @Html.AntiForgeryToken()
+
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label asp-for="FullName" class="form-label">FullName</label>
-                                        <input asp-for="FullName" class="form-control" />
-                                        <span asp-validation-for="FullName" class="text-danger"></span>
+                                        <label asp-for="UpdateProfile.FullName" class="form-label">Full Name</label>
+                                        <input asp-for="UpdateProfile.FullName" class="form-control" />
+                                        <span asp-validation-for="UpdateProfile.FullName" class="text-danger"></span>   
                                     </div>
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label asp-for="Email" class="form-label">Email Address</label>
-                                    <input asp-for="Email" class="form-control" readonly />
-                                    <small class="form-text text-muted">Email address cannot be changed. Contact support for assistance.</small>
+                                    <label asp-for="UpdateProfile.Email" class="form-label">Email Address</label>
+                                    <input asp-for="UpdateProfile.Email" class="form-control"  />
+                                    <span asp-validation-for="UpdateProfile.Email" class="text-danger"></span>
                                 </div>
-                                
-                                
-                                @* <div class="mb-3">
-                                    <label asp-for="Bio" class="form-label">Bio</label>
-                                    <textarea asp-for="Bio" class="form-control" rows="3" placeholder="Tell us a little about yourself..."></textarea>
-                                    <span asp-validation-for="Bio" class="text-danger"></span>
-                                </div> *@
                                 
                                 <div class="d-flex justify-content-end">
                                     <button type="submit" class="btn btn-primary">
@@ -130,23 +126,26 @@
                                     <h5 class="mb-0">Change Password</h5>
                                 </div>
                                 <div class="card-body">
-                                    <form asp-controller="Account" asp-action="ChangePassword" method="post">
+                                    <form asp-controller="Auth" asp-action="ChangePassword" method="post">
+                                        @Html.AntiForgeryToken()
+                                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                                        
                                         <div class="mb-3">
-                                            <label for="currentPassword" class="form-label">Current Password</label>
-                                            <input type="password" id="currentPassword" name="CurrentPassword" class="form-control" required />
+                                            <label asp-for="ChangePassword.CurrentPassword" class="form-label">Current Password</label>
+                                            <input asp-for="ChangePassword.CurrentPassword" type="password" class="form-control" required />
+                                            <span asp-validation-for="ChangePassword.CurrentPassword" type="password" class="text-danger"></span>
                                         </div>
                                         
                                         <div class="mb-3">
-                                            <label for="newPassword" class="form-label">New Password</label>
-                                            <input type="password" id="newPassword" name="NewPassword" class="form-control" required />
-                                            <div class="form-text">
-                                                Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
-                                            </div>
+                                            <label asp-for="ChangePassword.NewPassword" class="form-label">New Password</label>
+                                            <input asp-for="ChangePassword.NewPassword" type="password" class="form-control" required />
+                                            <span asp-validation-for="ChangePassword.NewPassword" class="text-danger"></span>
                                         </div>
                                         
                                         <div class="mb-3">
-                                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                                            <input type="password" id="confirmPassword" name="ConfirmPassword" class="form-control" required />
+                                            <label asp-for="ChangePassword.ConfirmNewPassword" class="form-label">Confirm New Password</label>
+                                            <input asp-for="ChangePassword.ConfirmNewPassword" type="password" class="form-control" required />
+                                            <span asp-validation-for="ChangePassword.ConfirmNewPassword" class="text-danger"></span>
                                         </div>
                                         
                                         <div class="d-flex justify-content-end">
@@ -164,13 +163,13 @@
                                 </div>
                                 <div class="card-body">
                                     @* <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="enable2fa" @(Model.TwoFactorEnabled ? "checked" : "") />
+                                        <input class="form-check-input" type="checkbox" id="enable2fa" @(Model.User.TwoFactorEnabled ? "checked" : "") />
                                         <label class="form-check-label" for="enable2fa">Enable Two-Factor Authentication</label>
                                     </div>
                                     
                                     <p class="mb-3">Two-factor authentication adds an extra layer of security to your account by requiring more than just a password to sign in.</p>
                                     
-                                    <button class="btn btn-outline-info" id="configure2fa" @(Model.TwoFactorEnabled ? "" : "disabled")>
+                                    <button class="btn btn-outline-info" id="configure2fa" @(Model.User.TwoFactorEnabled ? "" : "disabled")>
                                         <i class="fas fa-qrcode me-2"></i> Configure 2FA
                                     </button> *@
                                     <p>Comming soon!</p>
@@ -182,34 +181,34 @@
                         <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Account Preferences</h4>
                             
-                            <form asp-controller="Account" asp-action="UpdatePreferences" method="post">
+                            <form asp-controller="Auth" asp-action="UpdatePreferences" method="post">
+                                @Html.AntiForgeryToken()
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                                 <div class="mb-4">
                                     <h5>Notifications</h5>
                                     <div class="form-check mb-2">
-                                        @* <input class="form-check-input" type="checkbox" id="emailNotifications" name="EmailNotifications" @(Model.EmailNotificationsEnabled ? "checked" : "") /> *@
-                                        <label class="form-check-label" for="emailNotifications">
+                                        <input asp-for="UpdatePreferences.EmailNotificationEnabled" class="form-check-input" type="checkbox" />
+                                        <label class="form-check-label" asp-for="UpdatePreferences.EmailNotificationEnabled">
                                             Email Notifications
                                         </label>
-                                        <div class="form-text">Receive notifications about system updates and new features.</div>
                                     </div>
                                     
                                     <div class="form-check">
-                                        @* <input class="form-check-input" type="checkbox" id="activityAlerts" name="ActivityAlerts" @(Model.ActivityAlertsEnabled ? "checked" : "") /> *@
-                                        <label class="form-check-label" for="activityAlerts">
+                                        <input asp-for="UpdatePreferences.ActivityAlertEnabled" class="form-check-input" type="checkbox" />
+                                        <label class="form-check-label" asp-for="UpdatePreferences.ActivityAlertEnabled">
                                             Activity Alerts
                                         </label>
-                                        <div class="form-text">Receive alerts about important account activity.</div>
                                     </div>
                                 </div>
                                 
                                 <div class="mb-4">
                                     <h5>Display Settings</h5>
                                     <div class="mb-3">
-                                        <label for="itemsPerPage" class="form-label">Items per page</label>
-                                        <select class="form-select" id="itemsPerPage" name="ItemsPerPage">
-                                            @* <option value="10" @(Model.ItemsPerPage == 10 ? "selected" : "")>10</option>
-                                            <option value="25" @(Model.ItemsPerPage == 25 ? "selected" : "")>25</option>
-                                            <option value="50" @(Model.ItemsPerPage == 50 ? "selected" : "")>50</option> *@
+                                        <label asp-for="UpdatePreferences.ItemsPerPage" class="form-label">Items per page</label>
+                                        <select asp-for="UpdatePreferences.ItemsPerPage" class="form-select">
+                                            <option value="10">10</option>
+                                            <option value="25">25</option>
+                                            <option value="50">50</option>
                                             <option value="100">100</option>
                                         </select>
                                     </div>
@@ -224,39 +223,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Profile Picture Upload Modal -->
-<div class="modal fade" id="profilePictureModal" tabindex="-1" aria-labelledby="profilePictureModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="profilePictureModalLabel">Update Profile Picture</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form asp-controller="Account" asp-action="UpdateProfilePicture" method="post" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="profilePicture" class="form-label">Choose a new profile picture</label>
-                        <input class="form-control" type="file" id="profilePicture" name="ProfilePicture" accept="image/*" required>
-                        <div class="form-text">Maximum file size: 5MB. Supported formats: JPG, PNG, GIF.</div>
-                    </div>
-                    
-                    <div class="text-center mt-4">
-                        <div id="imagePreview" class="d-none mb-3">
-                            <img src="#" alt="Preview" class="img-thumbnail" style="max-height: 200px;" />
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-upload me-2"></i> Upload Picture
-                            </button>
-                        </div>
-                    </div>
-                </form>
             </div>
         </div>
     </div>

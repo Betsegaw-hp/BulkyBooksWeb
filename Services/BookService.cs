@@ -68,7 +68,7 @@ namespace BulkyBooksWeb.Services
 				Description = createBookDto.Description,
 				Price = createBookDto.Price,
 				PublishedDate = createBookDto.PublishedDate,
-				// CoverImageUrl = createBookDto.CoverImageUrl,
+				CoverImageUrl = createBookDto.CoverImageUrl,
 				CategoryId = createBookDto.CategoryId
 			};
 
@@ -86,7 +86,7 @@ namespace BulkyBooksWeb.Services
 				book.Price = updateBookDto.Price;
 				book.Description = updateBookDto.Description;
 				book.PublishedDate = updateBookDto.PublishedDate;
-				// book.CoverImageUrl = updateBookDto.CoverImageUrl;
+				book.CoverImageUrl = updateBookDto.CoverImageUrl;
 				book.CategoryId = updateBookDto.CategoryId;
 				book.UpdatedDateTime = updateBookDto.UpdatedDateTime;
 

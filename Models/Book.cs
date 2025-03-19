@@ -35,6 +35,8 @@ namespace BulkyBooksWeb.Models
 		[DataType(DataType.Date)]
 		public DateTime PublishedDate { get; set; }
 
+		public string CoverImageUrl { get; set; } = string.Empty;
+
 		// Navigation property
 		public virtual Category Category { get; set; } = null!;
 		public virtual User Author { get; set; } = null!;

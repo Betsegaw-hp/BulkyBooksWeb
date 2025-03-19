@@ -9,35 +9,58 @@
             <h2>@Model.Title</h2>
         </div>
         <div class="card-body">
-            <h3>Book Information</h3>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">Author:</div>
-                <div class="col-md-9">@Model.Author.FullName - (@Model.Author.Username)</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">Published Date:</div>
-                <div class="col-md-9">@Model.PublishedDate.ToLocalTime()</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">Category:</div>
-                <div class="col-md-9">
-                    <a asp-controller="Category" asp-action="Detail" asp-route-id="@Model.CategoryId" class="btn btn-primary btn-sm">
-                        @Model.Category?.Name
-                    </a>
+            <div class="row">
+                <!-- Cover Image Column -->
+                <div class="col-md-4 mb-4">
+                    @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+                    {
+                        <img src="@Model.CoverImageUrl" alt="Cover of @Model.Title" class="img-fluid rounded border border-dark" style="max-height: 400px; width: 100%; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="border border-dark rounded d-flex justify-content-center align-items-center bg-light" style="height: 300px;">
+                            <div class="text-center p-4">
+                                <i class="fas fa-book fa-4x text-muted mb-3"></i>
+                                <p class="text-muted">No cover image available</p>
+                            </div>
+                        </div>
+                    }
+                    <div class="mt-3 text-center">
+                        <h4 class="text-primary">$@Model.Price.ToString("0.00")</h4>
+                    </div>
+                </div>
+                
+                <!-- Book Information Column -->
+                <div class="col-md-8">
+                    <h3>Book Information</h3>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Author:</div>
+                        <div class="col-md-9">@Model.Author.FullName - (@Model.Author.Username)</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Published Date:</div>
+                        <div class="col-md-9">@Model.PublishedDate.ToLocalTime()</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Category:</div>
+                        <div class="col-md-9">
+                            <a asp-controller="Category" asp-action="Detail" asp-route-id="@Model.CategoryId" class="btn btn-primary btn-sm">
+                                @Model.Category?.Name
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">ISBN:</div>
+                        <div class="col-md-9">@(string.IsNullOrEmpty(Model.ISBN) ? "N/A" : Model.ISBN)</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3 fw-bold">Description:</div>
+                        <div class="col-md-9">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</div>
+                    </div>
                 </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">ISBN:</div>
-                <div class="col-md-9">@(string.IsNullOrEmpty(Model.ISBN) ? "N/A" : Model.ISBN)</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">Price:</div>
-                <div class="col-md-9">$@Model.Price.ToString("0.00")</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3 fw-bold">Description:</div>
-                <div class="col-md-9">@(string.IsNullOrEmpty(Model.Description) ? "No description available." : Model.Description)</div>
-            </div>
+            
+            <hr class="my-4" style="border-style: dashed;">
             
             <div class="d-flex justify-content-between mt-4">
                 <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
@@ -51,3 +74,6 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+}
