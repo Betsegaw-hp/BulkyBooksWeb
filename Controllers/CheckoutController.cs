@@ -9,6 +9,7 @@ using BulkyBooksWeb.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using BulkyBooksWeb.Policies;
+using BulkyBooksWeb.Dtos;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -143,10 +144,17 @@ namespace BulkyBooksWeb.Controllers
 
 		[HttpGet]
 		[Route("VerifyPayment")]
-		public async Task<IActionResult> VerifyPayment(string tx_ref)
+		public async Task<IActionResult> VerifyPayment([FromBody] TrxResponseDto trxRes)
 		{
+			if (trxRes == null)
+			{
+				_logger.LogError("Invalid JSON response from Chapa");
+				return RedirectToAction("PaymentFailed");
+			}
+			_logger.LogInformation("Verifying payment with response: {JsonResponse}", trxRes.ToString());
 			try
 			{
+				var tx_ref = trxRes.ref_id;
 				var isValid = await _chapa.VerifyAsync(tx_ref);
 				if (isValid == null || !isValid.IsSuccess)
 					return RedirectToAction("PaymentFailed");

@@ -15,4 +15,10 @@ namespace BulkyBooksWeb.Dtos
 
 	}
 
+	public class TrxResponseDto
+	{
+		public string trx_ref { get; set; } = string.Empty;
+		public string ref_id { get; set; } = string.Empty;
+		public string status { get; set; } = string.Empty;
+	}
 }
