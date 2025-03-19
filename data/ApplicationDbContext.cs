@@ -20,12 +20,6 @@ namespace BulkyBooksWeb.Data
 		// public DbSet<ShoppingCart> ShoppingCarts { get; set; } = default!;
 		// public DbSet<OrderHeader> OrderHeaders { get; set; } = default!;
 		// public DbSet<OrderDetails> OrderDetails { get; set; } = default!;
-		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-		{
-			optionsBuilder
-				.UseLazyLoadingProxies() // Enable lazy loading
-				.UseSqlServer("Server=DESKTOP-CQ5L6HL\\SQLEXPRESS;Database=BulkyBooks;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true");
-		}
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
