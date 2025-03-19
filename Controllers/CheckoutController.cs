@@ -78,6 +78,7 @@ namespace BulkyBooksWeb.Controllers
 				if (orderId == null)
 				{
 					_logger.LogWarning("Order ID not found in TempData.");
+					ModelState.AddModelError("", "Order ID not found.");
 					return RedirectToAction("Index");
 				}
 
@@ -171,7 +172,7 @@ namespace BulkyBooksWeb.Controllers
 					tx_ref: txRef,
 					currency: model.Currency,
 					callback_url: callbackUrl,
-					return_url: returnUrl + $"/{order.Id}",
+					return_url: returnUrl,
 					phoneNo: model.PhoneNumber,
 					customTitle: $"Bulky Books - Order #{txRef}"
 				);
@@ -196,7 +197,7 @@ namespace BulkyBooksWeb.Controllers
 			}
 			catch
 			{
-				ModelState.AddModelError("PaymentProcessingError", "An error occurred while processing your payment. Please try again.");
+				ModelState.AddModelError("", "An error occurred while processing your payment. Please try again.");
 				return View("Index", model);
 			}
 		}
