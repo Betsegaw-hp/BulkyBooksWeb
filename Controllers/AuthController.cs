@@ -13,7 +13,6 @@ using System.Text.Json;
 
 namespace BulkyBooksWeb.Controllers
 {
-	[Authorize(Roles = "admin,author,user")]
 	public class AuthController : Controller
 	{
 		private readonly ApplicationDbContext _context;
@@ -56,7 +55,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(userProfileViewModel);
 		}
 
-		public IActionResult Login(string returnUrl = null!)
+		public IActionResult Login(string? returnUrl)
 		{
 			if (User?.Identity?.IsAuthenticated ?? false)
 			{
@@ -68,7 +67,6 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[AllowAnonymous]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Login(LoginModel login, string? returnUrl)
 		{
@@ -120,7 +118,6 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[AllowAnonymous]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> SignUp(SignUpModel signUp)
 		{
@@ -167,6 +164,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(signUp);
 		}
 
+		[Authorize]
 		[HttpPost]
 		public async Task<IActionResult> Logout()
 		{
@@ -174,14 +172,12 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Index", "Home");
 		}
 
-		[AllowAnonymous]
 		public IActionResult IsUsernameUnique(string username)
 		{
 			var isUnique = !_context.Users.Any(u => u.Username == username);
 			return Json(isUnique);
 		}
 
-		[AllowAnonymous]
 		public IActionResult AccessDenied([FromQuery] string ReturnUrl)
 		{
 			if (string.IsNullOrEmpty(ReturnUrl))
@@ -192,6 +188,7 @@ namespace BulkyBooksWeb.Controllers
 			return View();
 		}
 
+		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> UpdateProfile(UpdateProfileViewModel model)
@@ -230,6 +227,7 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Profile");
 		}
 
+		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
@@ -267,6 +265,7 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Logout");
 		}
 
+		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> UpdatePreferences(UpdatePreferencesViewModel model)

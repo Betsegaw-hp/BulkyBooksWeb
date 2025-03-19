@@ -47,7 +47,6 @@ namespace BulkyBooksWeb.Services
 			return orders;
 		}
 
-
 		public async Task<OrderConfirmationDto?> GetOrderConfirmationDtoAsync(int id)
 		{
 			var order = await _context.Orders

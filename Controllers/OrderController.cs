@@ -32,7 +32,7 @@ namespace BulkyBooksWeb.Controllers
 		public async Task<IActionResult> Index([FromQuery] OrderFilterViewModel orderFilter)
 		{
 			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return RedirectToAction("Login", "Auth");
+			if (userId == null) return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index") });
 
 
 			var orders = await _orderService.GetAllOrders();
