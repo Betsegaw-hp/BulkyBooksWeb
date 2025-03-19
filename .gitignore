@@ -5,7 +5,7 @@
 
 # dotenv files
 .env
-
+*.sql
 # User-specific files
 *.rsuser
 *.suo
