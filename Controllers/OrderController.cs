@@ -50,7 +50,15 @@ namespace BulkyBooksWeb.Controllers
 			{
 				Orders = orders,
 				TotalOrdersMonthly = orders.Count(o => o.OrderDate.Month == DateTime.Now.Month && o.OrderDate.Year == DateTime.Now.Year),
-				MonthlyRevenue = orders.Where(o => o.OrderDate.Month == DateTime.Now.Month && o.OrderDate.Year == DateTime.Now.Year).Sum(o => o.OrderTotal),
+				MonthlyRevenue = orders.Where(o =>
+											o.OrderDate.Month == DateTime.Now.Month &&
+											o.OrderDate.Year == DateTime.Now.Year && o.Status == OrderStatus.Completed)
+										.Sum(o => o.OrderTotal),
+				TotalOrders = orders.Count(),
+				TotalCompletedRevenue = orders.Where(o => o.Status == OrderStatus.Completed).Sum(o => o.OrderTotal),
+				TotalRefundedRevenue = orders.Where(o => o.Status == OrderStatus.Refunded).Sum(o => o.OrderTotal),
+				TotalItemsSold = orders.Sum(o => o.OrderItems.Sum(oi => oi.Quantity)),
+				PendingRevenue = orders.Where(o => o.Status == OrderStatus.Pending).Sum(o => o.OrderTotal),
 				PendingOrders = orders.Count(o => o.Status == OrderStatus.Pending),
 				CompletedOrders = orders.Count(o => o.Status == OrderStatus.Completed),
 				RefundedOrders = orders.Count(o => o.Status == OrderStatus.Refunded),
@@ -97,10 +105,11 @@ namespace BulkyBooksWeb.Controllers
 			return View(orders);
 		}
 
-		[HttpPost("CancelOrder/{orderId}")]
-		public async Task<IActionResult> CancelOrder(int orderId)
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> CancelOrder(int id)
 		{
-			var order = await _orderService.GetOrderByIdAsync(orderId);
+			var order = await _orderService.GetOrderByIdAsync(id);
 			if (order == null) return NotFound("Order not found");
 
 			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
@@ -108,27 +117,29 @@ namespace BulkyBooksWeb.Controllers
 			{
 				var userId = _userContext.GetCurrentUserId();
 				if (userId == null) return RedirectToAction("Login", "Auth");
-				_logger.LogWarning("User {userId} is not authorized to cancel order {OrderId}", userId, orderId);
+				_logger.LogWarning("User {userId} is not authorized to cancel order {id}", userId, id);
 				return Forbid();
 			}
 
 			try
 			{
-				await _orderService.CancelOrderAsync(orderId);
-				_logger.LogInformation("Order {OrderId} cancel successfully", orderId);
+				await _orderService.CancelOrderAsync(id);
+				_logger.LogInformation("Order {OrderId} cancel successfully", id);
 				return RedirectToAction("Index");
 			}
 			catch (Exception)
 			{
-				_logger.LogError("Failed to cancel order {OrderId}", orderId);
+				_logger.LogError("Failed to cancel order {OrderId}", id);
 				return BadRequest("Failed to cancel order. Please try again later.");
 			}
 		}
 
-		[HttpPost("RefundOrder/{orderId}")]
-		public async Task<IActionResult> RefundOrder(int orderId)
+		[HttpPost]
+		[Authorize(Roles = "admin")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> RefundOrder(int id)
 		{
-			var order = await _orderService.GetOrderByIdAsync(orderId);
+			var order = await _orderService.GetOrderByIdAsync(id);
 			if (order == null) return NotFound("Order not found");
 
 			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
@@ -136,27 +147,29 @@ namespace BulkyBooksWeb.Controllers
 			{
 				var userId = _userContext.GetCurrentUserId();
 				if (userId == null) return RedirectToAction("Login", "Auth");
-				_logger.LogWarning("User {userId} is not authorized to refund order {OrderId}", userId, orderId);
+				_logger.LogWarning("User {userId} is not authorized to refund order {id}", userId, id);
 				return Forbid();
 			}
 
 			try
 			{
-				await _orderService.RefundOrderAsync(orderId);
-				_logger.LogInformation("Order {OrderId} Refunded successfully", orderId);
+				await _orderService.RefundOrderAsync(id);
+				_logger.LogInformation("Order {id} Refunded successfully", id);
 				return RedirectToAction("Index");
 			}
 			catch (Exception)
 			{
-				_logger.LogError("Failed to Refund order {OrderId}", orderId);
+				_logger.LogError("Failed to Refund order {id}", id);
 				return BadRequest("Failed to Refund order. Please try again later.");
 			}
 		}
 
-		[HttpPost("CompleteOrder/{orderId}")]
-		public async Task<IActionResult> CompleteOrder(int orderId)
+		[HttpPost]
+		[Authorize(Roles = "admin")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> CompleteOrder(int id)
 		{
-			var order = await _orderService.GetOrderByIdAsync(orderId);
+			var order = await _orderService.GetOrderByIdAsync(id);
 			if (order == null) return NotFound("Order not found");
 
 			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
@@ -164,22 +177,117 @@ namespace BulkyBooksWeb.Controllers
 			{
 				var userId = _userContext.GetCurrentUserId();
 				if (userId == null) return RedirectToAction("Login", "Auth");
-				_logger.LogWarning("User {userId} is not authorized to complete order {OrderId}", userId, orderId);
+				_logger.LogWarning("User {userId} is not authorized to complete order {OrderId}", userId, id);
 				return Forbid();
 			}
 
 			try
 			{
-				await _orderService.CompleteOrderAsync(orderId);
-				_logger.LogInformation("Order {OrderId} completed successfully", orderId);
+				await _orderService.CompleteOrderAsync(id);
+				_logger.LogInformation("Order {id} completed successfully", id);
 				return RedirectToAction("Index");
 			}
 			catch (Exception)
 			{
-				_logger.LogError("Failed to complete order {OrderId}", orderId);
+				_logger.LogError("Failed to complete order {id}", id);
 				return BadRequest("Failed to complete order. Please try again later.");
 			}
 		}
 
+		[HttpPost]
+		[Authorize(Roles = "admin")]
+		public async Task<IActionResult> UpdateOrderNotes([FromForm] int Id, [FromForm] string Note)
+		{
+			var userId = _userContext.GetCurrentUserId();
+			if (userId == null) return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index") });
+
+			var order = await _orderService.GetOrderByIdAsync(Id);
+			if (order == null) return NotFound("Order not found");
+
+			order.Note = Note;
+			try
+			{
+				await _orderService.UpdateOrderAsync(order);
+				TempData["Success"] = "Order updated successfully";
+				_logger.LogInformation("Order {id} updated successfully", Id);
+				return RedirectToAction("Index");
+			}
+			catch (Exception)
+			{
+				_logger.LogError("Failed to update order {id}", Id);
+				TempData["Error"] = "Failed to update order. Please try again later.";
+				return BadRequest("Failed to update order. Please try again later.");
+			}
+		}
+
+		[HttpPost]
+		[Authorize(Roles = "admin")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> BulkAction([FromForm] string action, [FromForm] int[] orderIds)
+		{
+			var userId = _userContext.GetCurrentUserId();
+			if (userId == null) return RedirectToAction("Login", "Auth", new { returnUrl = Url.Action("Index") });
+
+			if (orderIds.Length == 0)
+			{
+				TempData["Error"] = "No orders selected";
+				return RedirectToAction("Index");
+			}
+
+			try
+			{
+				switch (action.ToLower())
+				{
+					case "complete":
+						foreach (var orderId in orderIds)
+						{
+							await _orderService.CompleteOrderAsync(orderId);
+						}
+						break;
+					case "cancel":
+						foreach (var orderId in orderIds)
+						{
+							await _orderService.CancelOrderAsync(orderId);
+						}
+						break;
+					case "refund":
+						foreach (var orderId in orderIds)
+						{
+							await _orderService.RefundOrderAsync(orderId);
+						}
+						break;
+					default:
+						TempData["Error"] = "Invalid action";
+						return RedirectToAction("Index");
+				}
+				TempData["Success"] = $"{action} action completed successfully";
+				return RedirectToAction("Index");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to perform bulk action {Action} on orders {OrderIds}", action, string.Join(", ", orderIds));
+				TempData["Error"] = $"Failed to perform bulk action. Please try again later.";
+				return RedirectToAction("Index");
+			}
+		}
+
+		[HttpGet]
+		[Authorize(Roles = "admin, author, user")]
+		public async Task<IActionResult> Print(int id)
+		{
+			var order = await _orderService.GetOrderByIdAsync(id);
+			if (order == null) return NotFound("Order not found");
+
+			var isAuth = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
+			if (!isAuth.Succeeded)
+			{
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null) return RedirectToAction("Login", "Auth");
+				_logger.LogWarning("User {userId} is not authorized to print order {id}", userId, order.Id);
+				return Forbid();
+			}
+
+			return View(order);
+		}
 	}
 }

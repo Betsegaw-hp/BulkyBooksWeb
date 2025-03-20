@@ -30,6 +30,11 @@ namespace BulkyBooksWeb.Models
 		public string TransactionReference { get; set; } = string.Empty;
 		public DateTime? PaymentDate { get; set; }
 
+		[MaxLength(500)]
+		[MinLength(10)]
+		[DataType(DataType.MultilineText)]
+		public string? Note { get; set; } = string.Empty;
+
 		// Navigation properties
 		public virtual List<OrderItem> OrderItems { get; set; } = new();
 		public virtual User User { get; set; } = null!;

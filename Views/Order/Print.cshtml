@@ -1,0 +1,93 @@
+@model BulkyBooksWeb.Models.Order
+@{
+	ViewData["Title"] = "Order Print - " + Model.Id;
+	ViewData["Description"] = "Print view for order details.";
+	ViewData["Keywords"] = "Order, Print, Invoice";
+	ViewData["Author"] = "Bulky Books Team";
+	ViewData["Robots"] = "noindex, nofollow"; // Prevent search engines from indexing this page
+	Layout = null; // Standalone printable view
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Order Print - @Model.Id</title>
+	<style>
+		/* Basic styling for the printed document */
+		body {
+			font-family: Arial, sans-serif;
+			margin: 20px;
+			color: #000;
+		}
+		.order-header, .order-footer {
+			text-align: center;
+			border-bottom: 1px solid #000;
+			padding: 10px;
+		}
+		.order-footer {
+			border-top: 1px solid #000;
+			margin-top: 20px;
+		}
+		.order-details {
+			margin: 20px 0;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 20px 0;
+		}
+		th, td {
+			padding: 8px 12px;
+			border: 1px solid #ddd;
+			text-align: left;
+		}
+		@@media print {
+			.no-print {
+				display: none;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="order-header">
+		<h1>Order #: @Model.Id</h1>
+		<p>Order Date: @Model.OrderDate.ToShortDateString()</p>
+		<p>Customer(Full Name): @Model.User.FullName</p>
+		<p>Customer(Username): @Model.User.FullName</p>
+	</div>
+
+	<div class="order-details"></div>
+		<h2>Order Items</h2>
+		<table>
+			<thead>
+				<tr>
+					<th>Product</th>
+					<th>Quantity</th>
+					<th>Unit Price</th>
+					<th>Total Price</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var item in Model.OrderItems)
+				{
+					<tr>
+						<td>@item.BookTitle</td>
+						<td>@item.Quantity</td>
+						<td>@item.Price.ToString("C")</td>
+						<td>@(item.Quantity * item.Price).ToString("C")</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		<h3>Total: @Model.OrderTotal.ToString("C")</h3>
+	</div>
+
+	<div class="order-footer">
+		<p>Thank you for your order!</p>
+	</div>
+	<div class="no-print" style="text-align: center;">
+		<button onclick="window.print()">Print</button>
+	</div>
+</body>
+</html>

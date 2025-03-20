@@ -16,14 +16,15 @@
   box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
+*/
 html {
   position: relative;
   min-height: 100%;
 }
 
-body {
+/* body {
   margin-bottom: 60px;
-} */
+}  */
 
 
 /* Custom styles for the landing page */
@@ -50,16 +51,9 @@ body {
   z-index: 1;
 }
 
-/* Sticky sidebar adjustments */
-@media (min-width: 992px) {
-  .sticky-top {
-      top: 20px;
-      z-index: 1000;
-  }
-  header.sticky-top {
-      top: 0;
-      z-index: 2000;
-  }
+header.sticky-top {
+  top: 0;
+  z-index: 2000;
 }
 
 /* Featured books carousel */
@@ -79,3 +73,22 @@ body {
 .card:hover .category-icon {
   transform: scale(1.1);
 }
+
+#FeaturedBooksSection {
+  background-color: antiquewhite;
+}
+
+/* Sticky sidebar adjustments */
+@media (min-width: 992px) {
+  .sticky-top {
+      top: 20px;
+      z-index: 100;
+  }
+}
+
+@media (max-width: 580px) {
+  .slick-prev.slick-arrow, .slick-next.slick-arrow {
+      display: none !important;
+  }
+}
+

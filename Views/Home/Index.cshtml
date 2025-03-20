@@ -1,6 +1,8 @@
 ﻿@model BulkyBooksWeb.Models.ViewModels.BookListViewModel
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Buy Books Online - BulkyBooks";
+    ViewData["Description"] = "Discover a wide range of books across various genres. Shop now and enjoy great deals on your favorite titles!";
+    ViewData["Keywords"] = "books, online bookstore, buy books, book deals, book genres";
 }
 
 <!-- Hero Section -->
@@ -221,8 +223,6 @@
                                 <div class="position-relative">
                                     <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
-                                    @* <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
-                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
                                     @if (book.CreatedDateTime.Year < book.UpdatedDateTime.Year)
                                     {
                                         <div class="position-absolute top-0 end-0 m-2">
@@ -260,9 +260,7 @@
                             <div class="row g-0">
                                 <div class="col-md-3">
                                     <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
-                                         class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;">
-                                    @* <img src="/images/White_and_Blue_Simple_Prayer_Journal_Book_Cover.png" 
-                                        class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;"> *@
+                                         class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;" />
                                 </div>
                                 <div class="col-md-9">
                                     <div class="card-body">
@@ -348,7 +346,7 @@
 </section>
 
 <!-- Featured Books Saction -->
-<section class="py-5">
+<section id="FeaturedBooksSection" class="py-5">
     <div class="container">
         <h2 class="text-center mb-4">Featured Books</h2>
         <div class="row">
@@ -361,8 +359,6 @@
                                 <div class="position-relative">
                                     <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
-                                    @* <img src="/images/Black_Modern_Photographic_Man_Silhouette_Novel_Book_Cover.png" 
-                                         class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;"> *@
                                     <div class="position-absolute top-0 start-0 m-2">
                                         <span class="badge bg-danger">Featured</span>
                                     </div>
@@ -565,7 +561,6 @@
             $('.add-to-cart').click(function() {
                 var bookId = $(this).data('book-id');
                 $.ajax({
-                    @* include bookid in the url *@
                     url: '@Url.Action("AddToCart", "Home", new { id = "__bookId__" })'.replace('__bookId__', bookId),
                     type: 'POST',
                     success: function(response) {

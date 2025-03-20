@@ -63,7 +63,12 @@
             <hr class="my-4" style="border-style: dashed;">
             
             <div class="d-flex justify-content-between mt-4">
-                <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm add-to-cart" data-book-id="@Model.Id">
+                        <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                    </button>
+                    <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
                 @if(!User.IsInRole("user"))
                 {
                 <div>
@@ -79,4 +84,23 @@
 </div>
 
 @section Scripts {
+    <script >
+        $(document).ready(function () {
+           $('.add-to-cart').click(function() {
+                var bookId = $(this).data('book-id');
+                $.ajax({
+                    url: '@Url.Action("AddToCart", "Home", new { id = "__bookId__" })'.replace('__bookId__', bookId),
+                    type: 'POST',
+                    success: function(response) {
+                        window.location.href = '@Url.Action("Index", "Checkout")';
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(xhr);
+                        alert('Error adding book to cart. Please try again.');
+                        window.location.href = '@Url.Action("Login", "Auth")';
+                    }
+                });
+            });
+        });
+    </script>
 }

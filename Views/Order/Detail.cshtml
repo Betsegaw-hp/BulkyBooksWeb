@@ -14,14 +14,14 @@
                 </a>
             } else 
             {
-            <a asp-controller="Order" asp-action="Index" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i> Back to Orders
-            </a>
+                <a asp-controller="Order" asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Orders
+                </a>
             }
-            <a asp-controller="Order" asp-action="PrintInvoice" asp-route-id="@Model.Id" class="btn btn-outline-primary" target="_blank">
+            <a asp-controller="Order" asp-action="Print" asp-route-id="@Model.Id" class="btn btn-outline-primary" target="_blank">
                 <i class="fas fa-print me-2"></i> Print Invoice
             </a>
-            <a asp-controller="Order" asp-action="EmailForm" asp-route-id="@Model.Id" class="btn btn-outline-info">
+            <a href="#" onclick="alert('Note implemented yet!')" class="btn btn-outline-info">
                 <i class="fas fa-envelope me-2"></i> Email Customer
             </a>
         </div>
@@ -57,7 +57,7 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="mb-0">@item.BookTitle</h6>
-                                                    @* <small class="text-muted">@item.Author</small> *@
+                                                    <small class="text-muted">Author Name</small>
                                                 </div>
                                             </div>
                                         </td>
@@ -88,17 +88,20 @@
                     @if (User.IsInRole("admin"))
                     {
                         <form asp-controller="Order" asp-action="UpdateOrderNotes" method="post">
-                            <input type="hidden" name="id" value="@Model.Id" />
-                            <input type="hidden" name="returnUrl" value="@Url.Action("Detail", "Order", new { id = Model.Id })" />
+                            @Html.AntiForgeryToken()
+                            <input asp-for="Id" type="hidden" />
                             <div class="mb-3">
-                                <textarea class="form-control" name="notes" rows="4" placeholder="Add notes about this order...">@@Model.Notes</textarea>
+                                <textarea asp-for="Note" class="form-control"  rows="4" placeholder="Add notes about this order...">
+                                    @Model.Note
+                                </textarea>
+                                <span asp-validation-for="Note" class="text-danger"></span>
                             </div>
                             <button type="submit" class="btn btn-primary">Save Notes</button>
                         </form>
                     }
                     else
                     {
-                        <p>@@Model.Notes</p>
+                        <p>@Model.Note</p>
                     }
                 </div>
             </div>
@@ -133,20 +136,20 @@
                                     {
                                         @if (Model.Status == OrderStatus.Pending)
                                         {
-                                            <form asp-controller="Order" asp-action="CancelOrder" method="post">
-                                                <input type="hidden" name="id" value="@Model.Id" />
+                                            <form asp-controller="Order" asp-action="CancelOrder" asp-route-id="@Model.Id" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <button type="submit" class="btn btn-sm btn-danger">Cancel Order</button>
                                             </form>
 
-                                            <form asp-controller="Order" asp-action="MarkAsPaid" method="post">
-                                                <input type="hidden" name="id" value="@Model.Id" />
+                                            <form asp-controller="Order" asp-action="CompleteOrder" asp-route-id="@Model.Id" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <button type="submit" class="btn btn-sm btn-success">Mark as Paid</button>
                                             </form>
                                         }
                                         else if (Model.Status == OrderStatus.Completed)
                                         {
-                                            <form asp-controller="Order" asp-action="RefundOrder" method="post">
-                                                <input type="hidden" name="id" value="@Model.Id" />
+                                            <form asp-controller="Order" asp-action="RefundOrder" asp-route-id="@Model.Id" method="post">
+                                                @Html.AntiForgeryToken()
                                                 <button type="submit" class="btn btn-sm btn-warning">Refund Order</button>
                                             </form>
                                         }
@@ -194,7 +197,7 @@
                     </table>
                 </div>
                 <div class="card-footer">
-                    <a asp-controller="Order" asp-action="EmailForm" asp-route-id="@Model.Id" class="btn btn-outline-primary w-100">
+                    <a href="#" onclick="alert('Note implemented yet!')"  class="btn btn-outline-primary w-100">
                         <i class="fas fa-envelope me-2"></i> Contact Customer
                     </a>
                 </div>
@@ -205,4 +208,5 @@
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
 }
