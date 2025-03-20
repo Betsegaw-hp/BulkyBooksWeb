@@ -6,6 +6,7 @@
 # dotenv files
 .env
 *.sql
+appsettings*.json
 # User-specific files
 *.rsuser
 *.suo

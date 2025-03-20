@@ -1,93 +1,186 @@
 @model BulkyBooksWeb.Models.Order
 @{
-	ViewData["Title"] = "Order Print - " + Model.Id;
-	ViewData["Description"] = "Print view for order details.";
-	ViewData["Keywords"] = "Order, Print, Invoice";
-	ViewData["Author"] = "Bulky Books Team";
-	ViewData["Robots"] = "noindex, nofollow"; // Prevent search engines from indexing this page
-	Layout = null; // Standalone printable view
+	Layout = null;
+	var brandName = "BulkyBooks";
 }
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<title>Order Print - @Model.Id</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>@brandName Order Receipt - @Model.Id</title>
 	<style>
-		/* Basic styling for the printed document */
+		:root {
+			--primary-color: #0078d7;
+			--hover-color: #005a9e;
+			--background: #f9f9f9;
+			--text-color: #333;
+			--font-family: 'Courier New', Courier, monospace;
+		}
 		body {
-			font-family: Arial, sans-serif;
-			margin: 20px;
-			color: #000;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			font-family: var(--font-family);
+			margin: 0;
+			padding: 0;
+			background: var(--background);
 		}
-		.order-header, .order-footer {
+		.receipt-container {
+			width: 100%;
+			max-width: 250mm;
+			margin: auto;
+			padding: 10mm;
+			background: #fff;
+			border: 1px solid #000;
+		}
+		header, footer {
 			text-align: center;
-			border-bottom: 1px solid #000;
-			padding: 10px;
+			padding: 10px 0;
+			border-bottom: 1px dashed #000;
 		}
-		.order-footer {
-			border-top: 1px solid #000;
-			margin-top: 20px;
+		header h1 {
+			margin: 0;
+			font-size: 1.8em;
 		}
-		.order-details {
-			margin: 20px 0;
+		.receipt-info, .receipt-items {
+			margin-top: 10px;
+			font-size: 0.8em;
 		}
-		table {
+		.receipt-section {
+			padding-bottom: 8px;
+			border-bottom: 1px dashed #000;
+			margin-bottom: 10px;
+		}
+		.receipt-section:last-of-type {
+			border-bottom: none;
+		}
+		.items-table {
 			width: 100%;
 			border-collapse: collapse;
-			margin: 20px 0;
+			margin-top: 5px;
+			table-layout: fixed;
 		}
-		th, td {
-			padding: 8px 12px;
-			border: 1px solid #ddd;
+		.items-table th, .items-table td {
+			padding: 4px;
+			font-size: 0.8em;
+		}
+		.items-table th {
 			text-align: left;
 		}
+		.center { text-align: center; }
+		.right { text-align: right; }
+		.total {
+			text-align: right;
+			font-weight: bold;
+			border-top: 1px dashed #000;
+			padding-top: 5px;
+			font-size: 0.9em;
+		}
+		.print-btn {
+			text-align: center;
+			margin: 15px 0;
+		}
+		.print-btn button {
+			padding: 10px 20px;
+			font-size: 0.9em;
+			color: #fff;
+			background-color: var(--primary-color);
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+		.print-btn button:hover {
+			background-color: var(--hover-color);
+		}
 		@@media print {
-			.no-print {
-				display: none;
-			}
+			.print-btn { display: none; }
+		}
+		/* Additional styling for enhanced read-ability */
+		.highlight {
+			padding: 12px 16px;
+			text-align: left;
+			color: var(--text-color);
+			font-style: normal;
+			display:flex;
+			justify-content: space-between;
+		}
+		.highlight p {
+			margin: 5px;
 		}
 	</style>
 </head>
 <body>
-	<div class="order-header">
-		<h1>Order #: @Model.Id</h1>
-		<p>Order Date: @Model.OrderDate.ToShortDateString()</p>
-		<p>Customer(Full Name): @Model.User.FullName</p>
-		<p>Customer(Username): @Model.User.FullName</p>
-	</div>
-
-	<div class="order-details"></div>
-		<h2>Order Items</h2>
-		<table>
-			<thead>
-				<tr>
-					<th>Product</th>
-					<th>Quantity</th>
-					<th>Unit Price</th>
-					<th>Total Price</th>
-				</tr>
-			</thead>
-			<tbody>
-				@foreach (var item in Model.OrderItems)
-				{
-					<tr>
-						<td>@item.BookTitle</td>
-						<td>@item.Quantity</td>
-						<td>@item.Price.ToString("C")</td>
-						<td>@(item.Quantity * item.Price).ToString("C")</td>
+	<div class="receipt-container">
+		<header>
+			<h1>@brandName</h1>
+		</header>
+		<section class="receipt-section">
+			<div class="highlight">
+				<div>
+					<p style="font-weight: bold;">Order #: @Model.Id</p>
+					<p>Date: @Model.OrderDate.ToLongDateString()</p>
+					<p>Time: @Model.OrderDate.ToLongTimeString()</p>
+				</div>
+				<div>
+					<p>
+						<span style="font-weight: bold;">Transaction ref:</span>
+						<span style="font-style: italic;">@Model.TransactionReference</span>
+					</p>
+					<p>
+						<span style="font-weight: bold;">Payment Date:</span>
+						<span style="font-style: italic;">@(Model.PaymentDate?.ToLongDateString() ?? "N/A")</span>
+					</p>
+					<p>
+						<span style="font-weight: bold;">Payment Status:</span>
+						<span style="color:@(Model.Status.ToString() == "Completed" ? "green" : "red");">
+							@Model.Status
+						</span>
+					</p>
+				</div>
+			</div>
+		</section>
+		<section class="receipt-info receipt-section">
+			<h3>Customer Details</h3>
+			<p>Name: @Model.User.FullName</p>
+			<p>Username: @Model.User.Username</p>
+			<p>Email: @Model.User.Email</p>
+		</section>
+		<section class="receipt-items">
+			<h3>Items</h3>
+			<table class="items-table">
+				<thead>
+					<tr style="font-weight: bold; font-size: larger;">
+						<th>Book Title</th>
+						<th class="center">Qty</th>
+						<th class="right">Price</th>
+						<th class="right">SubTotal</th>
+						<th class="right">Total</th>
 					</tr>
-				}
-			</tbody>
-		</table>
-		<h3>Total: @Model.OrderTotal.ToString("C")</h3>
-	</div>
-
-	<div class="order-footer">
-		<p>Thank you for your order!</p>
-	</div>
-	<div class="no-print" style="text-align: center;">
-		<button onclick="window.print()">Print</button>
+				</thead>
+				<tbody>
+					@foreach (var item in Model.OrderItems)
+					{
+						<tr>
+							<td>@item.BookTitle</td>
+							<td>@item.Quantity</td>
+							<td>@item.Price.ToString("C")</td>
+							<td>@( (item.Quantity * item.Price).ToString("C") )</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+			<div class="total">
+				Total(15% tax): @Model.OrderTotal.ToString("C")
+			</div>
+		</section>
+		<footer>
+			<p>Thank you for your purchase!</p>
+		</footer>
+		<div class="print-btn">
+			<button type="button" onclick="window.print()">Print Receipt</button>
+		</div>
 	</div>
 </body>
 </html>

@@ -179,9 +179,9 @@ namespace BulkyBooksWeb.Controllers
 							txRef,
 							model.OrderTotal);
 
-				var callbackUrl = _configuration["PaymentGateway:CallbackUrl"];
+				var callbackUrl = _configuration["Chapa:CallbackUrl"];
 				var token = GenerateToken(order.Id, userId.Value);
-				var returnUrl = $"{_configuration["PaymentGateway:ReturnRootUrl"]}?token={token}";
+				var returnUrl = $"{_configuration["Chapa:ReturnRootUrl"]}?token={token}";
 
 				// Create Chapa transaction request
 				var request = new ChapaRequest(

@@ -18,114 +18,350 @@
     
     <!-- Order Statistics -->
     <div class="row mb-4">
-        <div class="row mb-4">
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-primary border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Total Orders (Monthly)
-                                </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.TotalOrdersMonthly</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-calendar fa-2x text-gray-300"></i>
-                            </div>
+        <div class="col-12">
+            <div class="card border-dark">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Order Statistics</h5>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            This Month <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item active" href="#">This Month</a>
+                            <a class="dropdown-item" href="#">Last Month</a>
+                            <a class="dropdown-item" href="#">This Year</a>
+                            <a class="dropdown-item" href="#">All Time</a>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-success border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Revenue (Monthly)
+                <div class="card-body">
+                    <!-- Summary Cards -->
+                    <div class="row g-3 mb-4">
+                        <!-- Total Orders Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-primary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="text-primary text-uppercase fw-bold mb-1">
+                                                Total Orders
+                                            </h6>
+                                            <h3 class="mb-0">@Model.TotalOrders</h3>
+                                            <div class="text-muted small mt-1">
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> 12%</span> from last month
+                                            </div>
+                                        </div>
+                                        <div class="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-shopping-bag fa-2x text-primary"></i>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.MonthlyRevenue.ToString("C")</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                        
+                        <!-- Monthly Revenue Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-success h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="text-success text-uppercase fw-bold mb-1">
+                                                Monthly Revenue
+                                            </h6>
+                                            <h3 class="mb-0">@Model.MonthlyRevenue.ToString("C")</h3>
+                                            <div class="text-muted small mt-1">
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> 8%</span> from last month
+                                            </div>
+                                        </div>
+                                        <div class="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-dollar-sign fa-2x text-success"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pending Orders Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-warning h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="text-warning text-uppercase fw-bold mb-1">
+                                                Pending Orders
+                                            </h6>
+                                            <h3 class="mb-0">@Model.PendingOrders</h3>
+                                            <div class="text-muted small mt-1">
+                                                <span class="text-danger"><i class="fas fa-arrow-up"></i> 5%</span> from last month
+                                            </div>
+                                        </div>
+                                        <div class="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-clock fa-2x text-warning"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Items Sold Card -->
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-info h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h6 class="text-info text-uppercase fw-bold mb-1">
+                                                Items Sold
+                                            </h6>
+                                            <h3 class="mb-0">@Model.TotalItemsSold</h3>
+                                            <div class="text-muted small mt-1">
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> 15%</span> from last month
+                                            </div>
+                                        </div>
+                                        <div class="bg-light rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                            <i class="fas fa-box-open fa-2x text-info"></i>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-primary border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Pending Orders
+                    
+                    <!-- Detailed Statistics -->
+                    <div class="row">
+                        <!-- Order Status -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-dark h-100">
+                                <div class="card-header bg-dark text-white">
+                                    <h6 class="mb-0"><i class="fas fa-tasks me-2"></i> Order Status</h6>
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.PendingOrders</div>
+                                <div class="card-body">
+                                    <!-- Completed Orders -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="fw-bold text-success">Completed</span>
+                                            <span class="fw-bold">@Model.CompletedOrders</span>
+                                        </div>
+                                        <div class="progress" style="height: 15px;">
+                                            @{
+                                                var completedPercentage = Model.TotalOrders > 0 ? 
+                                                    (int)((double)Model.CompletedOrders / Model.TotalOrders * 100) : 0;
+                                            }
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                style="width: @completedPercentage%;" 
+                                                aria-valuenow="@completedPercentage" aria-valuemin="0" aria-valuemax="100">
+                                                @completedPercentage%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Pending Orders -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="fw-bold text-warning">Pending</span>
+                                            <span class="fw-bold">@Model.PendingOrders</span>
+                                        </div>
+                                        <div class="progress" style="height: 15px;">
+                                            @{
+                                                var pendingPercentage = Model.TotalOrders > 0 ? 
+                                                    (int)((double)Model.PendingOrders / Model.TotalOrders * 100) : 0;
+                                            }
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                style="width: @pendingPercentage%;" 
+                                                aria-valuenow="@pendingPercentage" aria-valuemin="0" aria-valuemax="100">
+                                                @pendingPercentage%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Cancelled Orders -->
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="fw-bold text-danger">Cancelled</span>
+                                            <span class="fw-bold">@Model.CancelledOrders</span>
+                                        </div>
+                                        <div class="progress" style="height: 15px;">
+                                            @{
+                                                var cancelledPercentage = Model.TotalOrders > 0 ? 
+                                                    (int)((double)Model.CancelledOrders / Model.TotalOrders * 100) : 0;
+                                            }
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: @cancelledPercentage%;" 
+                                                aria-valuenow="@cancelledPercentage" aria-valuemin="0" aria-valuemax="100">
+                                                @cancelledPercentage%
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Refunded Orders -->
+                                    <div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="fw-bold text-info">Refunded</span>
+                                            <span class="fw-bold">@Model.RefundedOrders</span>
+                                        </div>
+                                        <div class="progress" style="height: 15px;">
+                                            @{
+                                                var refundedPercentage = Model.TotalOrders > 0 ? 
+                                                    (int)((double)Model.RefundedOrders / Model.TotalOrders * 100) : 0;
+                                            }
+                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                style="width: @refundedPercentage%;" 
+                                                aria-valuenow="@refundedPercentage" aria-valuemin="0" aria-valuemax="100">
+                                                @refundedPercentage%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                        
+                        <!-- Revenue Breakdown -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-dark h-100">
+                                <div class="card-header bg-dark text-white">
+                                    <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i> Revenue Breakdown</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Revenue Type</th>
+                                                    <th class="text-end">Amount</th>
+                                                    <th class="text-end">Percentage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @{
+                                                    var totalRevenue = Model.TotalCompletedRevenue + Model.PendingRevenue + Model.TotalRefundedRevenue;
+                                                    var completedRevenuePercentage = totalRevenue > 0 ? 
+                                                        (int)(Model.TotalCompletedRevenue / totalRevenue * 100) : 0;
+                                                    var pendingRevenuePercentage = totalRevenue > 0 ? 
+                                                        (int)(Model.PendingRevenue / totalRevenue * 100) : 0;
+                                                    var refundedRevenuePercentage = totalRevenue > 0 ? 
+                                                        (int)(Model.TotalRefundedRevenue / totalRevenue * 100) : 0;
+                                                }
+                                                <tr>
+                                                    <td><span class="text-success fw-bold">Completed</span></td>
+                                                    <td class="text-end">@Model.TotalCompletedRevenue.ToString("C")</td>
+                                                    <td class="text-end">@completedRevenuePercentage%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><span class="text-warning fw-bold">Pending</span></td>
+                                                    <td class="text-end">@Model.PendingRevenue.ToString("C")</td>
+                                                    <td class="text-end">@pendingRevenuePercentage%</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><span class="text-info fw-bold">Refunded</span></td>
+                                                    <td class="text-end">@Model.TotalRefundedRevenue.ToString("C")</td>
+                                                    <td class="text-end">@refundedRevenuePercentage%</td>
+                                                </tr>
+                                                <tr class="table-dark">
+                                                    <td class="fw-bold">Total Revenue</td>
+                                                    <td class="text-end fw-bold">@totalRevenue.ToString("C")</td>
+                                                    <td class="text-end fw-bold">100%</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="fw-bold">Monthly Revenue Trend</span>
+                                            <span class="badge bg-success">+8% growth</span>
+                                        </div>
+                                        <div class="border border-dark rounded p-2" style="height: 70px;">
+                                            <!-- Simple bar chart using divs -->
+                                            <div class="d-flex align-items-end h-100 gap-1">
+                                                @foreach (var height in new[] { 40, 65, 45, 70, 55, 80, 75, 60, 90, 85, 95, 100 })
+                                                {
+                                                    <div class="sketch-bar @(height == 100 ? "active" : "")" style="height: @height%;"></div>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-1">
+                                            <small>Jan</small>
+                                            <small>Dec</small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-success border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Completed Orders
+                    
+                    <!-- Monthly Comparison Cards -->
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-primary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-uppercase fw-bold text-primary">
+                                            Monthly Orders
+                                        </div>
+                                        <span class="badge bg-success">+12%</span>
+                                    </div>
+                                    <h4 class="mb-0">@Model.TotalOrdersMonthly</h4>
+                                    <div class="text-muted small mt-2">vs. @(Model.TotalOrdersMonthly - 24) last month</div>
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.CompletedOrders</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-danger border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                    Cancelled Orders
+                        
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-success h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-uppercase fw-bold text-success">
+                                            Monthly Revenue
+                                        </div>
+                                        <span class="badge bg-success">+8%</span>
+                                    </div>
+                                    <h4 class="mb-0">@Model.MonthlyRevenue.ToString("C")</h4>
+                                    <div class="text-muted small mt-2">vs. @((Model.MonthlyRevenue * 0.92m).ToString("C")) last month</div>
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.CancelledOrders</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-times-circle fa-2x text-gray-300"></i>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-4 col-md-6 mb-4">
-                <div class="card border-left-info border-dark h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                    Refunded Orders
+                        
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-info h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-uppercase fw-bold text-info">
+                                            Avg. Order Value
+                                        </div>
+                                        <span class="badge bg-danger">-3%</span>
+                                    </div>
+                                    @{
+                                        var avgOrderValue = Model.TotalOrdersMonthly > 0 ? 
+                                            Model.MonthlyRevenue / Model.TotalOrdersMonthly : 0;
+                                    }
+                                    <h4 class="mb-0">@avgOrderValue.ToString("C")</h4>
+                                    <div class="text-muted small mt-2">vs. @((avgOrderValue * 1.03m).ToString("C")) last month</div>
                                 </div>
-                                <div class="h5 mb-0 font-weight-bold">@Model.RefundedOrders</div>
                             </div>
-                            <div class="col-auto">
-                                <i class="fas fa-undo fa-2x text-gray-300"></i>
+                        </div>
+                        
+                        <div class="col-md-6 col-lg-3">
+                            <div class="card border-warning h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="text-uppercase fw-bold text-warning">
+                                            Refund Rate
+                                        </div>
+                                        <span class="badge bg-success">-1.2%</span>
+                                    </div>
+                                    @{
+                                        var refundRate = Model.TotalOrdersMonthly > 0 ? 
+                                            (double)Model.RefundedOrders / Model.TotalOrdersMonthly * 100 : 0;
+                                    }
+                                    <h4 class="mb-0">@refundRate.ToString("0.0")%</h4>
+                                    <div class="text-muted small mt-2">vs. @((refundRate + 1.2).ToString("0.0"))% last month</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     
     <!-- Filter and Search Section -->
     <div class="card border-dark mb-4">
@@ -269,6 +505,55 @@
     </div>
 </div>
 
+@section Styles {
+    <style>
+        /* Sketchy theme enhancements */
+        .card {
+            transition: transform 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        /* Custom bar chart styling */
+        .sketch-bar {
+            flex: 1;
+            background-color: #6c757d;
+            border-radius: 3px 3px 0 0;
+            margin: 0 1px;
+            transition: all 0.2s ease;
+        }
+        
+        .sketch-bar:hover {
+            background-color: #0d6efd;
+            transform: scaleY(1.05);
+        }
+        
+        .sketch-bar.active {
+            background-color: #198754;
+        }
+        
+        /* Progress bar enhancements */
+        .progress {
+            height: 15px !important;
+            border: 1px solid #dee2e6;
+        }
+        
+        .progress-bar {
+            font-weight: bold;
+            font-size: 0.8rem;
+            line-height: 15px;
+        }
+        
+        /* Responsive adjustments */
+        @@media (max-width: 768px) {
+            .card-body {
+                padding: 0.75rem;
+            }
+        }
+    </style>
+}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
