@@ -120,9 +120,24 @@ namespace BulkyBooksWeb.Services
 			return order;
 		}
 
+		public async Task CompleteOrderAsync(int orderId)
+		{
+			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			if (order.Status != OrderStatus.Pending)
+			{
+				throw new Exception("Only pending orders can be completed.");
+			}
+			order.Status = OrderStatus.Completed;
+			await _context.SaveChangesAsync();
+		}
+
 		public async Task CancelOrderAsync(int orderId)
 		{
 			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			if (order.Status != OrderStatus.Pending)
+			{
+				throw new Exception("Only pending orders can be cancelled.");
+			}
 			order.Status = OrderStatus.Cancelled;
 			await _context.SaveChangesAsync();
 		}
@@ -130,6 +145,10 @@ namespace BulkyBooksWeb.Services
 		public async Task RefundOrderAsync(int orderId)
 		{
 			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			if (order.Status != OrderStatus.Completed)
+			{
+				throw new Exception("Only completed orders can be refunded.");
+			}
 			order.Status = OrderStatus.Refunded;
 			await _context.SaveChangesAsync();
 		}
@@ -137,6 +156,10 @@ namespace BulkyBooksWeb.Services
 		public async Task FailOrderAsync(int orderId)
 		{
 			var order = await _context.Orders.FindAsync(orderId) ?? throw new Exception("Order not found");
+			if (order.Status != OrderStatus.Pending)
+			{
+				throw new Exception("Only pending orders can be marked as failed.");
+			}
 			order.Status = OrderStatus.Failed;
 			await _context.SaveChangesAsync();
 		}

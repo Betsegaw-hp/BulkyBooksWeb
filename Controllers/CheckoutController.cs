@@ -103,6 +103,9 @@ namespace BulkyBooksWeb.Controllers
 					return Forbid();
 				}
 
+				// Clear the cart after successful order creation
+				HttpContext.Session.Remove("Cart");
+
 				return View(orderDto);
 			}
 			catch (Exception ex)
@@ -222,7 +225,7 @@ namespace BulkyBooksWeb.Controllers
 		[HttpGet]
 		[AllowAnonymous]
 		[Route("VerifyPayment")]
-		public async Task<IActionResult> VerifyPayment([FromQuery] TrxResponseDto trxRes)
+		public async Task<IActionResult> VerifyPayment([FromBody] TrxResponseDto trxRes)
 		{
 			if (trxRes == null)
 			{
@@ -230,28 +233,37 @@ namespace BulkyBooksWeb.Controllers
 				return BadRequest("Invalid JSON response.");
 			}
 
-			_logger.LogInformation("Verifying payment with response: {JsonResponse}", trxRes.ref_id);
+			using (var reader = new StreamReader(HttpContext.Request.Body))
+			{
+				var rawBody = await reader.ReadToEndAsync();
+				_logger.LogInformation("Verifying payment with raw request body: {rawBody}", rawBody);
+			}
 
 			try
 			{
-				var tx_ref = trxRes.ref_id;
-				var isValid = await _chapa.VerifyAsync(tx_ref);
+				var trx_ref = trxRes.trx_ref;
+				var isValid = await _chapa.VerifyAsync(trx_ref);
 
-				if (isValid == null || !isValid.IsSuccess)
+				if (isValid != null)
 				{
-					await _orderService.UpdateOrderPaymentStatusAsync(tx_ref, OrderStatus.Failed);
-					_logger.LogError("Payment verification failed: {TransactionReference}", tx_ref);
-					return BadRequest("Payment verification failed.");
+					if (!isValid.IsSuccess)
+					{
+						await _orderService.UpdateOrderPaymentStatusAsync(trx_ref, OrderStatus.Failed);
+						_logger.LogError("Payment verification failed: {TransactionReference}", trx_ref);
+						return BadRequest("Payment verification failed.");
+					}
+
+					_logger.LogInformation("Payment verified successfully: {TransactionReference}", trx_ref);
+
+					var order = await _orderService.UpdateOrderPaymentStatusAsync(trx_ref, OrderStatus.Completed);
+
+					// Clear the cart after successful order creation
+					HttpContext.Session.Remove("Cart");
+
+					return Ok("Payment verified successfully.");
 				}
 
-				_logger.LogInformation("Payment verified successfully: {TransactionReference}", tx_ref);
-
-				var order = await _orderService.UpdateOrderPaymentStatusAsync(tx_ref, OrderStatus.Completed);
-
-				// Clear the cart after successful order creation
-				HttpContext.Session.Remove("Cart");
-
-				return Ok("Payment verified successfully.");
+				return BadRequest("Error happend while verifying  payment.");
 			}
 			catch (Exception ex)
 			{

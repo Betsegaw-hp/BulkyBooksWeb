@@ -112,11 +112,73 @@ namespace BulkyBooksWeb.Controllers
 				return Forbid();
 			}
 
-			if (order.Status != OrderStatus.Pending) return BadRequest("Only pending orders can be cancelled.");
+			try
+			{
+				await _orderService.CancelOrderAsync(orderId);
+				_logger.LogInformation("Order {OrderId} cancel successfully", orderId);
+				return RedirectToAction("Index");
+			}
+			catch (Exception)
+			{
+				_logger.LogError("Failed to cancel order {OrderId}", orderId);
+				return BadRequest("Failed to cancel order. Please try again later.");
+			}
+		}
 
-			order.Status = OrderStatus.Cancelled;
-			await _orderService.UpdateOrderAsync(order);
-			return RedirectToAction("Index");
+		[HttpPost("RefundOrder/{orderId}")]
+		public async Task<IActionResult> RefundOrder(int orderId)
+		{
+			var order = await _orderService.GetOrderByIdAsync(orderId);
+			if (order == null) return NotFound("Order not found");
+
+			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
+			if (!isValid.Succeeded)
+			{
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null) return RedirectToAction("Login", "Auth");
+				_logger.LogWarning("User {userId} is not authorized to refund order {OrderId}", userId, orderId);
+				return Forbid();
+			}
+
+			try
+			{
+				await _orderService.RefundOrderAsync(orderId);
+				_logger.LogInformation("Order {OrderId} Refunded successfully", orderId);
+				return RedirectToAction("Index");
+			}
+			catch (Exception)
+			{
+				_logger.LogError("Failed to Refund order {OrderId}", orderId);
+				return BadRequest("Failed to Refund order. Please try again later.");
+			}
+		}
+
+		[HttpPost("CompleteOrder/{orderId}")]
+		public async Task<IActionResult> CompleteOrder(int orderId)
+		{
+			var order = await _orderService.GetOrderByIdAsync(orderId);
+			if (order == null) return NotFound("Order not found");
+
+			var isValid = await _authorizationService.AuthorizeAsync(User, order.UserId, new OrderOwnerOrAdminRequirement());
+			if (!isValid.Succeeded)
+			{
+				var userId = _userContext.GetCurrentUserId();
+				if (userId == null) return RedirectToAction("Login", "Auth");
+				_logger.LogWarning("User {userId} is not authorized to complete order {OrderId}", userId, orderId);
+				return Forbid();
+			}
+
+			try
+			{
+				await _orderService.CompleteOrderAsync(orderId);
+				_logger.LogInformation("Order {OrderId} completed successfully", orderId);
+				return RedirectToAction("Index");
+			}
+			catch (Exception)
+			{
+				_logger.LogError("Failed to complete order {OrderId}", orderId);
+				return BadRequest("Failed to complete order. Please try again later.");
+			}
 		}
 
 	}
