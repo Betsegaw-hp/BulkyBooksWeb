@@ -90,6 +90,78 @@ Expiry: 12/34
 ```
 
 ---
+## Setup Guide 
+Here’s a **clear and secure guide** for setting up the `appsettings.json` configuration to run the BulkyBooks Web App. This includes placeholders for sensitive data and instructions for local development:
+
+```json
+// appsettings.json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=<your-database-server>;Database=<your-database-name>;User ID=<your-username>;Password=<your-password>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  },
+  "Chapa": {
+    "SecretKey": "<your-chapa-secret-key>",
+    "BaseUrl": "https://api.chapa.co/v1/",
+    "CallbackUrl": "https://<your-app-url>/Checkout/VerifyPayment",
+    "ReturnRootUrl": "https://<your-app-url>/Checkout/PaymentSuccess"
+  },
+  "JwtConfig": {
+    "Key": "<your-jwt-secret-key>",
+    "Issuer": "BulkyBooks",
+    "Audience": "BulkyBooks",
+    "DurationInMinutes": 60
+  }
+}
+```
+
+---
+
+### 🛠️ **Setup Instructions**
+
+1. **Database Configuration**  
+   Replace the following placeholders in `ConnectionStrings`:  
+   - `<your-database-server>`: Your Azure SQL Server or local SQL Server address  
+   - `<your-database-name>`: Database name (e.g., `BulkyBooks`)  
+   - `<your-username>`: Database username  
+   - `<your-password>`: Database password  
+
+   Example for local development:
+   ```json
+   "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=BulkyBooks;Trusted_Connection=True;MultipleActiveResultSets=true"
+   ```
+
+2. **Chapa Payment Gateway**  
+   - Sign up at [Chapa](https://chapa.co) and obtain your `SecretKey`.  
+   - Replace `<your-chapa-secret-key>` with your actual secret key.  
+   - For testing, use:  
+     ```json
+     "SecretKey": "CHASECK_TEST-<your-test-key>"
+     "CallbackUrl": "https://localhost:5001/Checkout/VerifyPayment",
+     "ReturnRootUrl": "https://localhost:5001/Checkout/PaymentSuccess"
+     ```
+
+3. **JWT Configuration**  
+   - Generate a secure JWT key using a tool like [RandomKeyGen](https://randomkeygen.com/).  
+   - Replace `<your-jwt-secret-key>` with a base64-encoded key.  
+   - Example:  
+     ```json
+     "Key": "sI8hz6G3j6c6GIz3+dI9QTMpQtvctGsWRIgjnBUAClw="
+     ```
+
+---
+
+### 🚀 **Running the Application**
+1. Update the `appsettings.json` file with your configuration.  
+2. Run database migrations:  
+   ```bash
+   dotnet ef database update
+   ```
+3. Start the application:  
+   ```bash
+   dotnet run
+   ```
+
+---
 
 ## 📈 Roadmap
 
