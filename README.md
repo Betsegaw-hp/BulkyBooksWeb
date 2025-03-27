@@ -16,12 +16,14 @@
 ## 🖼️ Infrastructure Dashboards
 
 ### Azure Monitoring
+
 | Dashboard                 | Screenshot                                                                 | Description                                                                 |
 |---------------------------|----------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | **Web App Service**       | ![Azure Web App](https://i.ibb.co/RpzPcxGz/bulkybooks-web-app.png)         | CPU/Memory metrics, deployment logs, and scaling status                    |
 | **SQL Server**            | ![Azure SQL](https://i.ibb.co/V0SZ8wNC/bulkybooks-sql-server.png)          | Query performance insights, index optimization, and connection statistics  |
 
 ### Application Analytics
+
 | Dashboard                     | Screenshot                                                                 | Description                                                                 |
 |-------------------------------|----------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 | **Order Management**          | ![Order Dashboard](https://i.ibb.co/KxBhSX6y/bulky-books-web-app.png)      | Bulk actions, advanced filtering, and order lifecycle tracking             |
@@ -90,7 +92,9 @@ Expiry: 12/34
 ```
 
 ---
-## Setup Guide 
+
+## Setup Guide
+
 Here’s a **clear and secure guide** for setting up the `appsettings.json` configuration to run the BulkyBooks Web App. This includes placeholders for sensitive data and instructions for local development:
 
 ```json
@@ -126,6 +130,7 @@ Here’s a **clear and secure guide** for setting up the `appsettings.json` conf
    - `<your-password>`: Database password  
 
    Example for local development:
+
    ```json
    "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=BulkyBooks;Trusted_Connection=True;MultipleActiveResultSets=true"
    ```
@@ -134,6 +139,7 @@ Here’s a **clear and secure guide** for setting up the `appsettings.json` conf
    - Sign up at [Chapa](https://chapa.co) and obtain your `SecretKey`.  
    - Replace `<your-chapa-secret-key>` with your actual secret key.  
    - For testing, use:  
+
      ```json
      "SecretKey": "CHASECK_TEST-<your-test-key>"
      "CallbackUrl": "https://localhost:5001/Checkout/VerifyPayment",
@@ -144,6 +150,7 @@ Here’s a **clear and secure guide** for setting up the `appsettings.json` conf
    - Generate a secure JWT key using a tool like [RandomKeyGen](https://randomkeygen.com/).  
    - Replace `<your-jwt-secret-key>` with a base64-encoded key.  
    - Example:  
+
      ```json
      "Key": "sI8hz6G3j6c6GIz3+dI9QTMpQtvctGsWRIgjnBUAClw="
      ```
@@ -151,12 +158,16 @@ Here’s a **clear and secure guide** for setting up the `appsettings.json` conf
 ---
 
 ### 🚀 **Running the Application**
+
 1. Update the `appsettings.json` file with your configuration.  
 2. Run database migrations:  
+
    ```bash
    dotnet ef database update
    ```
+
 3. Start the application:  
+
    ```bash
    dotnet run
    ```
@@ -178,17 +189,23 @@ Here’s a **clear and secure guide** for setting up the `appsettings.json` conf
 
 1. Fork the project (access required)
 2. Create your feature branch
-```bash
-git checkout -b feature/amazing-feature
-```
+
+    ```bash
+    git checkout -b feature/amazing-feature
+    ```
+
 3. Commit your changes
-```bash
-git commit -m 'Add some amazing feature'
-```
+
+    ```bash
+    git commit -m 'Add some amazing feature'
+    ```
+
 4. Push to the branch
-```bash
-git push origin feature/amazing-feature
-```
+
+    ```bash
+    git push origin feature/amazing-feature
+    ```
+
 5. Open a Pull Request
 
 ---
