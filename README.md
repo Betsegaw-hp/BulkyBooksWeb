@@ -33,7 +33,7 @@
 
 ## 🌟 Key Features
 
-- **Role-Based Access Control** (Reader, Author, Admin)
+- **Role-Based Access Control** (Reader, Author, Admin )
 - **E-commerce Workflow** with Chapa payment integration
 - **Order Management Dashboard** with bulk actions
 - **Automated CI/CD Pipeline** via GitHub Actions
