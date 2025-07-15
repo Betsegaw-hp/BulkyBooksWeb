@@ -6,39 +6,50 @@
 <div class="text-center">
     <h1 class="display-4">Category List</h1>
     <p>Welcome to the Category List page. Here you can view all the categories available in our system.</p>
-    <button type="button" class="btn btn-success mb-3" style="float: right;" data-bs-toggle="modal" data-bs-target=".modal-create-category">
-        Create Category
-    </button>
-    <table class="table table-striped table-hover table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Display Order</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var category in Model)
-            {
+    <form id="bulkActionForm" method="post" action="@Url.Action("BulkDelete", "Category")">
+        <button type="submit" class="btn btn-danger mb-3" style="float: left;" onclick="return confirm('Are you sure you want to delete selected categories?')">
+            Delete Selected
+        </button>
+        <button type="button" class="btn btn-success mb-3" style="float: right;" data-bs-toggle="modal" data-bs-target=".modal-create-category">
+            Create Category
+        </button>
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
                 <tr>
-                    <td width="20%">@category.Id</td>
-                    <td width="40%">
-                        <a asp-controller="Category" asp-action="Detail" asp-route-id="@category.Id" class="btn btn-info btn-sm">
-                            @category.Name
-                        </a>
-                    </td>
-                    <td width="20%">@category.DisplayOrder</td>
-                    <td width="20%">
-                        <a asp-controller="Category" asp-action="Detail" asp-route-id="@category.Id" class="btn btn-primary btn-sm edit-button">Edit</a>
-                        <form asp-controller="Category" asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
-                        </form>
-                    </td>
+                    <th style="width:10%; text-align:center; vertical-align:middle;">
+                        <input type="checkbox" id="selectAll" style="margin:auto; display:block; width:24px; height:24px; accent-color:#198754; background-color:#fff; border:2px solid #198754;" />
+                    </th>
+                    <th style="width:20%; text-align:center;">ID</th>
+                    <th style="width:40%; text-align:center;">Name</th>
+                    <th style="width:10%; text-align:center;">Display Order</th>
+                    <th style="width:20%; text-align:center;">Actions</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var category in Model)
+                {
+                    <tr>
+                        <td style="text-align:center; vertical-align:middle;">
+                            <input type="checkbox" name="selectedCategoryIds" value="@category.Id" class="selectItem" style="margin:auto; display:block;" />
+                        </td>
+                        <td style="text-align:center; vertical-align:middle;">@category.Id</td>
+                        <td style="vertical-align:middle;">
+                            <a asp-controller="Category" asp-action="Detail" asp-route-id="@category.Id" class="btn btn-info btn-sm">
+                                @category.Name
+                            </a>
+                        </td>
+                        <td style="text-align:center; vertical-align:middle;">@category.DisplayOrder</td>
+                        <td style="text-align:center; vertical-align:middle;">
+                            <a asp-controller="Category" asp-action="Detail" asp-route-id="@category.Id" class="btn btn-primary btn-sm edit-button">Edit</a>
+                            <form asp-controller="Category" asp-action="Delete" asp-route-id="@category.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this book?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </form>
 
     <!-- Include the partial view for the modal -->
     @await Html.PartialAsync("_CreateCategoryModal", new Category())
@@ -46,20 +57,36 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-	<script>
-		document.getElementById("categoryName").addEventListener("blur", async function(e) {
-			try {
-				const res = await fetch(`/Category/IsCategoryNameUnique?name=${this.value}`);
+    <script>
+        // Select All functionality
+        document.getElementById('selectAll').addEventListener('change', function () {
+            const checked = this.checked;
+            document.querySelectorAll('.selectItem').forEach(cb => cb.checked = checked);
+        });
 
-				if (!res.ok) {
-					throw new Error("Network response was not ok");
-				}
-				const isUnique = await res.json();
-				console.log(data)
-				if (!isUnique) alert("Category name already exists.");
-			} catch {
-				console.error("An error occurred while checking the category name uniqueness.");
-			}
-		});
-	</script>
+        // Optional: Uncheck "Select All" if any item is unchecked
+        document.querySelectorAll('.selectItem').forEach(cb => {
+            cb.addEventListener('change', function () {
+                if (!this.checked) {
+                    document.getElementById('selectAll').checked = false;
+                }
+            });
+        });
+
+        // Existing uniqueness check script...
+        document.getElementById("categoryName").addEventListener("blur", async function(e) {
+            try {
+                const res = await fetch(`/Category/IsCategoryNameUnique?name=${this.value}`);
+
+                if (!res.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                const isUnique = await res.json();
+                console.log(data)
+                if (!isUnique) alert("Category name already exists.");
+            } catch {
+                console.error("An error occurred while checking the category name uniqueness.");
+            }
+        });
+    </script>
 }

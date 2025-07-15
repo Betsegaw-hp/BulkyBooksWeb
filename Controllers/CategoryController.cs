@@ -106,5 +106,27 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("Index");
 		}
 
+		[Authorize(Policy = "AdminOnly")]
+		[HttpPost("BulkDelete")]
+		[ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete([FromForm] int[] selectedCategoryIds)
+        {
+            Console.WriteLine(selectedCategoryIds);
+
+            if (selectedCategoryIds == null || selectedCategoryIds.Length == 0)
+            {
+                TempData["error"] = "No categories selected for deletion.";
+                return RedirectToAction("Index");
+            }
+
+			var result = await _categoryService.BulkDeleteCategories(selectedCategoryIds);
+			if (result)
+				TempData["success"] = "Categories deleted successfully.";
+			else
+				TempData["error"] = "Failed to delete categories.";
+
+            return RedirectToAction("Index");
+        }
+
 	}
 }

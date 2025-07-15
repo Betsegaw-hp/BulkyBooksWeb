@@ -82,5 +82,18 @@ namespace BulkyBooksWeb.Services
 			return false;
 		}
 
-	}
+		public async Task<bool> BulkDeleteCategories(int[] ids)
+		{
+			var categoriesToDelete = await _db.Categories.Where(c => ids.Contains(c.Id)).ToListAsync();
+			if (categoriesToDelete.Any())
+			{
+				_db.Categories.RemoveRange(categoriesToDelete);
+				await _db.SaveChangesAsync();
+				return true;
+			}
+			return false;
+		}
+
+
+    }
 }

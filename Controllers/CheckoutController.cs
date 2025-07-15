@@ -182,7 +182,6 @@ namespace BulkyBooksWeb.Controllers
 				var callbackUrl = _configuration["Chapa:CallbackUrl"];
 				var token = GenerateToken(order.Id, userId.Value);
 				var returnUrl = $"{_configuration["Chapa:ReturnRootUrl"]}?token={token}";
-
 				// Create Chapa transaction request
 				var request = new ChapaRequest(
 					amount: (double)model.OrderTotal,
@@ -197,8 +196,10 @@ namespace BulkyBooksWeb.Controllers
 					customTitle: $"Bulky Books - Order #{txRef}"
 				);
 
+				_logger.LogInformation("Chapa request payload: {@ChapaRequest}", request);
 				var response = await _chapa.RequestAsync(request);
-				if (response.Status?.ToLower() == "success")
+
+                if (response.Status?.ToLower() == "success")
 				{
 					// Store transaction reference in session
 					HttpContext.Session.SetString("ChapaTxRef", request.TransactionReference);
@@ -215,8 +216,9 @@ namespace BulkyBooksWeb.Controllers
 				ModelState.AddModelError("", "Payment initialization failed");
 				return View("Index", model);
 			}
-			catch
+			catch (Exception ex)
 			{
+				_logger.LogError(ex, "An error occurred while processing the payment.");
 				ModelState.AddModelError("", "An error occurred while processing your payment. Please try again.");
 				return View("Index", model);
 			}

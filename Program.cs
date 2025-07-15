@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Debugging line
+Console.WriteLine($"[DEBUG] Current ASPNETCORE_ENVIRONMENT: {builder.Environment.EnvironmentName}");
+
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
