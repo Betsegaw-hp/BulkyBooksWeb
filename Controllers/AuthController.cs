@@ -13,6 +13,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using System.Text;
 using System.Linq;
+using QRCoder;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -690,8 +691,12 @@ namespace BulkyBooksWeb.Controllers
 			{
 				await _userManager.ResetAuthenticatorKeyAsync(user);
 				var key = await _userManager.GetAuthenticatorKeyAsync(user);
-				model.AuthenticatorKey = FormatKey(key!);
+				
+				// Set the properties that the view expects
+				model.AuthenticatorKey = key!;
+				model.ManualEntryKey = FormatKey(key!);
 				model.QrCodeUri = GenerateQrCodeUri(user.Email!, key!);
+				model.QrCodeImageData = GenerateQrCodeImage(model.QrCodeUri);
 			}
 			else
 			{
@@ -720,11 +725,19 @@ namespace BulkyBooksWeb.Controllers
 					await _userManager.SetTwoFactorEnabledAsync(user, true);
 					var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
 					
-					TempData["SuccessMessage"] = "Two-factor authentication has been enabled.";
-					TempData["RecoveryCodes"] = string.Join(",", recoveryCodes!);
+					// Create a new model for success display
+					var successModel = new TwoFactorSetupViewModel 
+					{ 
+						IsEnabled = true,
+						RecoveryCodes = recoveryCodes!.ToList()
+					};
+					
+					// Also set ViewBag for backward compatibility
+					ViewBag.RecoveryCodes = recoveryCodes!.ToList();
+					TempData["SuccessMessage"] = "Two-factor authentication has been enabled successfully! Please save your recovery codes.";
 					
 					_logger.LogInformation($"User {user.Id} enabled 2FA.");
-					return RedirectToAction("ManageProfile", new { tab = "security" });
+					return View("SetupTwoFactor", successModel);
 				}
 				else
 				{
@@ -736,8 +749,10 @@ namespace BulkyBooksWeb.Controllers
 			// Regenerate the setup data if validation failed
 			await _userManager.ResetAuthenticatorKeyAsync(user);
 			var key = await _userManager.GetAuthenticatorKeyAsync(user);
-			model.AuthenticatorKey = FormatKey(key!);
+			model.AuthenticatorKey = key!;
+			model.ManualEntryKey = FormatKey(key!);
 			model.QrCodeUri = GenerateQrCodeUri(user.Email!, key!);
+			model.QrCodeImageData = GenerateQrCodeImage(model.QrCodeUri);
 
 			return View(model);
 		}
@@ -1032,6 +1047,15 @@ namespace BulkyBooksWeb.Controllers
 				Uri.EscapeDataString("BulkyBooks"),
 				Uri.EscapeDataString(email), 
 				unformattedKey);
+		}
+
+		private string GenerateQrCodeImage(string qrCodeUri)
+		{
+			using var qrGenerator = new QRCodeGenerator();
+			using var qrCodeData = qrGenerator.CreateQrCode(qrCodeUri, QRCodeGenerator.ECCLevel.Q);
+			using var qrCode = new PngByteQRCode(qrCodeData);
+			var qrCodeBytes = qrCode.GetGraphic(20);
+			return Convert.ToBase64String(qrCodeBytes);
 		}
 	}
 }
