@@ -56,7 +56,7 @@ namespace BulkyBooksWeb.Controllers
 			// Create a User object for the view model (for backward compatibility)
 			var userViewModel = new User
 			{
-				Id = int.Parse(user.Id), // Convert string ID to int for compatibility
+				Id = user.Id.GetHashCode(), // Use hash code of GUID for int compatibility
 				Username = user.UserName ?? "",
 				Email = user.Email ?? "",
 				FullName = user.FullName,
@@ -267,7 +267,7 @@ namespace BulkyBooksWeb.Controllers
 				
 				var userViewModel = new User
 				{
-					Id = int.Parse(user.Id),
+					Id = user.Id.GetHashCode(),
 					Username = user.UserName ?? "",
 					Email = user.Email ?? "",
 					FullName = user.FullName,
@@ -321,7 +321,7 @@ namespace BulkyBooksWeb.Controllers
 				
 				var userViewModel = new User
 				{
-					Id = int.Parse(user.Id),
+					Id = user.Id.GetHashCode(),
 					Username = user.UserName ?? "",
 					Email = user.Email ?? "",
 					FullName = user.FullName,
@@ -379,7 +379,7 @@ namespace BulkyBooksWeb.Controllers
 				
 				var userViewModel = new User
 				{
-					Id = int.Parse(user.Id),
+					Id = user.Id.GetHashCode(),
 					Username = user.UserName ?? "",
 					Email = user.Email ?? "",
 					FullName = user.FullName,
