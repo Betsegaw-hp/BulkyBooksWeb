@@ -1,0 +1,101 @@
+@using BulkyBooksWeb.Models.ViewModels
+@model LoginWith2faViewModel
+@{
+    ViewData["Title"] = "Two-Factor Authentication";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-center text-muted mb-4">
+                        Enter the verification code from your authenticator app to complete your sign-in.
+                    </p>
+
+                    <form asp-action="LoginWith2fa" method="post">
+                        @if (ViewData.ModelState.ErrorCount > 0)
+                        {
+                            <div asp-validation-summary="All" class="alert alert-danger" role="alert"></div>
+                        }
+                        
+                        <input asp-for="RememberMe" type="hidden" />
+                        <input asp-for="ReturnUrl" type="hidden" />
+
+                        <div class="form-group mb-3">
+                            <label asp-for="TwoFactorCode" class="form-label fw-bold">
+                                <i class="fas fa-key me-2"></i>Verification Code
+                            </label>
+                            <input asp-for="TwoFactorCode" class="form-control text-center" 
+                                   placeholder="000000" maxlength="7" autocomplete="one-time-code"
+                                   style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                            <span asp-validation-for="TwoFactorCode" class="text-danger"></span>
+                            <div class="form-text">
+                                Enter the 6-digit code from your authenticator app
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input asp-for="RememberMachine" class="form-check-input" type="checkbox" />
+                            <label asp-for="RememberMachine" class="form-check-label">
+                                Remember this machine
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <div class="text-center">
+                        <p class="mb-2">Don't have access to your authenticator?</p>
+                        <a asp-action="LoginWithRecoveryCode" 
+                           asp-route-returnUrl="@Model.ReturnUrl" 
+                           class="btn btn-outline-secondary">
+                            <i class="fas fa-key me-2"></i>Use Recovery Code
+                        </a>
+                    </div>
+
+                    <div class="text-center mt-3">
+                        <a asp-action="Login" class="text-muted">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-format verification code input
+        document.addEventListener('DOMContentLoaded', function() {
+            const codeInput = document.querySelector('input[name="TwoFactorCode"]');
+            if (codeInput) {
+                codeInput.addEventListener('input', function(e) {
+                    // Only allow numbers
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    
+                    // Auto-submit when 6 digits are entered
+                    if (this.value.length === 6) {
+                        // Optional: Auto-submit form
+                        // this.form.submit();
+                    }
+                });
+
+                // Focus on the input field
+                codeInput.focus();
+            }
+        });
+    </script>
+}

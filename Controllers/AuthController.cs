@@ -115,6 +115,10 @@ namespace BulkyBooksWeb.Controllers
 						
 					if (result.Succeeded)
 					{
+						// Update last login time
+						user.LastLoginAt = DateTime.UtcNow;
+						await _userManager.UpdateAsync(user);
+						
 						_logger.LogInformation("User {Username} logged in successfully", login.Username);
 						
 						// Redirect to return URL or home
@@ -126,9 +130,23 @@ namespace BulkyBooksWeb.Controllers
 						return RedirectToAction("Index", "Home");
 					}
 					
+					if (result.RequiresTwoFactor)
+					{
+						_logger.LogInformation("User {Username} requires 2FA", login.Username);
+						return RedirectToAction("LoginWith2fa", new { returnUrl = returnUrl ?? login.ReturnUrl, rememberMe = login.RememberMe });
+					}
+					
 					if (result.IsLockedOut)
 					{
+						_logger.LogWarning("User {Username} account locked out", login.Username);
 						ModelState.AddModelError(string.Empty, "Account locked. Try again later.");
+						return View(login);
+					}
+					
+					if (result.IsNotAllowed)
+					{
+						_logger.LogWarning("User {Username} not allowed to sign in", login.Username);
+						ModelState.AddModelError(string.Empty, "Account not verified. Please check your email for verification instructions.");
 						return View(login);
 					}
 				}
@@ -137,6 +155,165 @@ namespace BulkyBooksWeb.Controllers
 			}
 
 			return View(login);
+		}
+
+		// GET: Two-Factor Authentication Login
+		public async Task<IActionResult> LoginWith2fa(bool rememberMe, string? returnUrl = null)
+		{
+			// Ensure the user has gone through the username & password screen first
+			var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+
+			if (user == null)
+			{
+				throw new InvalidOperationException($"Unable to load two-factor authentication user.");
+			}
+
+			// Provide default returnUrl if none provided
+			returnUrl = returnUrl ?? Url.Action("Index", "Home") ?? "/";
+
+			var model = new LoginWith2faViewModel
+			{
+				RememberMe = rememberMe,
+				ReturnUrl = returnUrl
+			};
+
+			ViewData["ReturnUrl"] = returnUrl;
+
+			return View(model);
+		}
+
+		// POST: Two-Factor Authentication Login
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> LoginWith2fa(LoginWith2faViewModel model, bool rememberMe, string? returnUrl = null)
+		{
+			if (!ModelState.IsValid)
+			{
+				return View(model);
+			}
+
+			// Use returnUrl from model if available, otherwise use parameter, otherwise default to Home
+			returnUrl = returnUrl ?? model.ReturnUrl ?? Url.Action("Index", "Home") ?? "/";
+
+			var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+			if (user == null)
+			{
+				throw new InvalidOperationException($"Unable to load two-factor authentication user.");
+			}
+
+			var authenticatorCode = model.TwoFactorCode.Replace(" ", string.Empty).Replace("-", string.Empty);
+
+			var result = await _signInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, rememberMe, model.RememberMachine);
+
+			var userId = await _userManager.GetUserIdAsync(user);
+
+			if (result.Succeeded)
+			{
+				// Update last login time
+				user.LastLoginAt = DateTime.UtcNow;
+				await _userManager.UpdateAsync(user);
+				
+				_logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
+				
+				if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+				{
+					return Redirect(returnUrl);
+				}
+				return RedirectToAction("Index", "Home");
+			}
+			else if (result.IsLockedOut)
+			{
+				_logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+				return RedirectToAction("Lockout");
+			}
+			else
+			{
+				_logger.LogWarning("Invalid authenticator code entered for user with ID '{UserId}'.", userId);
+				ModelState.AddModelError("TwoFactorCode", "Invalid authenticator code.");
+				
+				// Ensure model has proper ReturnUrl for re-rendering
+				model.ReturnUrl = returnUrl;
+				return View(model);
+			}
+		}
+
+		// GET: Login with Recovery Code
+		public async Task<IActionResult> LoginWithRecoveryCode(string? returnUrl = null)
+		{
+			// Ensure the user has gone through the username & password screen first
+			var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+			if (user == null)
+			{
+				throw new InvalidOperationException($"Unable to load two-factor authentication user.");
+			}
+
+			// Provide default returnUrl if none provided
+			returnUrl = returnUrl ?? Url.Action("Index", "Home") ?? "/";
+
+			ViewData["ReturnUrl"] = returnUrl;
+
+			return View(new TwoFactorRecoveryCodeLoginViewModel { ReturnUrl = returnUrl });
+		}
+
+		// POST: Login with Recovery Code
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> LoginWithRecoveryCode(TwoFactorRecoveryCodeLoginViewModel model)
+		{
+			if (!ModelState.IsValid)
+			{
+				return View(model);
+			}
+
+			var user = await _signInManager.GetTwoFactorAuthenticationUserAsync();
+			if (user == null)
+			{
+				throw new InvalidOperationException($"Unable to load two-factor authentication user.");
+			}
+
+			var recoveryCode = model.RecoveryCode.Replace(" ", string.Empty);
+
+			var result = await _signInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
+
+			var userId = await _userManager.GetUserIdAsync(user);
+
+			if (result.Succeeded)
+			{
+				// Update last login time
+				user.LastLoginAt = DateTime.UtcNow;
+				await _userManager.UpdateAsync(user);
+				
+				_logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
+				
+				// Use model ReturnUrl or default to Home
+				var returnUrl = model.ReturnUrl ?? Url.Action("Index", "Home") ?? "/";
+				
+				if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+				{
+					return Redirect(returnUrl);
+				}
+				return RedirectToAction("Index", "Home");
+			}
+			if (result.IsLockedOut)
+			{
+				_logger.LogWarning("User with ID '{UserId}' account locked out.", userId);
+				return RedirectToAction("Lockout");
+			}
+			else
+			{
+				_logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}'", userId);
+				ModelState.AddModelError("RecoveryCode", "Invalid recovery code entered.");
+				
+				// Ensure model has proper ReturnUrl for re-rendering
+				model.ReturnUrl = model.ReturnUrl ?? Url.Action("Index", "Home") ?? "/";
+				return View(model);
+			}
+		}
+
+		// GET: Lockout
+		public IActionResult Lockout()
+		{
+			return View();
 		}
 
 		public IActionResult SignUp()
@@ -187,7 +364,10 @@ namespace BulkyBooksWeb.Controllers
 				LastName = string.Join(" ", signUp.FullName.Split(' ').Skip(1)),
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				EmailConfirmed = true // For simplicity, auto-confirm emails
+				EmailConfirmed = true, // For simplicity, auto-confirm emails
+				TwoFactorEnabled = false, // Default to false for new users
+				LockoutEnabled = true, // Enable lockout protection
+				AccessFailedCount = 0
 			};
 
 			// Create user using Identity
@@ -206,8 +386,12 @@ namespace BulkyBooksWeb.Controllers
 				
 				_logger.LogInformation("User {Username} created successfully with role {Role}", signUp.Username, roleToAssign);
 				
-				// Optionally sign in the user immediately
+				// Set success message for login page
+				TempData["SuccessMessage"] = "Account created successfully! You can now sign in with your credentials.";
+				
+				// Optionally sign in the user immediately (uncomment if you want auto-login)
 				// await _signInManager.SignInAsync(newUser, isPersistent: false);
+				// return RedirectToAction("Index", "Home");
 				
 				return RedirectToAction("Login");
 			}
