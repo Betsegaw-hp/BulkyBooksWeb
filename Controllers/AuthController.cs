@@ -56,13 +56,28 @@ namespace BulkyBooksWeb.Controllers
 
 			UserProfileViewModel userProfileViewModel = new()
 			{
-				User = user, // Use ApplicationUser directly
+				User = user,
 				UpdateProfile = new UpdateProfileViewModel
 				{
 					FullName = user.FullName,
 					Email = user.Email ?? ""
-				}
+				},
+				ChangePassword = new ChangePasswordViewModel(),
+				UpdatePreferences = new UpdatePreferencesViewModel()
 			};
+
+			// Set active tab from TempData if available
+			ViewBag.ActiveTab = TempData["ActiveTab"] as string ?? "personal-info";
+			
+			// Handle success/error messages
+			if (TempData["SuccessMessage"] != null)
+			{
+				ViewBag.SuccessMessage = TempData["SuccessMessage"];
+			}
+			if (TempData["ErrorMessage"] != null)
+			{
+				ViewBag.ErrorMessage = TempData["ErrorMessage"];
+			}
 
 			return View(userProfileViewModel);
 		}
@@ -281,23 +296,41 @@ namespace BulkyBooksWeb.Controllers
 		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+		public async Task<IActionResult> ChangePassword(UserProfileViewModel model)
 		{
 			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
-			
-			if (!ModelState.IsValid)
+			if (user == null) 
 			{
-				var userProfileViewModel = new UserProfileViewModel
-				{
-					ChangePassword = model,
-					User = user // Use ApplicationUser directly
-				};
-				return View("Profile", userProfileViewModel);
+				TempData["ErrorMessage"] = "User not found.";
+				return RedirectToAction("Login");
+			}
+
+			// Validate only the ChangePassword part of the model
+			if (string.IsNullOrEmpty(model.ChangePassword.CurrentPassword) ||
+				string.IsNullOrEmpty(model.ChangePassword.NewPassword) ||
+				string.IsNullOrEmpty(model.ChangePassword.ConfirmNewPassword))
+			{
+				TempData["ErrorMessage"] = "All password fields are required.";
+				TempData["ActiveTab"] = "security";
+				return RedirectToAction("Profile");
+			}
+
+			if (model.ChangePassword.NewPassword != model.ChangePassword.ConfirmNewPassword)
+			{
+				TempData["ErrorMessage"] = "New password and confirmation do not match.";
+				TempData["ActiveTab"] = "security";
+				return RedirectToAction("Profile");
+			}
+
+			if (model.ChangePassword.NewPassword.Length < 8)
+			{
+				TempData["ErrorMessage"] = "Password must be at least 8 characters long.";
+				TempData["ActiveTab"] = "security";
+				return RedirectToAction("Profile");
 			}
 
 			// Use Identity's change password method
-			var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+			var result = await _userManager.ChangePasswordAsync(user, model.ChangePassword.CurrentPassword, model.ChangePassword.NewPassword);
 			
 			if (result.Succeeded)
 			{
@@ -308,14 +341,20 @@ namespace BulkyBooksWeb.Controllers
 				await _signInManager.RefreshSignInAsync(user);
 				
 				_logger.LogInformation("User {UserId} changed password successfully", user.Id);
+				TempData["SuccessMessage"] = "Password changed successfully!";
+				TempData["ActiveTab"] = "security";
 				return RedirectToAction("Profile");
 			}
 
+			// Handle Identity errors
+			var errorMessages = new List<string>();
 			foreach (var error in result.Errors)
 			{
-				ModelState.AddModelError(string.Empty, error.Description);
+				errorMessages.Add(error.Description);
 			}
-
+			
+			TempData["ErrorMessage"] = string.Join(" ", errorMessages);
+			TempData["ActiveTab"] = "security";
 			return RedirectToAction("Profile");
 		}
 

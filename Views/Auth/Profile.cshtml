@@ -1,9 +1,27 @@
+@using BulkyBooksWeb.Models.ViewModels
 @model BulkyBooksWeb.Models.ViewModels.UserProfileViewModel
 @{
     ViewData["Title"] = "My Account";
+    var activeTab = ViewBag.ActiveTab as string ?? "personal-info";
 }
 
 <div class="container py-4">
+    <!-- Success/Error Messages -->
+    @if (ViewBag.SuccessMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@ViewBag.SuccessMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@ViewBag.ErrorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    
     <div class="row">
         <div class="col-md-3 mb-4">
             <div class="card border-dark">
@@ -28,7 +46,6 @@
                     </div>
                     <h5>@Model.User.FullName</h5>
                     <p class="text-muted mb-2">@Model.User.Email</p>
-                    <div class="badge bg-success mb-3">User</div>
                     
                     <div class="d-grid gap-2">
                         <form asp-controller="Auth" asp-action="Logout" method="post">
@@ -108,27 +125,27 @@
                 <div class="card-header bg-dark text-white">
                     <ul class="nav nav-tabs card-header-tabs" id="profileTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="personal-info-tab" data-bs-toggle="tab" data-bs-target="#personal-info" type="button" role="tab" aria-controls="personal-info" aria-selected="true">
+                            <button class="nav-link @(activeTab == "personal-info" ? "active" : "")" id="personal-info-tab" data-bs-toggle="tab" data-bs-target="#personal-info" type="button" role="tab" aria-controls="personal-info" aria-selected="@(activeTab == "personal-info" ? "true" : "false")">
                                 <i class="fas fa-user me-2"></i> Personal Info
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">
+                            <button class="nav-link @(activeTab == "security" ? "active" : "")" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="@(activeTab == "security" ? "true" : "false")">
                                 <i class="fas fa-lock me-2"></i> Security
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="verification-tab" data-bs-toggle="tab" data-bs-target="#verification" type="button" role="tab" aria-controls="verification" aria-selected="false">
+                            <button class="nav-link @(activeTab == "verification" ? "active" : "")" id="verification-tab" data-bs-toggle="tab" data-bs-target="#verification" type="button" role="tab" aria-controls="verification" aria-selected="@(activeTab == "verification" ? "true" : "false")">
                                 <i class="fas fa-check-circle me-2"></i> Verification
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" aria-controls="preferences" aria-selected="false">
+                            <button class="nav-link @(activeTab == "preferences" ? "active" : "")" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" aria-controls="preferences" aria-selected="@(activeTab == "preferences" ? "true" : "false")">
                                 <i class="fas fa-cog me-2"></i> Preferences
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="privacy-tab" data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab" aria-controls="privacy" aria-selected="false">
+                            <button class="nav-link @(activeTab == "privacy" ? "active" : "")" id="privacy-tab" data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab" aria-controls="privacy" aria-selected="@(activeTab == "privacy" ? "true" : "false")">
                                 <i class="fas fa-user-shield me-2"></i> Privacy
                             </button>
                         </li>
@@ -137,7 +154,7 @@
                 <div class="card-body">
                     <div class="tab-content" id="profileTabsContent">
                         <!-- Personal Information Tab -->
-                        <div class="tab-pane fade show active" id="personal-info" role="tabpanel" aria-labelledby="personal-info-tab">
+                        <div class="tab-pane fade @(activeTab == "personal-info" ? "show active" : "")" id="personal-info" role="tabpanel" aria-labelledby="personal-info-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Personal Information</h4>
                             
                             <form asp-controller="Auth" asp-action="UpdateProfile" method="post">
@@ -200,7 +217,7 @@
                         </div>
                         
                         <!-- Security Tab -->
-                        <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                        <div class="tab-pane fade @(activeTab == "security" ? "show active" : "")" id="security" role="tabpanel" aria-labelledby="security-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Security Settings</h4>
                             
                             <div class="card mb-4 border-warning">
@@ -210,7 +227,7 @@
                                 <div class="card-body">
                                     <form asp-controller="Auth" asp-action="ChangePassword" method="post">
                                         @Html.AntiForgeryToken()
-                                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
                                         
                                         <div class="mb-3">
                                             <label asp-for="ChangePassword.CurrentPassword" class="form-label">Current Password</label>
@@ -330,7 +347,7 @@
                         </div>
                         
                         <!-- Email & Phone Verification Tab -->
-                        <div class="tab-pane fade" id="verification" role="tabpanel" aria-labelledby="verification-tab">
+                        <div class="tab-pane fade @(activeTab == "verification" ? "show active" : "")" id="verification" role="tabpanel" aria-labelledby="verification-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Account Verification</h4>
                             
                             <!-- Email Verification -->
@@ -449,7 +466,7 @@
                         </div>
                         
                         <!-- Preferences Tab -->
-                        <div class="tab-pane fade" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
+                        <div class="tab-pane fade @(activeTab == "preferences" ? "show active" : "")" id="preferences" role="tabpanel" aria-labelledby="preferences-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Account Preferences</h4>
                             
                             <form asp-controller="Auth" asp-action="UpdatePreferences" method="post">
@@ -494,7 +511,7 @@
                         </div>
                         
                         <!-- Privacy Tab -->
-                        <div class="tab-pane fade" id="privacy" role="tabpanel" aria-labelledby="privacy-tab">
+                        <div class="tab-pane fade @(activeTab == "privacy" ? "show active" : "")" id="privacy" role="tabpanel" aria-labelledby="privacy-tab">
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Privacy & Data Management</h4>
                             
                             <!-- Account Data Export -->
