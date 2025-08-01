@@ -62,7 +62,8 @@ namespace BulkyBooksWeb.Services
                 {
                     UserName = "admin",
                     Email = adminEmail,
-                    FullName = "System Administrator",
+                    FirstName = "System",
+                    LastName = "Administrator",
                     AvatarUrl = "/images/default-avatar.png",
                     EmailConfirmed = true,
                     CreatedAt = DateTime.UtcNow,
@@ -107,7 +108,8 @@ namespace BulkyBooksWeb.Services
                 {
                     UserName = "author1",
                     Email = authorEmail,
-                    FullName = "John Author",
+                    FirstName = "John",
+                    LastName = "Author",
                     AvatarUrl = "/images/default-avatar.png",
                     EmailConfirmed = true,
                     CreatedAt = DateTime.UtcNow,

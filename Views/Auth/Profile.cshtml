@@ -28,11 +28,11 @@
                     </div>
                     <h5>@Model.User.FullName</h5>
                     <p class="text-muted mb-2">@Model.User.Email</p>
-                    <div class="badge bg-success mb-3">@Model.User.Role.ToString()</div>
+                    <div class="badge bg-success mb-3">User</div>
                     
                     <div class="d-grid gap-2">
-                        <form asp-controller="Auth" asp-action="Logout" method="post" class="">
-                             <button type="submit" class=" btn btn-outline-danger">
+                        <form asp-controller="Auth" asp-action="Logout" method="post">
+                             <button type="submit" class="btn btn-outline-danger">
                                 <i class="fas fa-sign-out-alt me-2"></i> Logout
                             </button>
                         </form>
@@ -47,20 +47,59 @@
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Account Activity</h5>
                 </div>
-                @* <div class="card-body">
+                <div class="card-body">
                     <div class="mb-2">
                         <small class="text-muted">Last login:</small>
-                        <p class="mb-0">@Model.User.LastLoginDate.ToString("MMM dd, yyyy h:mm tt")</p>
+                        <p class="mb-0">
+                            @if (Model.User.LastLoginAt.HasValue)
+                            {
+                                @Model.User.LastLoginAt.Value.ToString("MMM dd, yyyy h:mm tt")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Never</span>
+                            }
+                        </p>
                     </div>
                     <div class="mb-2">
-                        <small class="text-muted">Last password change:</small>
-                        <p class="mb-0">@Model.User.LastPasswordChangeDate.ToString("MMM dd, yyyy")</p>
+                        <small class="text-muted">Account status:</small>
+                        <p class="mb-0">
+                            @if (Model.User.EmailConfirmed)
+                            {
+                                <span class="badge bg-success">Email Verified</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Email Pending</span>
+                            }
+                            @if (Model.User.PhoneNumberConfirmed)
+                            {
+                                <span class="badge bg-success">Phone Verified</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Two-Factor Authentication:</small>
+                        <p class="mb-0">
+                            @if (Model.User.TwoFactorEnabled)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="fas fa-shield-alt me-1"></i>Enabled
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-shield me-1"></i>Disabled
+                                </span>
+                            }
+                        </p>
                     </div>
                     <div>
-                        <small class="text-muted">Login count:</small>
-                        <p class="mb-0">@Model.User.LoginCount</p>
+                        <small class="text-muted">Failed login attempts:</small>
+                        <p class="mb-0">@Model.User.AccessFailedCount</p>
                     </div>
-                </div> *@
+                </div>
             </div>
         </div>
         
@@ -79,8 +118,18 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="verification-tab" data-bs-toggle="tab" data-bs-target="#verification" type="button" role="tab" aria-controls="verification" aria-selected="false">
+                                <i class="fas fa-check-circle me-2"></i> Verification
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="preferences-tab" data-bs-toggle="tab" data-bs-target="#preferences" type="button" role="tab" aria-controls="preferences" aria-selected="false">
                                 <i class="fas fa-cog me-2"></i> Preferences
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="privacy-tab" data-bs-toggle="tab" data-bs-target="#privacy" type="button" role="tab" aria-controls="privacy" aria-selected="false">
+                                <i class="fas fa-user-shield me-2"></i> Privacy
                             </button>
                         </li>
                     </ul>
@@ -101,12 +150,45 @@
                                         <input asp-for="UpdateProfile.FullName" class="form-control" />
                                         <span asp-validation-for="UpdateProfile.FullName" class="text-danger"></span>   
                                     </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Username</label>
+                                        <input value="@Model.User.UserName" class="form-control" readonly />
+                                        <div class="form-text">Username cannot be changed</div>
+                                    </div>
                                 </div>
                                 
-                                <div class="mb-3">
-                                    <label asp-for="UpdateProfile.Email" class="form-label">Email Address</label>
-                                    <input asp-for="UpdateProfile.Email" class="form-control"  />
-                                    <span asp-validation-for="UpdateProfile.Email" class="text-danger"></span>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label asp-for="UpdateProfile.Email" class="form-label">Email Address</label>
+                                        <div class="input-group">
+                                            <input asp-for="UpdateProfile.Email" class="form-control" />
+                                            @if (Model.User.EmailConfirmed)
+                                            {
+                                                <span class="input-group-text text-success">
+                                                    <i class="fas fa-check-circle" title="Email verified"></i>
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="sendEmailConfirmation()">
+                                                    Verify
+                                                </button>
+                                            }
+                                        </div>
+                                        <span asp-validation-for="UpdateProfile.Email" class="text-danger"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phone Number</label>
+                                        <div class="input-group">
+                                            <input value="@Model.User.PhoneNumber" class="form-control" placeholder="Add phone number" />
+                                            @if (Model.User.PhoneNumberConfirmed)
+                                            {
+                                                <span class="input-group-text text-success">
+                                                    <i class="fas fa-check-circle" title="Phone verified"></i>
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <div class="d-flex justify-content-end">
@@ -162,17 +244,206 @@
                                     <h5 class="mb-0">Two-Factor Authentication</h5>
                                 </div>
                                 <div class="card-body">
-                                    @* <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="enable2fa" @(Model.User.TwoFactorEnabled ? "checked" : "") />
-                                        <label class="form-check-label" for="enable2fa">Enable Two-Factor Authentication</label>
+                                    @if (Model.User.TwoFactorEnabled)
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            Two-factor authentication is <strong>enabled</strong> for your account.
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-danger" onclick="disableTwoFactor()">
+                                                <i class="fas fa-times me-2"></i>Disable 2FA
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary" onclick="generateRecoveryCodes()">
+                                                <i class="fas fa-key me-2"></i>Generate Recovery Codes
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            Two-factor authentication is <strong>disabled</strong>. Enable it for enhanced security.
+                                        </div>
+                                        <p class="mb-3">Two-factor authentication adds an extra layer of security to your account by requiring more than just a password to sign in.</p>
+                                        <a href="@Url.Action("SetupTwoFactor", "Auth")" class="btn btn-success">
+                                            <i class="fas fa-shield-alt me-2"></i>Enable Two-Factor Authentication
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                            
+                            <!-- Account Security Status -->
+                            <div class="card border-secondary mt-3">
+                                <div class="card-header bg-secondary text-white">
+                                    <h5 class="mb-0">Account Security Status</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Email Verification</span>
+                                                @if (Model.User.EmailConfirmed)
+                                                {
+                                                    <span class="badge bg-success">Verified</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">Pending</span>
+                                                }
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Phone Verification</span>
+                                                @if (Model.User.PhoneNumberConfirmed)
+                                                {
+                                                    <span class="badge bg-success">Verified</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Not Set</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Failed Login Attempts</span>
+                                                <span class="badge bg-info">@Model.User.AccessFailedCount</span>
+                                            </div>
+                                            @if (Model.User.LockoutEnd.HasValue && Model.User.LockoutEnd > DateTimeOffset.UtcNow)
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span>Account Status</span>
+                                                    <span class="badge bg-danger">Locked until @Model.User.LockoutEnd.Value.ToString("f")</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span>Account Status</span>
+                                                    <span class="badge bg-success">Active</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Email & Phone Verification Tab -->
+                        <div class="tab-pane fade" id="verification" role="tabpanel" aria-labelledby="verification-tab">
+                            <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Account Verification</h4>
+                            
+                            <!-- Email Verification -->
+                            <div class="card mb-4 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-envelope me-2"></i>Email Verification
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <strong>Email:</strong> @Model.User.Email
+                                        </div>
+                                        <div>
+                                            @if (Model.User.EmailConfirmed)
+                                            {
+                                                <span class="badge bg-success fs-6">
+                                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning fs-6">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Unverified
+                                                </span>
+                                            }
+                                        </div>
                                     </div>
                                     
-                                    <p class="mb-3">Two-factor authentication adds an extra layer of security to your account by requiring more than just a password to sign in.</p>
-                                    
-                                    <button class="btn btn-outline-info" id="configure2fa" @(Model.User.TwoFactorEnabled ? "" : "disabled")>
-                                        <i class="fas fa-qrcode me-2"></i> Configure 2FA
-                                    </button> *@
-                                    <p>Comming soon!</p>
+                                    @if (!Model.User.EmailConfirmed)
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Please verify your email address to secure your account and receive important notifications.
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="sendEmailConfirmation()">
+                                            <i class="fas fa-paper-plane me-2"></i>Send Verification Email
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            Your email address has been verified successfully.
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            
+                            <!-- Phone Verification -->
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-phone me-2"></i>Phone Number Verification
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if (string.IsNullOrEmpty(Model.User.PhoneNumber))
+                                    {
+                                        <div class="alert alert-secondary">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No phone number added. Add a phone number for additional security.
+                                        </div>
+                                        <form id="addPhoneForm">
+                                            <div class="input-group mb-3">
+                                                <input type="tel" class="form-control" placeholder="Enter phone number" id="phoneNumberInput" />
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="fas fa-plus me-1"></i>Add
+                                                </button>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <strong>Phone:</strong> @Model.User.PhoneNumber
+                                            </div>
+                                            <div>
+                                                @if (Model.User.PhoneNumberConfirmed)
+                                                {
+                                                    <span class="badge bg-success fs-6">
+                                                        <i class="fas fa-check-circle me-1"></i>Verified
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning fs-6">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Unverified
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                        
+                                        @if (!Model.User.PhoneNumberConfirmed)
+                                        {
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Verify your phone number to enable SMS notifications and additional security features.
+                                            </div>
+                                            <button type="button" class="btn btn-primary" onclick="sendPhoneVerification()">
+                                                <i class="fas fa-sms me-2"></i>Send Verification Code
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                Your phone number has been verified successfully.
+                                            </div>
+                                        }
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -221,6 +492,126 @@
                                 </div>
                             </form>
                         </div>
+                        
+                        <!-- Privacy Tab -->
+                        <div class="tab-pane fade" id="privacy" role="tabpanel" aria-labelledby="privacy-tab">
+                            <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Privacy & Data Management</h4>
+                            
+                            <!-- Account Data Export -->
+                            <div class="card mb-4 border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-download me-2"></i>Download Your Data
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">
+                                        Download a copy of all your personal data, including your profile information, 
+                                        order history, and account activity.
+                                    </p>
+                                    <button type="button" class="btn btn-info" onclick="downloadPersonalData()">
+                                        <i class="fas fa-download me-2"></i>Download My Data
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Privacy Settings -->
+                            <div class="card mb-4 border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-user-shield me-2"></i>Privacy Settings
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="profileVisibility" checked />
+                                        <label class="form-check-label" for="profileVisibility">
+                                            <strong>Profile Visibility</strong><br>
+                                            <small class="text-muted">Allow other users to see your profile information</small>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="orderHistory" />
+                                        <label class="form-check-label" for="orderHistory">
+                                            <strong>Order History Privacy</strong><br>
+                                            <small class="text-muted">Keep your order history private from other users</small>
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="dataProcessing" checked />
+                                        <label class="form-check-label" for="dataProcessing">
+                                            <strong>Analytics & Improvements</strong><br>
+                                            <small class="text-muted">Allow us to use your data to improve our services</small>
+                                        </label>
+                                    </div>
+                                    
+                                    <button type="button" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Privacy Settings
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Connected Apps -->
+                            <div class="card mb-4 border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-link me-2"></i>Connected External Accounts
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">Manage external accounts connected to your profile for sign-in.</p>
+                                    
+                                    <div class="list-group">
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fab fa-google fa-2x me-3 text-danger"></i>
+                                                <div>
+                                                    <h6 class="mb-1">Google</h6>
+                                                    <small class="text-muted">Not connected</small>
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-outline-primary btn-sm">Connect</button>
+                                        </div>
+                                        
+                                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fab fa-github fa-2x me-3 text-dark"></i>
+                                                <div>
+                                                    <h6 class="mb-1">GitHub</h6>
+                                                    <small class="text-muted">Not connected</small>
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-outline-primary btn-sm">Connect</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Danger Zone -->
+                            <div class="card border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Danger Zone
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-warning">
+                                        <strong>Warning:</strong> These actions cannot be undone. Please proceed with caution.
+                                    </div>
+                                    
+                                    <div class="d-grid gap-2 d-md-flex">
+                                        <button type="button" class="btn btn-outline-warning me-md-2" onclick="deactivateAccount()">
+                                            <i class="fas fa-pause me-2"></i>Deactivate Account
+                                        </button>
+                                        <a href="@Url.Action("DeleteAccount", "Auth")" class="btn btn-danger">
+                                            <i class="fas fa-trash me-2"></i>Delete Account
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -233,25 +624,224 @@
     
     <script>
         // Image preview functionality
-        document.getElementById('profilePicture').addEventListener('change', function(e) {
+        document.getElementById('profilePicture')?.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 const preview = document.getElementById('imagePreview');
-                const previewImage = preview.querySelector('img');
+                const previewImage = preview?.querySelector('img');
                 
                 reader.onload = function(e) {
-                    previewImage.src = e.target.result;
-                    preview.classList.remove('d-none');
+                    if (previewImage) {
+                        previewImage.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    }
                 }
                 
                 reader.readAsDataURL(file);
             }
         });
         
-        // Toggle 2FA configuration button based on checkbox
-        document.getElementById('enable2fa').addEventListener('change', function(e) {
-            document.getElementById('configure2fa').disabled = !e.target.checked;
+        // ASP.NET Core Identity Functions
+        
+        // Send email confirmation
+        function sendEmailConfirmation() {
+            fetch('@Url.Action("SendEmailConfirmation", "Auth")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Verification email sent! Please check your inbox.');
+                } else {
+                    showAlert('danger', data.message || 'Failed to send verification email.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while sending verification email.');
+            });
+        }
+        
+        // Send phone verification
+        function sendPhoneVerification() {
+            fetch('@Url.Action("SendPhoneVerification", "Auth")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Verification code sent to your phone!');
+                } else {
+                    showAlert('danger', data.message || 'Failed to send verification code.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while sending verification code.');
+            });
+        }
+        
+        // Disable Two-Factor Authentication
+        function disableTwoFactor() {
+            if (confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+                fetch('@Url.Action("DisableTwoFactor", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('warning', 'Two-factor authentication has been disabled.');
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showAlert('danger', data.message || 'Failed to disable two-factor authentication.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while disabling two-factor authentication.');
+                });
+            }
+        }
+        
+        // Generate Recovery Codes
+        function generateRecoveryCodes() {
+            if (confirm('This will invalidate your existing recovery codes. Continue?')) {
+                fetch('@Url.Action("GenerateRecoveryCodes", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Display recovery codes in a modal or redirect to recovery codes page
+                        window.location.href = '@Url.Action("ShowRecoveryCodes", "Auth")';
+                    } else {
+                        showAlert('danger', data.message || 'Failed to generate recovery codes.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while generating recovery codes.');
+                });
+            }
+        }
+        
+        // Download Personal Data
+        function downloadPersonalData() {
+            showAlert('info', 'Preparing your data for download...');
+            window.location.href = '@Url.Action("DownloadPersonalData", "Auth")';
+        }
+        
+        // Deactivate Account
+        function deactivateAccount() {
+            if (confirm('Are you sure you want to deactivate your account? You can reactivate it later by signing in.')) {
+                fetch('@Url.Action("DeactivateAccount", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', 'Account deactivated successfully. Redirecting...');
+                        setTimeout(() => window.location.href = '@Url.Action("Logout", "Auth")', 2000);
+                    } else {
+                        showAlert('danger', data.message || 'Failed to deactivate account.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while deactivating account.');
+                });
+            }
+        }
+        
+        // Add phone number
+        document.getElementById('addPhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const phoneNumber = document.getElementById('phoneNumberInput').value;
+            
+            if (!phoneNumber) {
+                showAlert('warning', 'Please enter a phone number.');
+                return;
+            }
+            
+            fetch('@Url.Action("AddPhoneNumber", "Auth")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                },
+                body: JSON.stringify({ phoneNumber: phoneNumber })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number added successfully!');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Failed to add phone number.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while adding phone number.');
+            });
+        });
+        
+        // Utility function to show alerts
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        // Handle tab switching with URL hash
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if there's a hash in the URL
+            const hash = window.location.hash;
+            if (hash) {
+                const tabButton = document.querySelector(`[data-bs-target="${hash}"]`);
+                if (tabButton) {
+                    tabButton.click();
+                }
+            }
+            
+            // Update URL hash when tab changes
+            const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+            tabButtons.forEach(button => {
+                button.addEventListener('shown.bs.tab', function(e) {
+                    const target = e.target.getAttribute('data-bs-target');
+                    if (target) {
+                        window.location.hash = target;
+                    }
+                });
+            });
         });
     </script>
 }

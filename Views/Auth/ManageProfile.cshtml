@@ -1,0 +1,518 @@
+@using BulkyBooksWeb.Models.ViewModels
+@model ProfileManagementViewModel
+@{
+    ViewData["Title"] = "Account Management";
+}
+
+<div class="container py-4">
+    <div class="row">
+        <!-- Navigation Sidebar -->
+        <div class="col-lg-3 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-cog me-2"></i>Account Settings
+                    </h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "personal" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#personal-info">
+                        <i class="fas fa-user me-2"></i>Personal Information
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "security" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#security">
+                        <i class="fas fa-shield-alt me-2"></i>Security & Privacy
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "notifications" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#notifications">
+                        <i class="fas fa-bell me-2"></i>Notifications
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "connected" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#connected-accounts">
+                        <i class="fas fa-link me-2"></i>Connected Accounts
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" 
+                       data-bs-toggle="tab" data-bs-target="#data-privacy">
+                        <i class="fas fa-download me-2"></i>Data & Privacy
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="col-lg-9">
+            <div class="tab-content">
+                <!-- Personal Information Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "personal" ? "show active" : "")" id="personal-info">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user me-2"></i>Personal Information
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form asp-action="UpdatePersonalInfo" method="post" enctype="multipart/form-data">
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                                
+                                <!-- Avatar Section -->
+                                <div class="row mb-4">
+                                    <div class="col-12 text-center">
+                                        <div class="position-relative d-inline-block">
+                                            @if (!string.IsNullOrEmpty(Model.PersonalInfo.CurrentAvatarUrl))
+                                            {
+                                                <img src="@Model.PersonalInfo.CurrentAvatarUrl" alt="Current Avatar" 
+                                                     class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover;">
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                                     style="width: 120px; height: 120px;">
+                                                    <span class="text-white fw-bold" style="font-size: 2rem;">
+                                                        @Model.PersonalInfo.FirstName.FirstOrDefault()@Model.PersonalInfo.LastName.FirstOrDefault()
+                                                    </span>
+                                                </div>
+                                            }
+                                            <label for="avatarUpload" class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" 
+                                                   style="width: 32px; height: 32px; cursor: pointer;">
+                                                <i class="fas fa-camera"></i>
+                                            </label>
+                                            <input id="avatarUpload" asp-for="PersonalInfo.NewAvatar" type="file" 
+                                                   class="d-none" accept="image/*" />
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">Click the camera icon to update your profile picture</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PersonalInfo.FirstName" class="form-label fw-bold">First Name</label>
+                                            <input asp-for="PersonalInfo.FirstName" class="form-control" />
+                                            <span asp-validation-for="PersonalInfo.FirstName" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PersonalInfo.LastName" class="form-label fw-bold">Last Name</label>
+                                            <input asp-for="PersonalInfo.LastName" class="form-control" />
+                                            <span asp-validation-for="PersonalInfo.LastName" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PersonalInfo.Email" class="form-label fw-bold">Email Address</label>
+                                            <div class="input-group">
+                                                <input asp-for="PersonalInfo.Email" type="email" class="form-control" />
+                                                @if (Model.PersonalInfo.EmailConfirmed)
+                                                {
+                                                    <span class="input-group-text text-success">
+                                                        <i class="fas fa-check-circle" title="Email confirmed"></i>
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <button type="submit" formaction="@Url.Action("SendEmailConfirmation")" 
+                                                            class="btn btn-outline-warning btn-sm">
+                                                        Verify
+                                                    </button>
+                                                }
+                                            </div>
+                                            <span asp-validation-for="PersonalInfo.Email" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label asp-for="PersonalInfo.PhoneNumber" class="form-label fw-bold">Phone Number</label>
+                                            <div class="input-group">
+                                                <input asp-for="PersonalInfo.PhoneNumber" type="tel" class="form-control" />
+                                                @if (Model.PersonalInfo.PhoneNumberConfirmed)
+                                                {
+                                                    <span class="input-group-text text-success">
+                                                        <i class="fas fa-check-circle" title="Phone confirmed"></i>
+                                                    </span>
+                                                }
+                                            </div>
+                                            <span asp-validation-for="PersonalInfo.PhoneNumber" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">Username</label>
+                                            <input value="@Model.PersonalInfo.UserName" class="form-control" readonly />
+                                            <div class="form-text">Username cannot be changed</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label class="form-label fw-bold">Member Since</label>
+                                            <input value="@Model.PersonalInfo.CreatedAt.ToString("MMMM dd, yyyy")" 
+                                                   class="form-control" readonly />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "security" ? "show active" : "")" id="security">
+                    <div class="row">
+                        <!-- Password Section -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-key me-2"></i>Change Password
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form asp-action="ChangePasswordForm" method="post">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">Current Password</label>
+                                                    <input name="CurrentPassword" type="password" class="form-control" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">New Password</label>
+                                                    <input name="NewPassword" type="password" class="form-control" required />
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-3">
+                                                    <label class="form-label fw-bold">Confirm New Password</label>
+                                                    <input name="ConfirmPassword" type="password" class="form-control" required />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-lock me-2"></i>Change Password
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Two-Factor Authentication -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-shield-alt me-2"></i>Two-Factor Authentication
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if (Model.Security.TwoFactorEnabled)
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            Two-factor authentication is <strong>enabled</strong> for your account.
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <form asp-action="DisableTwoFactor" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-outline-danger" 
+                                                        onclick="return confirm('Are you sure you want to disable 2FA?')">
+                                                    <i class="fas fa-times me-2"></i>Disable 2FA
+                                                </button>
+                                            </form>
+                                            <form asp-action="GenerateRecoveryCodes" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="fas fa-key me-2"></i>Generate New Recovery Codes
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            Two-factor authentication is <strong>disabled</strong>. Enable it for enhanced security.
+                                        </div>
+                                        <a asp-action="SetupTwoFactor" class="btn btn-success">
+                                            <i class="fas fa-plus me-2"></i>Enable Two-Factor Authentication
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div class="col-12">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Account Status
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Email Verification</span>
+                                                @if (Model.Security.EmailConfirmed)
+                                                {
+                                                    <span class="badge bg-success">Verified</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning">Pending</span>
+                                                }
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Phone Verification</span>
+                                                @if (Model.Security.PhoneNumberConfirmed)
+                                                {
+                                                    <span class="badge bg-success">Verified</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Not Set</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span>Failed Login Attempts</span>
+                                                <span class="badge bg-info">@Model.Security.AccessFailedCount</span>
+                                            </div>
+                                            @if (Model.Security.LockoutEnd.HasValue && Model.Security.LockoutEnd > DateTimeOffset.UtcNow)
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span>Account Status</span>
+                                                    <span class="badge bg-danger">Locked until @Model.Security.LockoutEnd.Value.ToString("f")</span>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "notifications" ? "show active" : "")" id="notifications">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-bell me-2"></i>Notification Preferences
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-4">Choose how you want to be notified about activities on your account.</p>
+                            
+                            <form>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">Email Notifications</h6>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="orderUpdates" checked>
+                                            <label class="form-check-label" for="orderUpdates">
+                                                Order status updates
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
+                                            <label class="form-check-label" for="securityAlerts">
+                                                Security alerts
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="bookRecommendations">
+                                            <label class="form-check-label" for="bookRecommendations">
+                                                Book recommendations
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">SMS Notifications</h6>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="smsOrders">
+                                            <label class="form-check-label" for="smsOrders">
+                                                Order confirmations
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="smsSecurity">
+                                            <label class="form-check-label" for="smsSecurity">
+                                                Security alerts
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="my-4">
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save Preferences
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected Accounts Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "connected" ? "show active" : "")" id="connected-accounts">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-link me-2"></i>Connected Accounts
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-4">Manage your external account connections for faster sign-in.</p>
+                            
+                            @if (Model.ConnectedAccounts.ExternalLogins.Any())
+                            {
+                                <h6 class="fw-bold mb-3">Connected Accounts</h6>
+                                @foreach (var login in Model.ConnectedAccounts.ExternalLogins)
+                                {
+                                    <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fab fa-@login.LoginProvider.ToLower() fa-2x me-3"></i>
+                                            <div>
+                                                <div class="fw-bold">@login.LoginProvider</div>
+                                                <small class="text-muted">@login.ProviderDisplayName</small>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-outline-danger btn-sm">
+                                            <i class="fas fa-unlink me-1"></i>Disconnect
+                                        </button>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fas fa-unlink fa-3x text-muted mb-3"></i>
+                                    <h6 class="text-muted">No connected accounts</h6>
+                                    <p class="text-muted">Connect external accounts for faster sign-in options.</p>
+                                </div>
+                            }
+                            
+                            <hr class="my-4">
+                            
+                            <h6 class="fw-bold mb-3">Available Connections</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <button class="btn btn-outline-primary w-100">
+                                        <i class="fab fa-google me-2"></i>Connect Google
+                                    </button>
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <button class="btn btn-outline-dark w-100">
+                                        <i class="fab fa-github me-2"></i>Connect GitHub
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data & Privacy Tab -->
+                <div class="tab-pane fade" id="data-privacy">
+                    <div class="row">
+                        <!-- Download Data -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-download me-2"></i>Download Your Data
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        Download a copy of all your personal data, including your profile information, 
+                                        order history, and account activity.
+                                    </p>
+                                    <a asp-action="DownloadPersonalData" class="btn btn-info">
+                                        <i class="fas fa-download me-2"></i>Download My Data
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delete Account -->
+                        <div class="col-12">
+                            <div class="card shadow-sm border-danger">
+                                <div class="card-header bg-danger text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Delete Account
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        <strong>Warning:</strong> This action cannot be undone. Deleting your account will 
+                                        permanently remove all your data, including your profile, order history, and any 
+                                        books you've authored.
+                                    </p>
+                                    <a asp-action="DeleteAccount" class="btn btn-danger">
+                                        <i class="fas fa-trash me-2"></i>Delete My Account
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle tab switching
+            const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetTab = this.getAttribute('data-bs-target');
+                    
+                    // Update active states
+                    tabLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show target tab
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                    });
+                    document.querySelector(targetTab).classList.add('show', 'active');
+                });
+            });
+
+            // Handle avatar preview
+            const avatarUpload = document.getElementById('avatarUpload');
+            if (avatarUpload) {
+                avatarUpload.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const avatarImg = document.querySelector('img[alt="Current Avatar"]');
+                            if (avatarImg) {
+                                avatarImg.src = e.target.result;
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+        });
+    </script>
+}

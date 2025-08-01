@@ -1,0 +1,211 @@
+@using BulkyBooksWeb.Models.ViewModels
+@model TwoFactorSetupViewModel
+@{
+    ViewData["Title"] = "Setup Two-Factor Authentication";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Setup Two-Factor Authentication
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (ViewBag.RecoveryCodes != null)
+                    {
+                        <!-- Recovery Codes Display -->
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Important: Save Your Recovery Codes</h5>
+                            <p class="mb-3">
+                                Store these recovery codes in a safe place. You can use these codes to access your account 
+                                if you lose access to your authenticator device.
+                            </p>
+                            <div class="bg-light p-3 rounded">
+                                <div class="row">
+                                    @for (int i = 0; i < ViewBag.RecoveryCodes.Count; i++)
+                                    {
+                                        <div class="col-md-6 mb-2">
+                                            <code class="fs-6">@ViewBag.RecoveryCodes[i]</code>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-primary me-2" onclick="downloadRecoveryCodes()">
+                                    <i class="fas fa-download me-2"></i>Download Codes
+                                </button>
+                                <a asp-action="ManageProfile" class="btn btn-success">
+                                    <i class="fas fa-check me-2"></i>I've Saved My Codes
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <!-- QR Code Setup -->
+                        <form asp-action="EnableTwoFactor" method="post">
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                            <div class="row">
+                                <div class="col-md-6 text-center">
+                                    <h5 class="mb-3">Scan QR Code</h5>
+                                    <div class="border p-3 rounded bg-light">
+                                        <img src="data:image/png;base64,@Model.QrCodeImageData" 
+                                             alt="QR Code for Two-Factor Authentication" 
+                                             class="img-fluid" style="max-width: 200px;" />
+                                    </div>
+                                    <p class="text-muted mt-2 small">
+                                        Scan this QR code with your authenticator app
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="mb-3">Manual Entry</h5>
+                                    <p>If you can't scan the QR code, enter this key manually:</p>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" value="@Model.ManualEntryKey" readonly />
+                                        <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('@Model.ManualEntryKey')">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <h6>Recommended Authenticator Apps:</h6>
+                                        <ul class="mb-0">
+                                            <li>Microsoft Authenticator</li>
+                                            <li>Google Authenticator</li>
+                                            <li>Authy</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="row">
+                                <div class="col-md-6 mx-auto">
+                                    <h5 class="mb-3 text-center">Verify Setup</h5>
+                                    <p class="text-center text-muted mb-3">
+                                        Enter the 6-digit code from your authenticator app to complete setup
+                                    </p>
+                                    
+                                    <div class="form-group mb-3">
+                                        <label asp-for="VerificationCode" class="form-label fw-bold">Verification Code</label>
+                                        <input asp-for="VerificationCode" class="form-control text-center" 
+                                               placeholder="000000" maxlength="6" 
+                                               style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                                        <span asp-validation-for="VerificationCode" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" class="btn btn-success btn-lg">
+                                            <i class="fas fa-check me-2"></i>Enable Two-Factor Authentication
+                                        </button>
+                                        <a asp-action="ManageProfile" class="btn btn-outline-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Cancel
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <!-- Instructions Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>How It Works
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="text-primary mb-2">
+                                <i class="fas fa-mobile-alt fa-3x"></i>
+                            </div>
+                            <h6>1. Install App</h6>
+                            <p class="text-muted small">Download an authenticator app on your mobile device</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="text-primary mb-2">
+                                <i class="fas fa-qrcode fa-3x"></i>
+                            </div>
+                            <h6>2. Scan Code</h6>
+                            <p class="text-muted small">Scan the QR code or enter the key manually</p>
+                        </div>
+                        <div class="col-md-4 text-center mb-3">
+                            <div class="text-primary mb-2">
+                                <i class="fas fa-shield-alt fa-3x"></i>
+                            </div>
+                            <h6>3. Secure Login</h6>
+                            <p class="text-muted small">Use the app to generate codes for secure login</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show success message
+                const button = event.target.closest('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        }
+
+        function downloadRecoveryCodes() {
+            const codes = @Html.Raw(Json.Serialize(ViewBag.RecoveryCodes ?? new List<string>()));
+            const content = 'Bulky Books - Two-Factor Authentication Recovery Codes\n' +
+                           'Generated: ' + new Date().toLocaleString() + '\n\n' +
+                           'IMPORTANT: Store these codes in a safe place.\n' +
+                           'Each code can only be used once.\n\n' +
+                           codes.join('\n');
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'bulky-books-recovery-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Auto-format verification code input
+        document.addEventListener('DOMContentLoaded', function() {
+            const verificationInput = document.querySelector('input[name="VerificationCode"]');
+            if (verificationInput) {
+                verificationInput.addEventListener('input', function(e) {
+                    // Only allow numbers
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    
+                    // Auto-submit when 6 digits are entered
+                    if (this.value.length === 6) {
+                        // Optional: Auto-submit form
+                        // this.form.submit();
+                    }
+                });
+            }
+        });
+    </script>
+}

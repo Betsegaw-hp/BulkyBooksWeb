@@ -56,7 +56,8 @@ namespace BulkyBooksWeb.Services
                         {
                             UserName = oldUser.Username,
                             Email = oldUser.Email,
-                            FullName = oldUser.FullName,
+                            FirstName = oldUser.FullName.Split(' ').FirstOrDefault() ?? "",
+                            LastName = string.Join(" ", oldUser.FullName.Split(' ').Skip(1)),
                             AvatarUrl = oldUser.AvatarUrl,
                             CreatedAt = oldUser.CreatedAt,
                             UpdatedAt = oldUser.UpdatedAt,
