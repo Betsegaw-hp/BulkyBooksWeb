@@ -48,40 +48,11 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 
-		public async Task<IActionResult> Profile()
+		public IActionResult Profile()
 		{
-			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
-
-			var roles = await _userManager.GetRolesAsync(user);
-			var role = roles.FirstOrDefault() ?? "User";
-
-			UserProfileViewModel userProfileViewModel = new()
-			{
-				User = user,
-				UpdateProfile = new UpdateProfileViewModel
-				{
-					FullName = user.FullName,
-					Email = user.Email ?? ""
-				},
-				ChangePassword = new ChangePasswordViewModel(),
-				UpdatePreferences = new UpdatePreferencesViewModel()
-			};
-
-			// Set active tab from TempData if available
-			ViewBag.ActiveTab = TempData["ActiveTab"] as string ?? "personal-info";
-			
-			// Handle success/error messages
-			if (TempData["SuccessMessage"] != null)
-			{
-				ViewBag.SuccessMessage = TempData["SuccessMessage"];
-			}
-			if (TempData["ErrorMessage"] != null)
-			{
-				ViewBag.ErrorMessage = TempData["ErrorMessage"];
-			}
-
-			return View(userProfileViewModel);
+			// Redirect to the more comprehensive ManageProfile page
+			// Keep the same functionality but with better UI and features
+			return RedirectToAction("ManageProfile");
 		}
 
 		public IActionResult Login(string? returnUrl)
@@ -439,7 +410,7 @@ namespace BulkyBooksWeb.Controllers
 			if (user == null) 
 			{
 				TempData["ErrorMessage"] = "User not found.";
-				return RedirectToAction("Login");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Validate only the UpdateProfile part of the model
@@ -447,7 +418,7 @@ namespace BulkyBooksWeb.Controllers
 			{
 				TempData["ErrorMessage"] = "Full name and email are required.";
 				TempData["ActiveTab"] = "personal-info";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Validate email format
@@ -455,7 +426,7 @@ namespace BulkyBooksWeb.Controllers
 			{
 				TempData["ErrorMessage"] = "Please enter a valid email address.";
 				TempData["ActiveTab"] = "personal-info";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Check if email is being changed and if it's already taken by another user
@@ -466,7 +437,7 @@ namespace BulkyBooksWeb.Controllers
 				{
 					TempData["ErrorMessage"] = "This email address is already in use by another account.";
 					TempData["ActiveTab"] = "personal-info";
-					return RedirectToAction("Profile");
+					return RedirectToAction("ManageProfile");
 				}
 			}
 
@@ -498,7 +469,7 @@ namespace BulkyBooksWeb.Controllers
 					TempData["SuccessMessage"] = "Profile updated successfully!";
 					TempData["ActiveTab"] = "personal-info";
 				}
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Handle Identity errors
@@ -510,7 +481,7 @@ namespace BulkyBooksWeb.Controllers
 			
 			TempData["ErrorMessage"] = string.Join(" ", errorMessages);
 			TempData["ActiveTab"] = "personal-info";
-			return RedirectToAction("Profile");
+			return RedirectToAction("ManageProfile");
 		}
 
 		[Authorize]
@@ -634,21 +605,21 @@ namespace BulkyBooksWeb.Controllers
 			{
 				TempData["ErrorMessage"] = "All password fields are required.";
 				TempData["ActiveTab"] = "security";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			if (model.ChangePassword.NewPassword != model.ChangePassword.ConfirmNewPassword)
 			{
 				TempData["ErrorMessage"] = "New password and confirmation do not match.";
 				TempData["ActiveTab"] = "security";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			if (model.ChangePassword.NewPassword.Length < 8)
 			{
 				TempData["ErrorMessage"] = "Password must be at least 8 characters long.";
 				TempData["ActiveTab"] = "security";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Use Identity's change password method
@@ -665,7 +636,7 @@ namespace BulkyBooksWeb.Controllers
 				_logger.LogInformation("User {UserId} changed password successfully", user.Id);
 				TempData["SuccessMessage"] = "Password changed successfully!";
 				TempData["ActiveTab"] = "security";
-				return RedirectToAction("Profile");
+				return RedirectToAction("ManageProfile");
 			}
 
 			// Handle Identity errors
@@ -677,7 +648,7 @@ namespace BulkyBooksWeb.Controllers
 			
 			TempData["ErrorMessage"] = string.Join(" ", errorMessages);
 			TempData["ActiveTab"] = "security";
-			return RedirectToAction("Profile");
+			return RedirectToAction("ManageProfile");
 		}
 
 		[Authorize]
@@ -706,7 +677,7 @@ namespace BulkyBooksWeb.Controllers
 
 			// await _userManager.UpdateAsync(user);
 
-			return RedirectToAction("Profile");
+			return RedirectToAction("ManageProfile");
 		}
 
 		// GET: Profile Management
@@ -1173,23 +1144,102 @@ namespace BulkyBooksWeb.Controllers
 		public async Task<IActionResult> SendEmailConfirmation()
 		{
 			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
+			if (user == null) 
+			{
+				if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+				{
+					return Json(new { success = false, message = "User not found." });
+				}
+				return RedirectToAction("Login");
+			}
 
 			if (user.EmailConfirmed)
 			{
+				if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+				{
+					return Json(new { success = false, message = "Your email is already confirmed." });
+				}
 				TempData["InfoMessage"] = "Your email is already confirmed.";
 				return RedirectToAction("ManageProfile", new { tab = "personal" });
 			}
 
-			var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-			var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
-				new { userId = user.Id, token = token }, Request.Scheme);
+			try
+			{
+				var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+				var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
+					new { userId = user.Id, token = token }, Request.Scheme);
 
-			// TODO: Send actual email
-			_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
-			
-			TempData["SuccessMessage"] = "Confirmation email sent. Please check your inbox.";
-			return RedirectToAction("ManageProfile", new { tab = "personal" });
+				// TODO: Send actual email - for now just log the confirmation link
+				_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
+				
+				if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+				{
+					return Json(new { success = true, message = "Confirmation email sent. Please check your inbox." });
+				}
+				
+				TempData["SuccessMessage"] = "Confirmation email sent. Please check your inbox.";
+				return RedirectToAction("ManageProfile", new { tab = "personal" });
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error sending email confirmation for user {UserId}", user.Id);
+				
+				if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+				{
+					return Json(new { success = false, message = "Failed to send confirmation email. Please try again." });
+				}
+				
+				TempData["ErrorMessage"] = "Failed to send confirmation email. Please try again.";
+				return RedirectToAction("ManageProfile", new { tab = "personal" });
+			}
+		}
+
+		// GET: Confirm Email
+		[HttpGet]
+		public async Task<IActionResult> ConfirmEmail(string userId, string token)
+		{
+			if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+			{
+				TempData["ErrorMessage"] = "Invalid email confirmation link.";
+				return RedirectToAction("Login");
+			}
+
+			var user = await _userManager.FindByIdAsync(userId);
+			if (user == null)
+			{
+				TempData["ErrorMessage"] = "User not found.";
+				return RedirectToAction("Login");
+			}
+
+			if (user.EmailConfirmed)
+			{
+				TempData["InfoMessage"] = "Your email is already confirmed.";
+				return RedirectToAction("ManageProfile", new { tab = "verification" });
+			}
+
+			try
+			{
+				var result = await _userManager.ConfirmEmailAsync(user, token);
+				if (result.Succeeded)
+				{
+					_logger.LogInformation("User {UserId} confirmed their email successfully", user.Id);
+					TempData["SuccessMessage"] = "Thank you for confirming your email address!";
+					return RedirectToAction("ManageProfile", new { tab = "verification" });
+				}
+				else
+				{
+					_logger.LogWarning("Email confirmation failed for user {UserId}: {Errors}", 
+						user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
+					TempData["ErrorMessage"] = "Email confirmation failed. The link may be expired or invalid.";
+					return RedirectToAction("ManageProfile", new { tab = "verification" });
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error confirming email for user {UserId}", user.Id);
+				TempData["ErrorMessage"] = "An error occurred while confirming your email. Please try again.";
+				return RedirectToAction("ManageProfile", new { tab = "verification" });
+			}
 		}
 
 		// POST: Send Phone Verification

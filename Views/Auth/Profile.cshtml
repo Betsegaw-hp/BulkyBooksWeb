@@ -744,22 +744,27 @@
         
         // Send email confirmation
         function sendEmailConfirmation() {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            
             fetch('@Url.Action("SendEmailConfirmation", "Auth")', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                }
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': token
+                },
+                body: `__RequestVerificationToken=${encodeURIComponent(token)}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('success', 'Verification email sent! Please check your inbox.');
+                    showAlert('success', data.message || 'Verification email sent! Please check your inbox.');
                 } else {
                     showAlert('danger', data.message || 'Failed to send verification email.');
                 }
             })
             .catch(error => {
+                console.error('Error:', error);
                 showAlert('danger', 'An error occurred while sending verification email.');
             });
         }

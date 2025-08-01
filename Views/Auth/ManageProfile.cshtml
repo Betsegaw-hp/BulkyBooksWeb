@@ -23,6 +23,10 @@
                        data-bs-toggle="tab" data-bs-target="#security">
                         <i class="fas fa-shield-alt me-2"></i>Security & Privacy
                     </a>
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "verification" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#verification">
+                        <i class="fas fa-check-circle me-2"></i>Verification
+                    </a>
                     <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "notifications" ? "active" : "")" 
                        data-bs-toggle="tab" data-bs-target="#notifications">
                         <i class="fas fa-bell me-2"></i>Notifications
@@ -31,10 +35,77 @@
                        data-bs-toggle="tab" data-bs-target="#connected-accounts">
                         <i class="fas fa-link me-2"></i>Connected Accounts
                     </a>
+                    <a href="#" class="list-group-item list-group-item-action @(Model.ActiveTab == "privacy" ? "active" : "")" 
+                       data-bs-toggle="tab" data-bs-target="#privacy-settings">
+                        <i class="fas fa-user-shield me-2"></i>Privacy Settings
+                    </a>
                     <a href="#" class="list-group-item list-group-item-action" 
                        data-bs-toggle="tab" data-bs-target="#data-privacy">
                         <i class="fas fa-download me-2"></i>Data & Privacy
                     </a>
+                </div>
+            </div>
+            
+            <!-- Account Activity Card -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">Account Activity</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">Last login:</small>
+                        <p class="mb-0 small">
+                            @if (Model.PersonalInfo.LastLoginAt.HasValue)
+                            {
+                                @Model.PersonalInfo.LastLoginAt.Value.ToString("MMM dd, yyyy h:mm tt")
+                            }
+                            else
+                            {
+                                <span class="text-muted">Never</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Account status:</small>
+                        <p class="mb-0">
+                            @if (Model.PersonalInfo.EmailConfirmed)
+                            {
+                                <span class="badge bg-success">Email Verified</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">Email Pending</span>
+                            }
+                            @if (Model.PersonalInfo.PhoneNumberConfirmed)
+                            {
+                                <span class="badge bg-success">Phone Verified</span>
+                            }
+                        </p>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Two-Factor Authentication:</small>
+                        <p class="mb-0">
+                            @if (Model.Security.TwoFactorEnabled)
+                            {
+                                <span class="badge bg-success">
+                                    <i class="fas fa-shield-alt me-1"></i>Enabled
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-shield me-1"></i>Disabled
+                                </span>
+                            }
+                        </p>
+                    </div>
+                    <div>
+                        <small class="text-muted">Failed login attempts:</small>
+                        <p class="mb-0">@Model.Security.AccessFailedCount</p>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <small class="text-muted">Member since: @Model.PersonalInfo.CreatedAt.ToString("MMMM yyyy")</small>
                 </div>
             </div>
         </div>
@@ -113,28 +184,57 @@
                                                 }
                                                 else
                                                 {
-                                                    <button type="submit" formaction="@Url.Action("SendEmailConfirmation")" 
-                                                            class="btn btn-outline-warning btn-sm">
-                                                        Verify
+                                                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="switchToVerificationTab()">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Verify
                                                     </button>
                                                 }
                                             </div>
                                             <span asp-validation-for="PersonalInfo.Email" class="text-danger"></span>
+                                            @if (!Model.PersonalInfo.EmailConfirmed)
+                                            {
+                                                <div class="form-text text-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Email address needs verification
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label asp-for="PersonalInfo.PhoneNumber" class="form-label fw-bold">Phone Number</label>
                                             <div class="input-group">
-                                                <input asp-for="PersonalInfo.PhoneNumber" type="tel" class="form-control" />
+                                                <input asp-for="PersonalInfo.PhoneNumber" type="tel" class="form-control" placeholder="Add phone number" readonly />
                                                 @if (Model.PersonalInfo.PhoneNumberConfirmed)
                                                 {
                                                     <span class="input-group-text text-success">
                                                         <i class="fas fa-check-circle" title="Phone confirmed"></i>
                                                     </span>
                                                 }
+                                                else if (!string.IsNullOrEmpty(Model.PersonalInfo.PhoneNumber))
+                                                {
+                                                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="switchToVerificationTab()">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Verify
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchToVerificationTab()">
+                                                        <i class="fas fa-plus me-1"></i>Add
+                                                    </button>
+                                                }
                                             </div>
                                             <span asp-validation-for="PersonalInfo.PhoneNumber" class="text-danger"></span>
+                                            @if (!string.IsNullOrEmpty(Model.PersonalInfo.PhoneNumber) && !Model.PersonalInfo.PhoneNumberConfirmed)
+                                            {
+                                                <div class="form-text text-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Phone number needs verification
+                                                </div>
+                                            }
+                                            else if (string.IsNullOrEmpty(Model.PersonalInfo.PhoneNumber))
+                                            {
+                                                <div class="form-text text-muted">
+                                                    <i class="fas fa-info-circle me-1"></i>Add phone number for enhanced security
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -303,6 +403,182 @@
                     </div>
                 </div>
 
+                <!-- Verification Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "verification" ? "show active" : "")" id="verification">
+                    <div class="row">
+                        <!-- Email Verification -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-envelope me-2"></i>Email Verification
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <strong>Email:</strong> @Model.PersonalInfo.Email
+                                        </div>
+                                        <div>
+                                            @if (Model.PersonalInfo.EmailConfirmed)
+                                            {
+                                                <span class="badge bg-success fs-6">
+                                                    <i class="fas fa-check-circle me-1"></i>Verified
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning fs-6">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Unverified
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                    
+                                    @if (!Model.PersonalInfo.EmailConfirmed)
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Please verify your email address to secure your account and receive important notifications.
+                                        </div>
+                                        <button type="button" class="btn btn-primary" onclick="sendEmailConfirmation()">
+                                            <i class="fas fa-paper-plane me-2"></i>Send Verification Email
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            Your email address has been verified successfully.
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phone Number Verification -->
+                        <div class="col-12">
+                            <div class="card shadow-sm border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-phone me-2"></i>Phone Number Verification
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if (string.IsNullOrEmpty(Model.PersonalInfo.PhoneNumber))
+                                    {
+                                        <div class="alert alert-secondary">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No phone number added. Add a phone number for additional security.
+                                        </div>
+                                        <form id="addPhoneForm">
+                                            @Html.AntiForgeryToken()
+                                            <div class="input-group mb-3">
+                                                <input type="tel" class="form-control" placeholder="Enter phone number" name="phoneNumber" id="phoneNumberInput" />
+                                                <button type="submit" class="btn btn-outline-primary">
+                                                    <i class="fas fa-plus me-1"></i>Add
+                                                </button>
+                                            </div>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <div>
+                                                <strong>Phone:</strong> @Model.PersonalInfo.PhoneNumber
+                                            </div>
+                                            <div>
+                                                @if (Model.PersonalInfo.PhoneNumberConfirmed)
+                                                {
+                                                    <span class="badge bg-success fs-6">
+                                                        <i class="fas fa-check-circle me-1"></i>Verified
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning fs-6">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Unverified
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div id="changePhoneForm" style="display: none;">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                Changing your phone number will require verification of the new number.
+                                            </div>
+                                            <form id="updatePhoneForm">
+                                                @Html.AntiForgeryToken()
+                                                <div class="input-group mb-3">
+                                                    <input type="tel" class="form-control" placeholder="Enter new phone number" name="newPhoneNumber" id="newPhoneNumberInput" />
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fas fa-sync me-1"></i>Update
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="hideChangePhoneForm()">
+                                                        <i class="fas fa-times me-1"></i>Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+
+                                        @if (!Model.PersonalInfo.PhoneNumberConfirmed)
+                                        {
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Verify your phone number to enable SMS notifications and additional security features.
+                                            </div>
+                                            <div class="d-flex gap-2 mb-3">
+                                                <button type="button" class="btn btn-primary" onclick="sendPhoneVerification()">
+                                                    <i class="fas fa-sms me-2"></i>Send Verification Code
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="showChangePhoneForm()">
+                                                    <i class="fas fa-edit me-2"></i>Change Number
+                                                </button>
+                                            </div>
+
+                                            <!-- Verification Code Input Form (initially hidden) -->
+                                            <div id="phoneVerificationForm" style="display: none;">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    Enter the 6-digit verification code sent to your phone. The code expires in 5 minutes.
+                                                </div>
+                                                <form id="verifyPhoneForm">
+                                                    @Html.AntiForgeryToken()
+                                                    <div class="input-group mb-3">
+                                                        <input type="text" class="form-control" placeholder="Enter 6-digit code" name="verificationCode" id="verificationCodeInput" maxlength="6" pattern="[0-9]{6}" />
+                                                        <button type="submit" class="btn btn-success">
+                                                            <i class="fas fa-check me-1"></i>Verify
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                                <small class="text-muted">
+                                                    Didn't receive the code? 
+                                                    <button type="button" class="btn btn-link btn-sm p-0" onclick="sendPhoneVerification()">
+                                                        Resend Code
+                                                    </button>
+                                                </small>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                Your phone number has been verified successfully.
+                                            </div>
+                                            <div class="d-flex gap-2 mb-3">
+                                                <button type="button" class="btn btn-outline-warning" onclick="showChangePhoneForm()">
+                                                    <i class="fas fa-edit me-2"></i>Change Phone Number
+                                                </button>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Notifications Tab -->
                 <div class="tab-pane fade @(Model.ActiveTab == "notifications" ? "show active" : "")" id="notifications">
                     <div class="card shadow-sm">
@@ -422,6 +698,60 @@
                     </div>
                 </div>
 
+                <!-- Privacy Settings Tab -->
+                <div class="tab-pane fade @(Model.ActiveTab == "privacy" ? "show active" : "")" id="privacy-settings">
+                    <div class="card shadow-sm">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-user-shield me-2"></i>Privacy Settings
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-4">Control your privacy settings and how your information is shared.</p>
+                            
+                            <form asp-action="UpdatePrivacySettings" method="post">
+                                @Html.AntiForgeryToken()
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="profileVisibility" name="ProfileVisibility" checked />
+                                    <label class="form-check-label" for="profileVisibility">
+                                        <strong>Profile Visibility</strong><br>
+                                        <small class="text-muted">Allow other users to see your profile information</small>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="orderHistory" name="OrderHistoryPrivacy" />
+                                    <label class="form-check-label" for="orderHistory">
+                                        <strong>Order History Privacy</strong><br>
+                                        <small class="text-muted">Keep your order history private from other users</small>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="dataProcessing" name="AllowDataProcessing" checked />
+                                    <label class="form-check-label" for="dataProcessing">
+                                        <strong>Analytics & Improvements</strong><br>
+                                        <small class="text-muted">Allow us to use your data to improve our services</small>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="marketingEmails" name="AllowMarketingEmails" />
+                                    <label class="form-check-label" for="marketingEmails">
+                                        <strong>Marketing Communications</strong><br>
+                                        <small class="text-muted">Receive promotional emails about new books and offers</small>
+                                    </label>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save Privacy Settings
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Data & Privacy Tab -->
                 <div class="tab-pane fade" id="data-privacy">
                     <div class="row">
@@ -441,6 +771,26 @@
                                     <a asp-action="DownloadPersonalData" class="btn btn-info">
                                         <i class="fas fa-download me-2"></i>Download My Data
                                     </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Deactivation -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-pause me-2"></i>Account Deactivation
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">
+                                        Temporarily deactivate your account. You can reactivate it anytime by signing back in.
+                                        Your data will be preserved during deactivation.
+                                    </p>
+                                    <button type="button" class="btn btn-outline-warning" onclick="deactivateAccount()">
+                                        <i class="fas fa-pause me-2"></i>Deactivate Account
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -493,8 +843,20 @@
                         pane.classList.remove('show', 'active');
                     });
                     document.querySelector(targetTab).classList.add('show', 'active');
+                    
+                    // Update URL hash
+                    window.location.hash = targetTab;
                 });
             });
+
+            // Handle tab switching with URL hash on page load
+            const hash = window.location.hash;
+            if (hash) {
+                const tabButton = document.querySelector(`[data-bs-target="${hash}"]`);
+                if (tabButton) {
+                    tabButton.click();
+                }
+            }
 
             // Handle avatar preview
             const avatarUpload = document.getElementById('avatarUpload');
@@ -514,5 +876,271 @@
                 });
             }
         });
+
+        // Email Verification Functions
+        function sendEmailConfirmation() {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            
+            fetch('@Url.Action("SendEmailConfirmation", "Auth")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': token
+                },
+                body: `__RequestVerificationToken=${encodeURIComponent(token)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', data.message || 'Verification email sent! Please check your inbox.');
+                } else {
+                    showAlert('danger', data.message || 'Failed to send verification email.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'An error occurred while sending verification email.');
+            });
+        }
+
+        // Phone Number Management Functions
+        function sendPhoneVerification() {
+            fetch('@Url.Action("SendPhoneVerification", "Auth")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Verification code sent to your phone!');
+                    document.getElementById('phoneVerificationForm').style.display = 'block';
+                } else {
+                    showAlert('danger', data.message || 'Failed to send verification code.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while sending verification code.');
+            });
+        }
+
+        function showChangePhoneForm() {
+            document.getElementById('changePhoneForm').style.display = 'block';
+        }
+
+        function hideChangePhoneForm() {
+            document.getElementById('changePhoneForm').style.display = 'none';
+            document.getElementById('newPhoneNumberInput').value = '';
+        }
+
+        // Two-Factor Authentication Functions
+        function disableTwoFactor() {
+            if (confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                fetch('@Url.Action("DisableTwoFactor", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('warning', 'Two-factor authentication has been disabled.');
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        showAlert('danger', data.message || 'Failed to disable two-factor authentication.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while disabling two-factor authentication.');
+                });
+            }
+        }
+
+        function generateRecoveryCodes() {
+            if (confirm('This will invalidate your existing recovery codes. Continue?')) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                fetch('@Url.Action("GenerateRecoveryCodes", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            window.location.href = '@Url.Action("ShowRecoveryCodes", "Auth")';
+                        }
+                    } else {
+                        showAlert('danger', data.message || 'Failed to generate recovery codes.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while generating recovery codes.');
+                });
+            }
+        }
+
+        // Account Management Functions
+        function deactivateAccount() {
+            if (confirm('Are you sure you want to deactivate your account? You can reactivate it later by signing in.')) {
+                fetch('@Url.Action("DeactivateAccount", "Auth")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', 'Account deactivated successfully. Redirecting...');
+                        setTimeout(() => window.location.href = '@Url.Action("Logout", "Auth")', 2000);
+                    } else {
+                        showAlert('danger', data.message || 'Failed to deactivate account.');
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'An error occurred while deactivating account.');
+                });
+            }
+        }
+
+        // Form Handlers
+        document.getElementById('addPhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const phoneNumber = document.getElementById('phoneNumberInput').value;
+            
+            if (!phoneNumber) {
+                showAlert('warning', 'Please enter a phone number.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('phoneNumber', phoneNumber);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
+            fetch('@Url.Action("AddPhoneNumber", "Auth")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number added successfully!');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Failed to add phone number.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while adding phone number.');
+            });
+        });
+
+        document.getElementById('verifyPhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const verificationCode = document.getElementById('verificationCodeInput').value;
+            
+            if (!verificationCode || verificationCode.length !== 6) {
+                showAlert('warning', 'Please enter a valid 6-digit verification code.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('code', verificationCode);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
+            fetch('@Url.Action("VerifyPhoneNumber", "Auth")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number verified successfully!');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Invalid verification code. Please try again.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while verifying phone number.');
+            });
+        });
+
+        document.getElementById('updatePhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newPhoneNumber = document.getElementById('newPhoneNumberInput').value;
+            
+            if (!newPhoneNumber) {
+                showAlert('warning', 'Please enter a new phone number.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('phoneNumber', newPhoneNumber);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
+            fetch('@Url.Action("ChangePhoneNumber", "Auth")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number updated successfully! Please verify your new number.');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Failed to update phone number.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while updating phone number.');
+            });
+        });
+
+        // Utility function to show alerts
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Switch to verification tab
+        function switchToVerificationTab() {
+            const verificationTab = document.querySelector('[data-bs-target="#verification"]');
+            if (verificationTab) {
+                verificationTab.click();
+                window.location.hash = '#verification';
+            }
+        }
     </script>
 }
