@@ -10,7 +10,7 @@ namespace BulkyBooksWeb.Models
 		User
 	}
 
-	public class User
+	public class User 
 	{
 		[Key]
 		public int Id { get; set; }

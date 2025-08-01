@@ -237,7 +237,7 @@
                                         <span class="badge bg-light text-dark">@book.Category.Name</span>
                                         <strong class="text-primary">$@book.Price.ToString("0.00")</strong>
                                     </div>
-                                    <p class="card-text small">@(book.Description?.Length > 100 ? book.Description.Substring(0, 100) + "..." : book.Description)</p>
+                                    <p class="card-text small">@(book.Description?.Length > 100 ? $"{book.Description[..100]}..." : book.Description)</p>
                                 </div>
                                 <div class="card-footer bg-transparent border-top-0">
                                     <div class="d-grid gap-2">
@@ -277,7 +277,7 @@
                                                 }
                                             </div>
                                         </div>
-                                        <p class="card-text">@(book.Description?.Length > 200 ? book.Description.Substring(0, 200) + "..." : book.Description)</p>
+                                        <p class="card-text">@(book.Description?.Length > 200 ? $"{book.Description[..200]}..." : book.Description)</p>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <strong class="text-primary fs-5">$@book.Price.ToString("0.00")</strong>
                                             <div class="btn-group">

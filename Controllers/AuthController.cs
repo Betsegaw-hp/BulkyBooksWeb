@@ -121,47 +121,44 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> SignUp(SignUpModel signUp)
 		{
-			if (ModelState.IsValid)
+			if (!ModelState.IsValid) return View(signUp);
+			var errors = new List<string>();
+
+			if (await _context.Users.AnyAsync(u => u.Username == signUp.Username))
+				errors.Add("Username already exists.");
+
+			if (signUp.Password != signUp.ConfirmPassword)
+				errors.Add("Passwords do not match.");
+
+			if (!signUp.AcceptTerms)
+				errors.Add("You must accept the terms and conditions.");
+
+			if (errors.Count != 0)
 			{
-				var errors = new List<string>();
-
-				if (await _context.Users.AnyAsync(u => u.Username == signUp.Username))
-					errors.Add("Username already exists.");
-
-				if (signUp.Password != signUp.ConfirmPassword)
-					errors.Add("Passwords do not match.");
-
-				if (!signUp.AcceptTerms)
-					errors.Add("You must accept the terms and conditions.");
-
-				if (errors.Count != 0)
-				{
-					foreach (var error in errors)
-						ModelState.AddModelError(string.Empty, error);
-					return View(signUp);
-				}
-
-				// Hash the password
-				var passwordHash = HashPassword(signUp.Password);
-
-				var adminCount = await _context.Users.CountAsync(u => u.Role == RoleOpt.Admin);
-				var newUser = new User
-				{
-					Username = signUp.Username,
-					PasswordHash = passwordHash,
-					Role = adminCount > 0 ? signUp.Role : RoleOpt.Admin,
-					Email = signUp.Email,
-					FullName = signUp.FullName
-
-				};
-
-				_context.Users.Add(newUser);
-				await _context.SaveChangesAsync();
-
-				return RedirectToAction("Login");
+				foreach (var error in errors)
+					ModelState.AddModelError(string.Empty, error);
+				return View(signUp);
 			}
 
-			return View(signUp);
+			// Hash the password
+			var passwordHash = HashPassword(signUp.Password);
+
+			var adminCount = await _context.Users.CountAsync(u => u.Role == RoleOpt.Admin);
+			var newUser = new User
+			{
+				Username = signUp.Username,
+				PasswordHash = passwordHash,
+				Role = adminCount > 0 ? signUp.Role : RoleOpt.Admin,
+				Email = signUp.Email,
+				FullName = signUp.FullName
+
+			};
+
+			_context.Users.Add(newUser);
+			await _context.SaveChangesAsync();
+
+			return RedirectToAction("Login");
+
 		}
 
 		[Authorize]

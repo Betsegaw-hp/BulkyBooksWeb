@@ -97,8 +97,8 @@ Expiry: 12/34
 
 Here’s a **clear and secure guide** for setting up the `appsettings.json` configuration to run the BulkyBooks Web App. This includes placeholders for sensitive data and instructions for local development:
 
+file: "appsettings.json"
 ```json
-// appsettings.json
 {
   "ConnectionStrings": {
     "DefaultConnection": "Server=<your-database-server>;Database=<your-database-name>;User ID=<your-username>;Password=<your-password>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
