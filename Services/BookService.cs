@@ -26,7 +26,7 @@ namespace BulkyBooksWeb.Services
 			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.CategoryId == categoryId).ToListAsync();
 		}
 
-		public async Task<IEnumerable<Book>> GetBooksByAuthor(int authorId)
+		public async Task<IEnumerable<Book>> GetBooksByAuthor(string authorId)
 		{
 			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.AuthorId == authorId).ToListAsync();
 		}
@@ -58,7 +58,7 @@ namespace BulkyBooksWeb.Services
 			return !await _db.Books.AnyAsync(b => b.ISBN == isbn && (id == null || b.Id != id));
 		}
 
-		public async Task CreateBook(CreateBookDto createBookDto, int authorId)
+		public async Task CreateBook(CreateBookDto createBookDto, string authorId)
 		{
 			Book book = new()
 			{

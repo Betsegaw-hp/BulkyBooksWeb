@@ -19,7 +19,7 @@ namespace BulkyBooksWeb.Models
 
 		[ForeignKey("User")]
 		[Required]
-		public int UserId { get; set; }
+		public string UserId { get; set; } = string.Empty;
 
 		public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
@@ -37,6 +37,6 @@ namespace BulkyBooksWeb.Models
 
 		// Navigation properties
 		public virtual List<OrderItem> OrderItems { get; set; } = new();
-		public virtual User User { get; set; } = null!;
+		public virtual ApplicationUser User { get; set; } = null!;
 	}
 }

@@ -44,7 +44,7 @@ public class HomeController : Controller
         {
             booksQuery = booksQuery.Where(b =>
                 b.Title.Contains(searchQuery) ||
-                b.Author.Username.Contains(searchQuery) ||
+                (b.Author != null && b.Author.UserName != null && b.Author.UserName.Contains(searchQuery)) ||
                 b.Description.Contains(searchQuery) ||
                 b.ISBN.Contains(searchQuery));
         }

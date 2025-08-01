@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace BulkyBooksWeb.Controllers
 {
 
-	[Authorize(Roles = "admin, author, user")]
+	[Authorize(Roles = "Admin, Author, User")]
 	[Route("[controller]")]
 	public class BookController : Controller
 	{
@@ -33,7 +33,7 @@ namespace BulkyBooksWeb.Controllers
 			_userContext = userContext;
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
@@ -59,7 +59,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(book);
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpGet("Create")]
 		public async Task<IActionResult> Create()
 		{
@@ -74,7 +74,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(bookViewModel);
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpPost("Create")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([FromForm] CreateBookDto createBookDto)
@@ -85,7 +85,7 @@ namespace BulkyBooksWeb.Controllers
 				if (authorId != null)
 				{
 					Console.WriteLine("Author ID: " + authorId);
-					await _bookService.CreateBook(createBookDto, (int)authorId);
+					await _bookService.CreateBook(createBookDto, authorId);
 					return RedirectToAction(nameof(Index));
 				}
 
@@ -94,7 +94,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(createBookDto);
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpGet("Edit/{id:int}")]
 		public async Task<IActionResult> Edit(int id)
 		{
@@ -121,7 +121,7 @@ namespace BulkyBooksWeb.Controllers
 			return View(bookViewModel);
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpPost("Edit/{id:int}")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto)
@@ -153,7 +153,7 @@ namespace BulkyBooksWeb.Controllers
 			}
 		}
 
-		[Authorize(Roles = "admin, author")]
+		[Authorize(Roles = "Admin, Author")]
 		[HttpPost("Delete/{id:int}")]
 		public async Task<IActionResult> Delete(int id)
 		{

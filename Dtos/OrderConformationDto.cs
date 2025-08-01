@@ -5,7 +5,7 @@ namespace BulkyBooksWeb.Dtos
 	public class OrderConfirmationDto
 	{
 		public int Id { get; set; }
-		public int UserId { get; set; }
+		public string UserId { get; set; } = string.Empty;
 		public string OwnerEmail { get; set; } = string.Empty;
 		public DateTime OrderDate { get; set; }
 		public decimal OrderTotal { get; set; }

@@ -17,7 +17,7 @@ using System.IdentityModel.Tokens.Jwt;
 namespace BulkyBooksWeb.Controllers
 {
 
-	[Authorize(Roles = "admin, author, user")]
+	[Authorize(Roles = "Admin, Author, User")]
 	[Route("[controller]")]
 	public class CheckoutController : Controller
 	{
@@ -84,7 +84,7 @@ namespace BulkyBooksWeb.Controllers
 						return RedirectToAction("Index");
 					}
 
-					if (!ValidateToken(token, out int parsedOrderId, out int? userId))
+					if (!ValidateToken(token, out int parsedOrderId, out string? userId))
 					{
 						_logger.LogError("Invalid token after login attempt.");
 						return RedirectToAction("PaymentFailed");
@@ -180,7 +180,7 @@ namespace BulkyBooksWeb.Controllers
 							model.OrderTotal);
 
 				var callbackUrl = _configuration["Chapa:CallbackUrl"];
-				var token = GenerateToken(order.Id, userId.Value);
+				var token = GenerateToken(order.Id, userId);
 				var returnUrl = $"{_configuration["Chapa:ReturnRootUrl"]}?token={token}";
 				// Create Chapa transaction request
 				var request = new ChapaRequest(
@@ -293,7 +293,7 @@ namespace BulkyBooksWeb.Controllers
 			return cart.Sum(i => i.Price * i.Quantity) * 0.15m; // 15% tax
 		}
 
-		private string GenerateToken(int orderId, int userId)
+		private string GenerateToken(int orderId, string userId)
 		{
 			var jwtConfig = _configuration.GetSection("JwtConfig");
 			if (string.IsNullOrEmpty(jwtConfig["Key"]) || string.IsNullOrEmpty(jwtConfig["Issuer"]) || string.IsNullOrEmpty(jwtConfig["Audience"]))
@@ -323,7 +323,7 @@ namespace BulkyBooksWeb.Controllers
 			return new JwtSecurityTokenHandler().WriteToken(token);
 		}
 
-		private bool ValidateToken(string? token, out int orderId, out int? userId)
+		private bool ValidateToken(string? token, out int orderId, out string? userId)
 		{
 			if (string.IsNullOrEmpty(token))
 			{
@@ -361,7 +361,7 @@ namespace BulkyBooksWeb.Controllers
 					return false;
 				}
 				orderId = int.Parse(orderClaim);
-				userId = int.Parse(userClaim);
+				userId = userClaim;
 				return true;
 			}
 			catch

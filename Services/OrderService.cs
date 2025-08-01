@@ -37,7 +37,7 @@ namespace BulkyBooksWeb.Services
 			return orders;
 		}
 
-		public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(int userId)
+		public async Task<IEnumerable<Order>> GetOrdersByUserIdAsync(string userId)
 		{
 			var orders = await _context.Orders
 				.Include(o => o.OrderItems)
@@ -61,7 +61,7 @@ namespace BulkyBooksWeb.Services
 				Status = order.Status,
 				TransactionReference = order.TransactionReference,
 				UserId = order.UserId,
-				OwnerEmail = order.User.Email,
+				OwnerEmail = order.User?.Email ?? "",
 				OrderItems = order.OrderItems.Select(oi => new OrderItemDto
 				{
 					BookId = oi.BookId,
@@ -83,7 +83,7 @@ namespace BulkyBooksWeb.Services
 			{
 				var order = new Order
 				{
-					UserId = (int)currentUser,
+					UserId = currentUser,
 					Status = OrderStatus.Pending,
 					TransactionReference = transactionReference,
 					OrderTotal = amount,

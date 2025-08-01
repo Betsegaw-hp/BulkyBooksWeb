@@ -5,7 +5,7 @@ namespace BulkyBooksWeb.Data
 {
 	public interface IUserContext
 	{
-		int? GetCurrentUserId();
+		string? GetCurrentUserId();
 	}
 
 	public class UserContext : IUserContext
@@ -17,15 +17,9 @@ namespace BulkyBooksWeb.Data
 			_httpContextAccessor = httpContextAccessor;
 		}
 
-		public int? GetCurrentUserId()
+		public string? GetCurrentUserId()
 		{
-			var userIdClaim = _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-			if (int.TryParse(userIdClaim, out int userId))
-			{
-				return userId;
-			}
-
-			return null;
+			return _httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 		}
 	}
 }

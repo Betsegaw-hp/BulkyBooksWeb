@@ -13,7 +13,7 @@ namespace BulkyBooksWeb.Models
 		public int CategoryId { get; set; }
 
 		[ForeignKey("Author")]
-		public int AuthorId { get; set; }
+		public string AuthorId { get; set; } = string.Empty;
 
 		[Required]
 		[StringLength(100)]
@@ -39,7 +39,7 @@ namespace BulkyBooksWeb.Models
 
 		// Navigation property
 		public virtual Category Category { get; set; } = null!;
-		public virtual User Author { get; set; } = null!;
+		public virtual ApplicationUser Author { get; set; } = null!;
 
 		public DateTime CreatedDateTime { get; set; } = DateTime.Now;
 		public DateTime UpdatedDateTime { get; set; } = DateTime.Now;

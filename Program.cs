@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ChapaNET;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
+using BulkyBooksWeb.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,8 @@ builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddScoped<UserMigrationService>();
+builder.Services.AddScoped<DataSeedService>();
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
 builder.Services.AddSession(options =>
@@ -50,19 +54,38 @@ if (string.IsNullOrEmpty(chapaSecretKey))
 }
 builder.Services.AddSingleton(new Chapa(chapaSecretKey));
 
+// Configure ASP.NET Core Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+    
+    // Lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    
+    // User settings
+    options.User.RequireUniqueEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Auth/Login";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
-    });
+// Configure Identity cookies
+builder.Services.ConfigureApplicationCookie(options => {
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+    options.AccessDeniedPath = "/Auth/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+});
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
-    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("author"));
-    options.AddPolicy("UserOnly", policy => policy.RequireRole("user"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("Author"));
+    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
     options.AddPolicy("BookOwnerOrAdmin", policy =>
         policy.Requirements.Add(new BookOwnerOrAdminRequirement()));
     options.AddPolicy("OrderOwnerOrAdmin", policy =>
@@ -99,5 +122,12 @@ app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Seed the database
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeedService>();
+    await seeder.SeedAsync();
+}
 
 app.Run();

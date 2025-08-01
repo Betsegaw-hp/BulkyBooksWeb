@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using BulkyBooksWeb.Models.ViewModels;
 using BulkyBooksWeb.Services;
 using System.Text.Json;
+using Microsoft.AspNetCore.Identity;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -20,35 +21,59 @@ namespace BulkyBooksWeb.Controllers
 		private readonly IUserContext _userContext;
 		private readonly UserService _userService;
 		private readonly ILogger<AuthController> _logger;
+		private readonly UserManager<ApplicationUser> _userManager;
+		private readonly SignInManager<ApplicationUser> _signInManager;
+		private readonly RoleManager<IdentityRole> _roleManager;
 
 		public AuthController(
 			ApplicationDbContext context,
 			IAuthorizationService authorizationService,
 			IUserContext userContext, ILogger<AuthController> logger,
-			UserService userService)
+			UserService userService,
+			UserManager<ApplicationUser> userManager,
+			SignInManager<ApplicationUser> signInManager,
+			RoleManager<IdentityRole> roleManager)
 		{
 			_context = context;
 			_authService = authorizationService;
 			_userContext = userContext;
 			_userService = userService;
 			_logger = logger;
+			_userManager = userManager;
+			_signInManager = signInManager;
+			_roleManager = roleManager;
 		}
 
 
 		public async Task<IActionResult> Profile()
 		{
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return RedirectToAction("Login");
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
 
-			var user = await _userService.GetUserById((int)userId);
-			if (user == null) return NotFound();
+			var roles = await _userManager.GetRolesAsync(user);
+			var role = roles.FirstOrDefault() ?? "User";
+
+			// Create a User object for the view model (for backward compatibility)
+			var userViewModel = new User
+			{
+				Id = int.Parse(user.Id), // Convert string ID to int for compatibility
+				Username = user.UserName ?? "",
+				Email = user.Email ?? "",
+				FullName = user.FullName,
+				AvatarUrl = user.AvatarUrl,
+				Role = Enum.Parse<RoleOpt>(role, true),
+				CreatedAt = user.CreatedAt,
+				UpdatedAt = user.UpdatedAt,
+				PasswordHash = "" // Don't expose password hash
+			};
+
 			UserProfileViewModel userProfileViewModel = new()
 			{
-				User = user,
+				User = userViewModel,
 				UpdateProfile = new UpdateProfileViewModel
 				{
 					FullName = user.FullName,
-					Email = user.Email
+					Email = user.Email ?? ""
 				}
 			};
 
@@ -72,41 +97,39 @@ namespace BulkyBooksWeb.Controllers
 		{
 			if (ModelState.IsValid)
 			{
-				var user = await _context.Users
-					.FirstOrDefaultAsync(u => u.Username == login.Username);
-
-				if (user == null || !VerifyPassword(login.Password, user.PasswordHash))
+				// Find user by username (UserName in Identity)
+				var user = await _userManager.FindByNameAsync(login.Username);
+				
+				if (user != null)
 				{
-					ModelState.AddModelError(string.Empty, "Invalid credentials.");
-					return View(login);
-				}
-
-
-				// Create claims for the authenticated user
-				var claims = new List<Claim>
-				{
-					new(ClaimTypes.Name, user.Username),
-					new(ClaimTypes.Role, user.Role.ToString().ToLowerInvariant()),
-					new(ClaimTypes.NameIdentifier, user.Id.ToString())
-				};
-
-				var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-				// Sign in the user
-				await HttpContext.SignInAsync(
-					CookieAuthenticationDefaults.AuthenticationScheme,
-					new ClaimsPrincipal(claimsIdentity),
-					new AuthenticationProperties
+					// Use Identity's sign-in manager
+					var result = await _signInManager.PasswordSignInAsync(
+						login.Username, 
+						login.Password, 
+						login.RememberMe, 
+						lockoutOnFailure: true);
+						
+					if (result.Succeeded)
 					{
-						IsPersistent = login.RememberMe,
-						ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(60)
-					});
-
-				Console.WriteLine("User logged in: " + user.Username);
-				// Redirect to the return URL or home page
-				returnUrl ??= login.ReturnUrl;
-				return LocalRedirect(returnUrl ?? "/");
-
+						_logger.LogInformation("User {Username} logged in successfully", login.Username);
+						
+						// Redirect to return URL or home
+						returnUrl ??= login.ReturnUrl;
+						if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+						{
+							return Redirect(returnUrl);
+						}
+						return RedirectToAction("Index", "Home");
+					}
+					
+					if (result.IsLockedOut)
+					{
+						ModelState.AddModelError(string.Empty, "Account locked. Try again later.");
+						return View(login);
+					}
+				}
+				
+				ModelState.AddModelError(string.Empty, "Invalid login attempt.");
 			}
 
 			return View(login);
@@ -124,8 +147,15 @@ namespace BulkyBooksWeb.Controllers
 			if (!ModelState.IsValid) return View(signUp);
 			var errors = new List<string>();
 
-			if (await _context.Users.AnyAsync(u => u.Username == signUp.Username))
+			// Check if username already exists using Identity
+			var existingUser = await _userManager.FindByNameAsync(signUp.Username);
+			if (existingUser != null)
 				errors.Add("Username already exists.");
+
+			// Check if email already exists
+			var existingEmail = await _userManager.FindByEmailAsync(signUp.Email);
+			if (existingEmail != null)
+				errors.Add("Email already exists.");
 
 			if (signUp.Password != signUp.ConfirmPassword)
 				errors.Add("Passwords do not match.");
@@ -140,38 +170,64 @@ namespace BulkyBooksWeb.Controllers
 				return View(signUp);
 			}
 
-			// Hash the password
-			var passwordHash = HashPassword(signUp.Password);
+			// Check if this should be an admin (first user)
+			var adminCount = await _userManager.GetUsersInRoleAsync("Admin");
+			var roleToAssign = adminCount.Count > 0 ? signUp.Role.ToString() : "Admin";
 
-			var adminCount = await _context.Users.CountAsync(u => u.Role == RoleOpt.Admin);
-			var newUser = new User
+			// Create new ApplicationUser
+			var newUser = new ApplicationUser
 			{
-				Username = signUp.Username,
-				PasswordHash = passwordHash,
-				Role = adminCount > 0 ? signUp.Role : RoleOpt.Admin,
+				UserName = signUp.Username,
 				Email = signUp.Email,
-				FullName = signUp.FullName
-
+				FullName = signUp.FullName,
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow,
+				EmailConfirmed = true // For simplicity, auto-confirm emails
 			};
 
-			_context.Users.Add(newUser);
-			await _context.SaveChangesAsync();
+			// Create user using Identity
+			var result = await _userManager.CreateAsync(newUser, signUp.Password);
+			
+			if (result.Succeeded)
+			{
+				// Ensure role exists
+				if (!await _roleManager.RoleExistsAsync(roleToAssign))
+				{
+					await _roleManager.CreateAsync(new IdentityRole(roleToAssign));
+				}
+				
+				// Add user to role
+				await _userManager.AddToRoleAsync(newUser, roleToAssign);
+				
+				_logger.LogInformation("User {Username} created successfully with role {Role}", signUp.Username, roleToAssign);
+				
+				// Optionally sign in the user immediately
+				// await _signInManager.SignInAsync(newUser, isPersistent: false);
+				
+				return RedirectToAction("Login");
+			}
+			
+			// Add errors from Identity
+			foreach (var error in result.Errors)
+			{
+				ModelState.AddModelError(string.Empty, error.Description);
+			}
 
-			return RedirectToAction("Login");
-
+			return View(signUp);
 		}
 
 		[Authorize]
 		[HttpPost]
 		public async Task<IActionResult> Logout()
 		{
-			await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+			await _signInManager.SignOutAsync();
 			return RedirectToAction("Index", "Home");
 		}
 
-		public IActionResult IsUsernameUnique(string username)
+		public async Task<IActionResult> IsUsernameUnique(string username)
 		{
-			var isUnique = !_context.Users.Any(u => u.Username == username);
+			var existingUser = await _userManager.FindByNameAsync(username);
+			var isUnique = existingUser == null;
 			return Json(isUnique);
 		}
 
@@ -190,8 +246,8 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> UpdateProfile(UpdateProfileViewModel model)
 		{
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return RedirectToAction("Login");
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
 
 			if (!ModelState.IsValid)
 			{
@@ -204,22 +260,47 @@ namespace BulkyBooksWeb.Controllers
 					});
 
 				_logger.LogInformation($"Validation errors: {JsonSerializer.Serialize(errors)}");
+				
+				// Create view model for return
+				var roles = await _userManager.GetRolesAsync(user);
+				var role = roles.FirstOrDefault() ?? "User";
+				
+				var userViewModel = new User
+				{
+					Id = int.Parse(user.Id),
+					Username = user.UserName ?? "",
+					Email = user.Email ?? "",
+					FullName = user.FullName,
+					AvatarUrl = user.AvatarUrl,
+					Role = Enum.Parse<RoleOpt>(role, true),
+					CreatedAt = user.CreatedAt,
+					UpdatedAt = user.UpdatedAt,
+					PasswordHash = ""
+				};
+				
 				var userProfileViewModel = new UserProfileViewModel
 				{
 					UpdateProfile = model,
-					User = await _userService.GetUserById((int)userId) ?? new()
+					User = userViewModel
 				};
 				return View("Profile", userProfileViewModel);
 			}
 
-
-			var user = await _userService.GetUserById((int)userId);
-			if (user == null) return NotFound();
-
+			// Update user properties
 			user.FullName = model.FullName;
 			user.Email = model.Email;
+			user.UpdatedAt = DateTime.UtcNow;
 
-			await _context.SaveChangesAsync();
+			var result = await _userManager.UpdateAsync(user);
+			if (result.Succeeded)
+			{
+				return RedirectToAction("Profile");
+			}
+			
+			foreach (var error in result.Errors)
+			{
+				ModelState.AddModelError(string.Empty, error.Description);
+			}
 
 			return RedirectToAction("Profile");
 		}
@@ -229,37 +310,57 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
 		{
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return RedirectToAction("Login");
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+			
 			if (!ModelState.IsValid)
 			{
+				// Create view model for return
+				var roles = await _userManager.GetRolesAsync(user);
+				var role = roles.FirstOrDefault() ?? "User";
+				
+				var userViewModel = new User
+				{
+					Id = int.Parse(user.Id),
+					Username = user.UserName ?? "",
+					Email = user.Email ?? "",
+					FullName = user.FullName,
+					AvatarUrl = user.AvatarUrl,
+					Role = Enum.Parse<RoleOpt>(role, true),
+					CreatedAt = user.CreatedAt,
+					UpdatedAt = user.UpdatedAt,
+					PasswordHash = ""
+				};
 
 				var userProfileViewModel = new UserProfileViewModel
 				{
 					ChangePassword = model,
-					User = await _userService.GetUserById((int)userId) ?? new()
+					User = userViewModel
 				};
 				return View("Profile", userProfileViewModel);
 			}
 
-
-			var user = await _userService.GetUserById((int)userId);
-			if (user == null) return NotFound();
-
-			if (!VerifyPassword(model.CurrentPassword, user.PasswordHash))
+			// Use Identity's change password method
+			var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+			
+			if (result.Succeeded)
 			{
-				ModelState.AddModelError(string.Empty, "Current password is incorrect.");
-				return View("Profile", new UserProfileViewModel
-				{
-					ChangePassword = model,
-					User = user
-				});
+				// Update the security stamp and sign out other sessions
+				await _userManager.UpdateSecurityStampAsync(user);
+				
+				// Refresh the sign-in cookie
+				await _signInManager.RefreshSignInAsync(user);
+				
+				_logger.LogInformation("User {UserId} changed password successfully", user.Id);
+				return RedirectToAction("Profile");
 			}
 
-			user.PasswordHash = HashPassword(model.NewPassword);
-			await _context.SaveChangesAsync();
+			foreach (var error in result.Errors)
+			{
+				ModelState.AddModelError(string.Empty, error.Description);
+			}
 
-			return RedirectToAction("Logout");
+			return RedirectToAction("Profile");
 		}
 
 		[Authorize]
@@ -267,72 +368,45 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> UpdatePreferences(UpdatePreferencesViewModel model)
 		{
-
-			var userId = _userContext.GetCurrentUserId();
-			if (userId == null) return RedirectToAction("Login");
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
 
 			if (!ModelState.IsValid)
 			{
+				// Create view model for return
+				var roles = await _userManager.GetRolesAsync(user);
+				var role = roles.FirstOrDefault() ?? "User";
+				
+				var userViewModel = new User
+				{
+					Id = int.Parse(user.Id),
+					Username = user.UserName ?? "",
+					Email = user.Email ?? "",
+					FullName = user.FullName,
+					AvatarUrl = user.AvatarUrl,
+					Role = Enum.Parse<RoleOpt>(role, true),
+					CreatedAt = user.CreatedAt,
+					UpdatedAt = user.UpdatedAt,
+					PasswordHash = ""
+				};
+				
 				var userProfileViewModel = new UserProfileViewModel
 				{
 					UpdatePreferences = model,
-					User = await _userService.GetUserById((int)userId) ?? new()
+					User = userViewModel
 				};
 				return View("Profile", userProfileViewModel);
 			}
 
-			var user = await _userService.GetUserById((int)userId);
-			if (user == null) return NotFound();
-
+			// Note: Since ApplicationUser doesn't have preference fields yet,
+			// we'll just return success. You can add these fields later if needed.
 			// user.EmailNotificationEnabled = model.EmailNotificationEnabled;
 			// user.ActivityAlertEnabled = model.ActivityAlertEnabled;
 			// user.ItemsPerPage = model.ItemsPerPage;
 
-			// await _context.SaveChangesAsync();
+			// await _userManager.UpdateAsync(user);
 
 			return RedirectToAction("Profile");
 		}
-
-		private static string HashPassword(string password)
-		{
-			byte[] salt = new byte[16];
-			using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
-			{
-				rng.GetBytes(salt);
-			}
-
-			// Hash the password using PBKDF2
-			byte[] hash = KeyDerivation.Pbkdf2(
-				password: password,
-				salt: salt,
-				prf: KeyDerivationPrf.HMACSHA256,
-				iterationCount: 10000,
-				numBytesRequested: 256 / 8);
-
-			// Combine salt and hash (store as base64)
-			return Convert.ToBase64String(salt) + ":" + Convert.ToBase64String(hash);
-		}
-
-		private static bool VerifyPassword(string enteredPassword, string storedPasswordHash)
-		{
-			// Split the stored hash to get salt and password hash
-			var parts = storedPasswordHash.Split(':');
-			if (parts.Length != 2) return false;
-
-			byte[] salt = Convert.FromBase64String(parts[0]);
-			byte[] storedHash = Convert.FromBase64String(parts[1]);
-
-			// Hash the entered password with the stored salt
-			byte[] enteredHash = KeyDerivation.Pbkdf2(
-				password: enteredPassword,
-				salt: salt,
-				prf: KeyDerivationPrf.HMACSHA256,
-				iterationCount: 10000,
-				numBytesRequested: 256 / 8);
-
-			// Compare both hashes
-			return storedHash.SequenceEqual(enteredHash);
-		}
 	}
-
 }
