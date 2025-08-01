@@ -791,11 +791,14 @@
         // Disable Two-Factor Authentication
         function disableTwoFactor() {
             if (confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
                 fetch('@Url.Action("DisableTwoFactor", "Auth")', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
                     }
                 })
                 .then(response => response.json())
@@ -816,18 +819,24 @@
         // Generate Recovery Codes
         function generateRecoveryCodes() {
             if (confirm('This will invalidate your existing recovery codes. Continue?')) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
                 fetch('@Url.Action("GenerateRecoveryCodes", "Auth")', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': token
                     }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Display recovery codes in a modal or redirect to recovery codes page
-                        window.location.href = '@Url.Action("ShowRecoveryCodes", "Auth")';
+                        if (data.redirectUrl) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            window.location.href = '@Url.Action("ShowRecoveryCodes", "Auth")';
+                        }
                     } else {
                         showAlert('danger', data.message || 'Failed to generate recovery codes.');
                     }

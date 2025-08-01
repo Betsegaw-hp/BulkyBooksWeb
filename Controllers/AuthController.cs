@@ -948,41 +948,111 @@ namespace BulkyBooksWeb.Controllers
 		public async Task<IActionResult> DisableTwoFactor()
 		{
 			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
+			if (user == null) 
+			{
+				// Check if it's an AJAX request
+				if (Request.Headers.ContainsKey("X-Requested-With") || 
+					Request.Headers["Content-Type"].ToString().Contains("application/json"))
+				{
+					return Json(new { success = false, message = "User not found." });
+				}
+				return RedirectToAction("Login");
+			}
 
 			var disable2faResult = await _userManager.SetTwoFactorEnabledAsync(user, false);
+			
+			
 			if (disable2faResult.Succeeded)
 			{
-				TempData["SuccessMessage"] = "Two-factor authentication has been disabled.";
 				_logger.LogInformation($"User {user.Id} disabled 2FA.");
+				
+				// Check if it's an AJAX request
+				if (Request.Headers.ContainsKey("X-Requested-With") || 
+					Request.Headers["Content-Type"].ToString().Contains("application/json"))
+				{
+					return Json(new { success = true, message = "Two-factor authentication has been disabled." });
+				}
+				
+				TempData["SuccessMessage"] = "Two-factor authentication has been disabled.";
+				return RedirectToAction("ManageProfile", new { tab = "security" });
 			}
 			else
 			{
+				// Check if it's an AJAX request
+				if (Request.Headers.ContainsKey("X-Requested-With") || 
+					Request.Headers["Content-Type"].ToString().Contains("application/json"))
+				{
+					return Json(new { success = false, message = "Failed to disable two-factor authentication." });
+				}
+				
 				TempData["ErrorMessage"] = "Failed to disable two-factor authentication.";
+				return RedirectToAction("ManageProfile", new { tab = "security" });
 			}
-
-			return RedirectToAction("ManageProfile", new { tab = "security" });
 		}
 
 		// GET: Generate Recovery Codes
 		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> GenerateRecoveryCodes()
 		{
 			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
+			if (user == null) 
+			{
+				// Check if it's an AJAX request
+				if (Request.Headers.ContainsKey("X-Requested-With") || 
+					Request.Headers["Content-Type"].ToString().Contains("application/json"))
+				{
+					return Json(new { success = false, message = "User not found." });
+				}
+				return RedirectToAction("Login");
+			}
 
 			if (!user.TwoFactorEnabled)
 			{
+				// Check if it's an AJAX request
+				if (Request.Headers.ContainsKey("X-Requested-With") || 
+					Request.Headers["Content-Type"].ToString().Contains("application/json"))
+				{
+					return Json(new { success = false, message = "Cannot generate recovery codes for user who does not have 2FA enabled." });
+				}
 				TempData["ErrorMessage"] = "Cannot generate recovery codes for user who does not have 2FA enabled.";
 				return RedirectToAction("ManageProfile", new { tab = "security" });
 			}
 
 			var recoveryCodes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+			_logger.LogInformation($"User {user.Id} generated new 2FA recovery codes.");
+			
+			// Store recovery codes in TempData for both AJAX and form submissions
 			TempData["RecoveryCodes"] = string.Join(",", recoveryCodes!);
 			TempData["SuccessMessage"] = "New recovery codes generated successfully.";
+			
+			// Check if it's an AJAX request
+			if (Request.Headers.ContainsKey("X-Requested-With") || 
+				Request.Headers["Content-Type"].ToString().Contains("application/json"))
+			{
+				var redirectUrl = Url.Action("ShowRecoveryCodes", "Auth");
+				return Json(new { success = true, message = "New recovery codes generated successfully.", redirectUrl = redirectUrl });
+			}
+			
+			return RedirectToAction("ShowRecoveryCodes");
+		}
 
-			_logger.LogInformation($"User {user.Id} generated new 2FA recovery codes.");
-			return RedirectToAction("ManageProfile", new { tab = "security" });
+		// GET: Show Recovery Codes
+		[Authorize]
+		public IActionResult ShowRecoveryCodes()
+		{
+			if (TempData["RecoveryCodes"] == null)
+			{
+				TempData["ErrorMessage"] = "No recovery codes available. Please generate new ones.";
+				return RedirectToAction("ManageProfile", new { tab = "security" });
+			}
+
+			var recoveryCodesString = TempData["RecoveryCodes"] as string;
+			var recoveryCodes = recoveryCodesString?.Split(',').ToList() ?? new List<string>();
+			
+			ViewBag.RecoveryCodes = recoveryCodes;
+			return View();
 		}
 
 		// GET: Download Personal Data
