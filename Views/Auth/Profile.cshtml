@@ -158,13 +158,13 @@
                             <h4 class="border-bottom pb-2 mb-4" style="border-bottom-style: dashed !important;">Personal Information</h4>
                             
                             <form asp-controller="Auth" asp-action="UpdateProfile" method="post">
-                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                                 @Html.AntiForgeryToken()
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                                 <div class="row mb-3">
                                     <div class="col-md-6">
                                         <label asp-for="UpdateProfile.FullName" class="form-label">Full Name</label>
-                                        <input asp-for="UpdateProfile.FullName" class="form-control" />
+                                        <input asp-for="UpdateProfile.FullName" class="form-control" value="@Model.User.FullName" />
                                         <span asp-validation-for="UpdateProfile.FullName" class="text-danger"></span>   
                                     </div>
                                     <div class="col-md-6">
@@ -178,7 +178,7 @@
                                     <div class="col-md-6">
                                         <label asp-for="UpdateProfile.Email" class="form-label">Email Address</label>
                                         <div class="input-group">
-                                            <input asp-for="UpdateProfile.Email" class="form-control" />
+                                            <input asp-for="UpdateProfile.Email" class="form-control" value="@Model.User.Email" />
                                             @if (Model.User.EmailConfirmed)
                                             {
                                                 <span class="input-group-text text-success">
@@ -187,24 +187,54 @@
                                             }
                                             else
                                             {
-                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="sendEmailConfirmation()">
-                                                    Verify
+                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="switchToVerificationTab()">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Verify
                                                 </button>
                                             }
                                         </div>
                                         <span asp-validation-for="UpdateProfile.Email" class="text-danger"></span>
+                                        @if (!Model.User.EmailConfirmed)
+                                        {
+                                            <div class="form-text text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Email address needs verification
+                                            </div>
+                                        }
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label">Phone Number</label>
                                         <div class="input-group">
-                                            <input value="@Model.User.PhoneNumber" class="form-control" placeholder="Add phone number" />
+                                            <input value="@Model.User.PhoneNumber" class="form-control" placeholder="Add phone number" readonly />
                                             @if (Model.User.PhoneNumberConfirmed)
                                             {
                                                 <span class="input-group-text text-success">
                                                     <i class="fas fa-check-circle" title="Phone verified"></i>
                                                 </span>
                                             }
+                                            else if (!string.IsNullOrEmpty(Model.User.PhoneNumber))
+                                            {
+                                                <button type="button" class="btn btn-outline-warning btn-sm" onclick="switchToVerificationTab()">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Verify
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="switchToVerificationTab()">
+                                                    <i class="fas fa-plus me-1"></i>Add
+                                                </button>
+                                            }
                                         </div>
+                                        @if (!string.IsNullOrEmpty(Model.User.PhoneNumber) && !Model.User.PhoneNumberConfirmed)
+                                        {
+                                            <div class="form-text text-warning">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Phone number needs verification
+                                            </div>
+                                        }
+                                        else if (string.IsNullOrEmpty(Model.User.PhoneNumber))
+                                        {
+                                            <div class="form-text text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>Add phone number for enhanced security
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                                 
@@ -414,7 +444,7 @@
                                         </div>
                                         <form id="addPhoneForm">
                                             <div class="input-group mb-3">
-                                                <input type="tel" class="form-control" placeholder="Enter phone number" id="phoneNumberInput" />
+                                                <input type="tel" class="form-control" placeholder="Enter phone number" name="phoneNumber" id="phoneNumberInput" />
                                                 <button type="submit" class="btn btn-outline-primary">
                                                     <i class="fas fa-plus me-1"></i>Add
                                                 </button>
@@ -443,21 +473,72 @@
                                             </div>
                                         </div>
                                         
+                                        
+                                        <div id="changePhoneForm" style="display: none;">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                Changing your phone number will require verification of the new number.
+                                            </div>
+                                            <form id="updatePhoneForm">
+                                                <div class="input-group mb-3">
+                                                    <input type="tel" class="form-control" placeholder="Enter new phone number" name="newPhoneNumber" id="newPhoneNumberInput" />
+                                                    <button type="submit" class="btn btn-primary">
+                                                        <i class="fas fa-sync me-1"></i>Update
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary" onclick="hideChangePhoneForm()">
+                                                        <i class="fas fa-times me-1"></i>Cancel
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                        
                                         @if (!Model.User.PhoneNumberConfirmed)
                                         {
                                             <div class="alert alert-info">
                                                 <i class="fas fa-info-circle me-2"></i>
                                                 Verify your phone number to enable SMS notifications and additional security features.
                                             </div>
-                                            <button type="button" class="btn btn-primary" onclick="sendPhoneVerification()">
-                                                <i class="fas fa-sms me-2"></i>Send Verification Code
-                                            </button>
+                                            <div class="d-flex gap-2 mb-3">
+                                                <button type="button" class="btn btn-primary" onclick="sendPhoneVerification()">
+                                                    <i class="fas fa-sms me-2"></i>Send Verification Code
+                                                </button>
+                                                <button type="button" class="btn btn-outline-warning" onclick="showChangePhoneForm()">
+                                                    <i class="fas fa-edit me-2"></i>Change Number
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- Verification Code Input Form (initially hidden) -->
+                                            <div id="phoneVerificationForm" style="display: none;">
+                                                <div class="alert alert-warning">
+                                                    <i class="fas fa-clock me-2"></i>
+                                                    Enter the 6-digit verification code sent to your phone. The code expires in 5 minutes.
+                                                </div>
+                                                <form id="verifyPhoneForm">
+                                                    <div class="input-group mb-3">
+                                                        <input type="text" class="form-control" placeholder="Enter 6-digit code" name="verificationCode" id="verificationCodeInput" maxlength="6" pattern="[0-9]{6}" />
+                                                        <button type="submit" class="btn btn-success">
+                                                            <i class="fas fa-check me-1"></i>Verify
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                                <small class="text-muted">
+                                                    Didn't receive the code? 
+                                                    <button type="button" class="btn btn-link btn-sm p-0" onclick="sendPhoneVerification()">
+                                                        Resend Code
+                                                    </button>
+                                                </small>
+                                            </div>
                                         }
                                         else
                                         {
                                             <div class="alert alert-success">
                                                 <i class="fas fa-check-circle me-2"></i>
                                                 Your phone number has been verified successfully.
+                                            </div>
+                                            <div class="d-flex gap-2 mb-3">
+                                                <button type="button" class="btn btn-outline-warning" onclick="showChangePhoneForm()">
+                                                    <i class="fas fa-edit me-2"></i>Change Phone Number
+                                                </button>
                                             </div>
                                         }
                                     }
@@ -696,6 +777,8 @@
             .then(data => {
                 if (data.success) {
                     showAlert('success', 'Verification code sent to your phone!');
+                    // Show the verification form
+                    document.getElementById('phoneVerificationForm').style.display = 'block';
                 } else {
                     showAlert('danger', data.message || 'Failed to send verification code.');
                 }
@@ -796,13 +879,14 @@
                 return;
             }
             
+            // Create form data to send as form-encoded
+            const formData = new FormData();
+            formData.append('phoneNumber', phoneNumber);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
             fetch('@Url.Action("AddPhoneNumber", "Auth")', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                },
-                body: JSON.stringify({ phoneNumber: phoneNumber })
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
@@ -815,6 +899,83 @@
             })
             .catch(error => {
                 showAlert('danger', 'An error occurred while adding phone number.');
+            });
+        });
+        
+        // Verify phone number with code
+        document.getElementById('verifyPhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const verificationCode = document.getElementById('verificationCodeInput').value;
+            
+            if (!verificationCode || verificationCode.length !== 6) {
+                showAlert('warning', 'Please enter a valid 6-digit verification code.');
+                return;
+            }
+            
+            // Create form data to send as form-encoded
+            const formData = new FormData();
+            formData.append('code', verificationCode);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
+            fetch('@Url.Action("VerifyPhoneNumber", "Auth")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number verified successfully!');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Invalid verification code. Please try again.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while verifying phone number.');
+            });
+        });
+        
+        // Show change phone form
+        function showChangePhoneForm() {
+            document.getElementById('changePhoneForm').style.display = 'block';
+        }
+        
+        // Hide change phone form
+        function hideChangePhoneForm() {
+            document.getElementById('changePhoneForm').style.display = 'none';
+            document.getElementById('newPhoneNumberInput').value = '';
+        }
+        
+        // Update phone number
+        document.getElementById('updatePhoneForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const newPhoneNumber = document.getElementById('newPhoneNumberInput').value;
+            
+            if (!newPhoneNumber) {
+                showAlert('warning', 'Please enter a new phone number.');
+                return;
+            }
+            
+            // Create form data to send as form-encoded
+            const formData = new FormData();
+            formData.append('phoneNumber', newPhoneNumber);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            
+            fetch('@Url.Action("ChangePhoneNumber", "Auth")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', 'Phone number updated successfully! Please verify your new number.');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('danger', data.message || 'Failed to update phone number.');
+                }
+            })
+            .catch(error => {
+                showAlert('danger', 'An error occurred while updating phone number.');
             });
         });
         
@@ -836,6 +997,17 @@
                     alertDiv.remove();
                 }
             }, 5000);
+        }
+        
+        // Switch to verification tab
+        function switchToVerificationTab() {
+            const verificationTab = document.getElementById('verification-tab');
+            if (verificationTab) {
+                const tab = new bootstrap.Tab(verificationTab);
+                tab.show();
+                // Update URL hash
+                window.location.hash = '#verification';
+            }
         }
         
         // Handle tab switching with URL hash

@@ -12,6 +12,7 @@ using BulkyBooksWeb.Services;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using System.Text;
+using System.Linq;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -247,50 +248,186 @@ namespace BulkyBooksWeb.Controllers
 		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> UpdateProfile(UpdateProfileViewModel model)
+		public async Task<IActionResult> UpdateProfile(UserProfileViewModel model)
 		{
 			var user = await _userManager.GetUserAsync(User);
-			if (user == null) return RedirectToAction("Login");
-
-			if (!ModelState.IsValid)
+			if (user == null) 
 			{
-				var errors = ModelState
-					.Where(x => x.Value != null && x.Value.Errors != null && x.Value.Errors.Count > 0)
-					.Select(x => new
-					{
-						Field = x.Key,
-						Errors = string.Join(", ", x.Value?.Errors?.Select(e => e.ErrorMessage) ?? [])
-					});
+				TempData["ErrorMessage"] = "User not found.";
+				return RedirectToAction("Login");
+			}
 
-				_logger.LogInformation($"Validation errors: {JsonSerializer.Serialize(errors)}");
-				
-				// Create view model for return
-				var userProfileViewModel = new UserProfileViewModel
+			// Validate only the UpdateProfile part of the model
+			if (string.IsNullOrEmpty(model.UpdateProfile.FullName) || string.IsNullOrEmpty(model.UpdateProfile.Email))
+			{
+				TempData["ErrorMessage"] = "Full name and email are required.";
+				TempData["ActiveTab"] = "personal-info";
+				return RedirectToAction("Profile");
+			}
+
+			// Validate email format
+			if (!System.Text.RegularExpressions.Regex.IsMatch(model.UpdateProfile.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+			{
+				TempData["ErrorMessage"] = "Please enter a valid email address.";
+				TempData["ActiveTab"] = "personal-info";
+				return RedirectToAction("Profile");
+			}
+
+			// Check if email is being changed and if it's already taken by another user
+			if (user.Email != model.UpdateProfile.Email)
+			{
+				var existingUser = await _userManager.FindByEmailAsync(model.UpdateProfile.Email);
+				if (existingUser != null && existingUser.Id != user.Id)
 				{
-					UpdateProfile = model,
-					User = user // Use ApplicationUser directly
-				};
-				return View("Profile", userProfileViewModel);
+					TempData["ErrorMessage"] = "This email address is already in use by another account.";
+					TempData["ActiveTab"] = "personal-info";
+					return RedirectToAction("Profile");
+				}
 			}
 
 			// Update user properties
-			user.FirstName = model.FullName.Split(' ').FirstOrDefault() ?? "";
-			user.LastName = string.Join(" ", model.FullName.Split(' ').Skip(1));
-			user.Email = model.Email;
+			user.FirstName = model.UpdateProfile.FullName.Split(' ').FirstOrDefault() ?? "";
+			user.LastName = string.Join(" ", model.UpdateProfile.FullName.Split(' ').Skip(1));
+			
+			// If email is being changed, mark it as unconfirmed
+			bool emailChanged = user.Email != model.UpdateProfile.Email;
+			if (emailChanged)
+			{
+				user.Email = model.UpdateProfile.Email;
+				user.EmailConfirmed = false;
+				user.NormalizedEmail = _userManager.NormalizeEmail(model.UpdateProfile.Email);
+			}
+			
 			user.UpdatedAt = DateTime.UtcNow;
 
 			var result = await _userManager.UpdateAsync(user);
 			if (result.Succeeded)
 			{
+				if (emailChanged)
+				{
+					TempData["SuccessMessage"] = "Profile updated successfully! Please verify your new email address.";
+					TempData["ActiveTab"] = "verification";
+				}
+				else
+				{
+					TempData["SuccessMessage"] = "Profile updated successfully!";
+					TempData["ActiveTab"] = "personal-info";
+				}
 				return RedirectToAction("Profile");
 			}
-			
+
+			// Handle Identity errors
+			var errorMessages = new List<string>();
 			foreach (var error in result.Errors)
 			{
-				ModelState.AddModelError(string.Empty, error.Description);
+				errorMessages.Add(error.Description);
+			}
+			
+			TempData["ErrorMessage"] = string.Join(" ", errorMessages);
+			TempData["ActiveTab"] = "personal-info";
+			return RedirectToAction("Profile");
+		}
+
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> AddPhoneNumber(string phoneNumber)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) 
+			{
+				return Json(new { success = false, message = "User not found." });
 			}
 
-			return RedirectToAction("Profile");
+			// Validate phone number format
+			if (string.IsNullOrWhiteSpace(phoneNumber))
+			{
+				return Json(new { success = false, message = "Phone number is required." });
+			}
+
+			// Basic phone number validation (accepts various formats)
+			if (!System.Text.RegularExpressions.Regex.IsMatch(phoneNumber.Trim(), @"^[\+]?[\d\s\-\(\)]{10,15}$"))
+			{
+				return Json(new { success = false, message = "Please enter a valid phone number." });
+			}
+
+			// Check if phone number is already taken by another user
+			var existingUser = await _userManager.Users
+				.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber.Trim() && u.Id != user.Id);
+			if (existingUser != null)
+			{
+				return Json(new { success = false, message = "This phone number is already associated with another account." });
+			}
+
+			// Update user's phone number
+			user.PhoneNumber = phoneNumber.Trim();
+			user.PhoneNumberConfirmed = false; // Require verification
+			user.UpdatedAt = DateTime.UtcNow;
+
+			var result = await _userManager.UpdateAsync(user);
+			if (result.Succeeded)
+			{
+				_logger.LogInformation("User {UserId} added phone number successfully", user.Id);
+				return Json(new { success = true, message = "Phone number added successfully! Please verify it to complete the process." });
+			}
+
+			// Handle Identity errors
+			var errorMessages = result.Errors.Select(e => e.Description).ToList();
+			return Json(new { success = false, message = string.Join(" ", errorMessages) });
+		}
+
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ChangePhoneNumber(string phoneNumber)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) 
+			{
+				return Json(new { success = false, message = "User not found." });
+			}
+
+			// Validate phone number format
+			if (string.IsNullOrWhiteSpace(phoneNumber))
+			{
+				return Json(new { success = false, message = "Phone number is required." });
+			}
+
+			// Basic phone number validation (accepts various formats)
+			if (!System.Text.RegularExpressions.Regex.IsMatch(phoneNumber.Trim(), @"^[\+]?[\d\s\-\(\)]{10,15}$"))
+			{
+				return Json(new { success = false, message = "Please enter a valid phone number." });
+			}
+
+			// Check if phone number is already taken by another user
+			var existingUser = await _userManager.Users
+				.FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber.Trim() && u.Id != user.Id);
+			if (existingUser != null)
+			{
+				return Json(new { success = false, message = "This phone number is already associated with another account." });
+			}
+
+			// Check if it's the same phone number
+			if (user.PhoneNumber == phoneNumber.Trim())
+			{
+				return Json(new { success = false, message = "This is already your current phone number." });
+			}
+
+			// Update user's phone number
+			user.PhoneNumber = phoneNumber.Trim();
+			user.PhoneNumberConfirmed = false; // Require verification for new number
+			user.UpdatedAt = DateTime.UtcNow;
+
+			var result = await _userManager.UpdateAsync(user);
+			if (result.Succeeded)
+			{
+				_logger.LogInformation("User {UserId} changed phone number to {PhoneNumber}", user.Id, phoneNumber.Trim());
+				return Json(new { success = true, message = "Phone number updated successfully! Please verify your new number to complete the process." });
+			}
+
+			// Handle Identity errors
+			var errorMessages = result.Errors.Select(e => e.Description).ToList();
+			return Json(new { success = false, message = string.Join(" ", errorMessages) });
 		}
 
 		[Authorize]
@@ -784,6 +921,90 @@ namespace BulkyBooksWeb.Controllers
 			
 			TempData["SuccessMessage"] = "Confirmation email sent. Please check your inbox.";
 			return RedirectToAction("ManageProfile", new { tab = "personal" });
+		}
+
+		// POST: Send Phone Verification
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> SendPhoneVerification()
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) 
+			{
+				return Json(new { success = false, message = "User not found." });
+			}
+
+			if (string.IsNullOrEmpty(user.PhoneNumber))
+			{
+				return Json(new { success = false, message = "No phone number to verify. Please add a phone number first." });
+			}
+
+			if (user.PhoneNumberConfirmed)
+			{
+				return Json(new { success = false, message = "Your phone number is already verified." });
+			}
+
+			// Generate phone verification token
+			var token = await _userManager.GenerateChangePhoneNumberTokenAsync(user, user.PhoneNumber);
+			
+			// TODO: Send actual SMS with verification code
+			// For now, we'll just log it for development purposes
+			_logger.LogInformation($"Phone verification code for {user.PhoneNumber}: {token}");
+			
+			
+			return Json(new { success = true, message = $"Verification code sent to {user.PhoneNumber}. Please check your messages. (DEV: Code is {token})" });
+		}
+
+		// POST: Verify Phone Number
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> VerifyPhoneNumber(string code)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) 
+			{
+				return Json(new { success = false, message = "User not found." });
+			}
+
+			if (string.IsNullOrEmpty(user.PhoneNumber))
+			{
+				return Json(new { success = false, message = "No phone number to verify. Please add a phone number first." });
+			}
+
+			if (user.PhoneNumberConfirmed)
+			{
+				return Json(new { success = false, message = "Your phone number is already verified." });
+			}
+
+			if (string.IsNullOrWhiteSpace(code))
+			{
+				return Json(new { success = false, message = "Verification code is required." });
+			}
+
+			// Verify the phone number token
+			var isValid = await _userManager.VerifyChangePhoneNumberTokenAsync(user, code, user.PhoneNumber);
+			
+			if (isValid)
+			{
+				// Mark phone number as confirmed
+				user.PhoneNumberConfirmed = true;
+				user.UpdatedAt = DateTime.UtcNow;
+
+				var result = await _userManager.UpdateAsync(user);
+				if (result.Succeeded)
+				{
+					_logger.LogInformation("User {UserId} verified phone number successfully", user.Id);
+					return Json(new { success = true, message = "Phone number verified successfully!" });
+				}
+
+				// Handle Identity errors
+				var errorMessages = result.Errors.Select(e => e.Description).ToList();
+				return Json(new { success = false, message = string.Join(" ", errorMessages) });
+			}
+
+			return Json(new { success = false, message = "Invalid verification code. Please check the code and try again." });
 		}
 
 		// Helper methods
