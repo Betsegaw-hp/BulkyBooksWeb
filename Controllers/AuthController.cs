@@ -72,12 +72,10 @@ namespace BulkyBooksWeb.Controllers
 		{
 			if (ModelState.IsValid)
 			{
-				// Find user by username (UserName in Identity)
 				var user = await _userManager.FindByNameAsync(login.Username);
 				
 				if (user != null)
 				{
-					// Use Identity's sign-in manager
 					var result = await _signInManager.PasswordSignInAsync(
 						login.Username, 
 						login.Password, 
@@ -86,7 +84,6 @@ namespace BulkyBooksWeb.Controllers
 						
 					if (result.Succeeded)
 					{
-						// Update last login time
 						user.LastLoginAt = DateTime.UtcNow;
 						await _userManager.UpdateAsync(user);
 						
@@ -117,8 +114,21 @@ namespace BulkyBooksWeb.Controllers
 					if (result.IsNotAllowed)
 					{
 						_logger.LogWarning("User {Username} not allowed to sign in", login.Username);
-						ModelState.AddModelError(string.Empty, "Account not verified. Please check your email for verification instructions.");
-						return View(login);
+						
+						// Find the user to get their email for resend functionality
+						var unverifiedUser = await _userManager.FindByNameAsync(login.Username);
+						if (unverifiedUser != null && !unverifiedUser.EmailConfirmed)
+						{
+							TempData["ErrorMessage"] = "Your email address has not been verified yet. Please check your email or request a new verification link.";
+							TempData["Email"] = unverifiedUser.Email;
+							TempData["UserId"] = unverifiedUser.Id;
+							return RedirectToAction("EmailVerificationRequired");
+						}
+						else
+						{
+							ModelState.AddModelError(string.Empty, "Account not verified. Please contact support if this problem persists.");
+							return View(login);
+						}
 					}
 				}
 				
@@ -335,7 +345,7 @@ namespace BulkyBooksWeb.Controllers
 				LastName = string.Join(" ", signUp.FullName.Split(' ').Skip(1)),
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow,
-				EmailConfirmed = true, // For simplicity, auto-confirm emails
+				EmailConfirmed = false, 
 				TwoFactorEnabled = false, // Default to false for new users
 				LockoutEnabled = true, // Enable lockout protection
 				AccessFailedCount = 0
@@ -357,14 +367,33 @@ namespace BulkyBooksWeb.Controllers
 				
 				_logger.LogInformation("User {Username} created successfully with role {Role}", signUp.Username, roleToAssign);
 				
-				// Set success message for login page
-				TempData["SuccessMessage"] = "Account created successfully! You can now sign in with your credentials.";
-				
-				// Optionally sign in the user immediately (uncomment if you want auto-login)
-				// await _signInManager.SignInAsync(newUser, isPersistent: false);
-				// return RedirectToAction("Index", "Home");
-				
-				return RedirectToAction("Login");
+				// Send email verification
+				try
+				{
+					var token = await _userManager.GenerateEmailConfirmationTokenAsync(newUser);
+					var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
+						new { userId = newUser.Id, token = token }, Request.Scheme);
+
+					// TODO: Send actual email - for now just log the confirmation link
+					_logger.LogInformation($"Email confirmation link for {newUser.Email}: {callbackUrl}");
+					
+					// Set success message and redirect to email verification page
+					TempData["SuccessMessage"] = "Account created successfully! Please check your email to verify your account before signing in.";
+					TempData["Email"] = newUser.Email;
+					TempData["UserId"] = newUser.Id;
+					
+					return RedirectToAction("EmailVerificationRequired");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Error sending welcome email verification for user {UserId}", newUser.Id);
+					// Still redirect to verification page even if email sending failed
+					TempData["WarningMessage"] = "Account created successfully! However, we couldn't send the verification email. You can request a new one below.";
+					TempData["Email"] = newUser.Email;
+					TempData["UserId"] = newUser.Id;
+					
+					return RedirectToAction("EmailVerificationRequired");
+				}
 			}
 			
 			// Add errors from Identity
@@ -374,6 +403,69 @@ namespace BulkyBooksWeb.Controllers
 			}
 
 			return View(signUp);
+		}
+
+		// GET: Email Verification Required
+		[HttpGet]
+		public IActionResult EmailVerificationRequired()
+		{
+			// Pass email and user ID from TempData for resend functionality
+			ViewBag.Email = TempData["Email"]?.ToString();
+			ViewBag.UserId = TempData["UserId"]?.ToString();
+			return View();
+		}
+
+		// POST: Resend Email Verification
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ResendEmailVerification(string email)
+		{
+			if (string.IsNullOrEmpty(email))
+			{
+				TempData["ErrorMessage"] = "Email address is required.";
+				return RedirectToAction("EmailVerificationRequired");
+			}
+
+			var user = await _userManager.FindByEmailAsync(email);
+			if (user == null)
+			{
+				// Don't reveal that the user does not exist
+				TempData["SuccessMessage"] = "If an account with that email exists, a verification email has been sent.";
+				return RedirectToAction("EmailVerificationRequired");
+			}
+
+			if (user.EmailConfirmed)
+			{
+				TempData["InfoMessage"] = "This email address is already verified. You can now sign in.";
+				return RedirectToAction("Login");
+			}
+
+			try
+			{
+				var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+				var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
+					new { userId = user.Id, token = token }, Request.Scheme);
+
+				// TODO: Send actual email - for now just log the confirmation link
+				_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
+				
+				TempData["SuccessMessage"] = "Verification email sent! Please check your inbox.";
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error resending email verification for user {UserId}", user.Id);
+				TempData["ErrorMessage"] = "Failed to send verification email. Please try again.";
+			}
+
+			return RedirectToAction("EmailVerificationRequired");
+		}
+
+		// GET: Email Verification Success
+		[HttpGet]
+		public IActionResult EmailVerificationSuccess()
+		{
+			ViewBag.Email = TempData["Email"]?.ToString();
+			return View();
 		}
 
 		[Authorize]
@@ -1213,8 +1305,8 @@ namespace BulkyBooksWeb.Controllers
 
 			if (user.EmailConfirmed)
 			{
-				TempData["InfoMessage"] = "Your email is already confirmed.";
-				return RedirectToAction("ManageProfile", new { tab = "verification" });
+				TempData["InfoMessage"] = "Your email is already confirmed. You can now sign in.";
+				return RedirectToAction("Login");
 			}
 
 			try
@@ -1223,22 +1315,50 @@ namespace BulkyBooksWeb.Controllers
 				if (result.Succeeded)
 				{
 					_logger.LogInformation("User {UserId} confirmed their email successfully", user.Id);
-					TempData["SuccessMessage"] = "Thank you for confirming your email address!";
-					return RedirectToAction("ManageProfile", new { tab = "verification" });
+					
+					// Check if user is logged in (existing user managing profile vs new user confirming)
+					if (User.Identity?.IsAuthenticated == true)
+					{
+						TempData["SuccessMessage"] = "Thank you for confirming your email address!";
+						return RedirectToAction("ManageProfile", new { tab = "verification" });
+					}
+					else
+					{
+						// New user verification - redirect to welcome page then login
+						TempData["SuccessMessage"] = "Email verified successfully! You can now sign in to your account.";
+						TempData["Email"] = user.Email;
+						return RedirectToAction("EmailVerificationSuccess");
+					}
 				}
 				else
 				{
 					_logger.LogWarning("Email confirmation failed for user {UserId}: {Errors}", 
 						user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
 					TempData["ErrorMessage"] = "Email confirmation failed. The link may be expired or invalid.";
-					return RedirectToAction("ManageProfile", new { tab = "verification" });
+					
+					if (User.Identity?.IsAuthenticated == true)
+					{
+						return RedirectToAction("ManageProfile", new { tab = "verification" });
+					}
+					else
+					{
+						return RedirectToAction("EmailVerificationRequired");
+					}
 				}
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "Error confirming email for user {UserId}", user.Id);
 				TempData["ErrorMessage"] = "An error occurred while confirming your email. Please try again.";
-				return RedirectToAction("ManageProfile", new { tab = "verification" });
+				
+				if (User.Identity?.IsAuthenticated == true)
+				{
+					return RedirectToAction("ManageProfile", new { tab = "verification" });
+				}
+				else
+				{
+					return RedirectToAction("EmailVerificationRequired");
+				}
 			}
 		}
 

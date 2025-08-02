@@ -23,7 +23,7 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label asp-for="Username" class="form-label">Usernamee</label>
+                                <label asp-for="Username" class="form-label">Username</label>
                                 <input asp-for="Username" class="form-control" placeholder="Enter your Username" />
                                 <span asp-validation-for="Username" class="text-danger"></span>
                             </div>
@@ -39,6 +39,10 @@
                             <label asp-for="Email" class="form-label">Email</label>
                             <input asp-for="Email" class="form-control" placeholder="Enter your email" />
                             <span asp-validation-for="Email" class="text-danger"></span>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                We'll send a verification link to this email address
+                            </div>
                         </div>
 
 						<div class="mb-3">
@@ -73,7 +77,13 @@
                         </div>
                         
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">Create Account</button>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </button>
+                            <small class="text-muted text-center">
+                                <i class="fas fa-envelope me-1"></i>
+                                You'll need to verify your email before signing in
+                            </small>
                         </div>
                     </form>
                     

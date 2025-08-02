@@ -1,0 +1,172 @@
+@{
+    ViewData["Title"] = "Email Verification Required";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-warning shadow-lg">
+                <div class="card-header bg-warning text-dark text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-envelope-open-text me-2"></i>
+                        Email Verification Required
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- Success/Error Messages -->
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["ErrorMessage"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            @TempData["ErrorMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["WarningMessage"] != null)
+                    {
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            @TempData["WarningMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["InfoMessage"] != null)
+                    {
+                        <div class="alert alert-info alert-dismissible fade show" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            @TempData["InfoMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <!-- Main Content -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-block p-4 rounded-circle mb-3" style="background-color: #fff3cd; border: 2px dashed #ffc107;">
+                            <i class="fas fa-envelope-open-text fa-4x text-warning"></i>
+                        </div>
+                        <h4 class="mb-3">Check Your Email</h4>
+                        <p class="text-muted mb-1">We've sent a verification link to:</p>
+                        @if (!string.IsNullOrEmpty(ViewBag.Email))
+                        {
+                            <p class="fw-bold text-primary mb-3">@ViewBag.Email</p>
+                        }
+                        else
+                        {
+                            <p class="fw-bold text-primary mb-3">your email address</p>
+                        }
+                        <p class="text-muted">
+                            Click the link in the email to verify your account and complete your registration.
+                        </p>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-lightbulb me-2 text-warning"></i>
+                                What to do next:
+                            </h6>
+                            <ol class="mb-0">
+                                <li class="mb-2">Check your email inbox (including spam/junk folder)</li>
+                                <li class="mb-2">Look for an email from BulkyBooks</li>
+                                <li class="mb-2">Click the verification link in the email</li>
+                                <li>Return here and sign in with your credentials</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <!-- Resend Email Form -->
+                        @if (!string.IsNullOrEmpty(ViewBag.Email))
+                        {
+                            <form asp-action="ResendEmailVerification" method="post" id="resendForm">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="email" value="@ViewBag.Email" />
+                                <button type="submit" class="btn btn-warning btn-lg" id="resendBtn">
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    Resend Verification Email
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                If you need to resend the verification email, please try signing in again.
+                            </div>
+                        }
+                        
+                        <a asp-action="Login" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Sign In
+                        </a>
+                    </div>
+
+                    <!-- Support Section -->
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <h6 class="mb-3">Need Help?</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-light h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                        <h6 class="card-title">Email Not Arriving?</h6>
+                                        <p class="card-text small text-muted">
+                                            Check your spam folder. Emails may take up to 5 minutes to arrive.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-light h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="fas fa-life-ring fa-2x text-info mb-2"></i>
+                                        <h6 class="card-title">Still Having Issues?</h6>
+                                        <p class="card-text small text-muted">
+                                            <a href="mailto:support@bulkybooks.com" class="btn btn-sm btn-outline-info">
+                                                Contact Support
+                                            </a>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const resendForm = document.getElementById('resendForm');
+            const resendBtn = document.getElementById('resendBtn');
+            
+            if (resendForm && resendBtn) {
+                resendForm.addEventListener('submit', function(e) {
+                    // Disable button to prevent double submission
+                    resendBtn.disabled = true;
+                    resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+                    
+                    // Re-enable after a delay (form will likely redirect before this)
+                    setTimeout(() => {
+                        resendBtn.disabled = false;
+                        resendBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Resend Verification Email';
+                    }, 5000);
+                });
+            }
+        });
+    </script>
+}
