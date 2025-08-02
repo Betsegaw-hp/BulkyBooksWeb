@@ -323,7 +323,7 @@ namespace BulkyBooksWeb.Controllers
             if (user == null)
                 return NotFound();
 
-            var viewModel = new ResetPasswordViewModel
+            var viewModel = new AdminResetPasswordViewModel
             {
                 UserId = user.Id,
                 UserName = user.UserName ?? "",
@@ -336,7 +336,7 @@ namespace BulkyBooksWeb.Controllers
         // POST: UserManagement/ResetPassword/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+        public async Task<IActionResult> ResetPassword(AdminResetPasswordViewModel model)
         {
             if (ModelState.IsValid)
             {

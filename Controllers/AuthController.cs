@@ -51,7 +51,6 @@ namespace BulkyBooksWeb.Controllers
 		public IActionResult Profile()
 		{
 			// Redirect to the more comprehensive ManageProfile page
-			// Keep the same functionality but with better UI and features
 			return RedirectToAction("ManageProfile");
 		}
 
@@ -466,6 +465,242 @@ namespace BulkyBooksWeb.Controllers
 		{
 			ViewBag.Email = TempData["Email"]?.ToString();
 			return View();
+		}
+
+		// GET: Forgot Password
+		[HttpGet]
+		public IActionResult ForgotPassword()
+		{
+			return View();
+		}
+
+		// POST: Forgot Password
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+		{
+			if (!ModelState.IsValid)
+			{
+				return View(model);
+			}
+
+			var user = await _userManager.FindByEmailAsync(model.Email);
+			
+			// Don't reveal whether the user exists or not for security
+			TempData["SuccessMessage"] = "If an account with that email exists, a password reset link has been sent.";
+			
+			if (user != null && user.EmailConfirmed)
+			{
+				try
+				{
+					var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+					var callbackUrl = Url.Action("ResetPassword", "Auth", 
+						new { userId = user.Id, token = token }, Request.Scheme);
+
+					// TODO: Send actual email - for now just log the reset link
+					_logger.LogInformation($"Password reset link for {user.Email}: {callbackUrl}");
+					
+					_logger.LogInformation("Password reset requested for user {UserId}", user.Id);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Error sending password reset email for user {Email}", model.Email);
+				}
+			}
+			else if (user != null && !user.EmailConfirmed)
+			{
+				_logger.LogWarning("Password reset requested for unverified user {Email}", model.Email);
+			}
+			else
+			{
+				_logger.LogWarning("Password reset requested for non-existent email {Email}", model.Email);
+			}
+
+			return RedirectToAction("ForgotPasswordConfirmation");
+		}
+
+		// GET: Forgot Password Confirmation
+		[HttpGet]
+		public IActionResult ForgotPasswordConfirmation()
+		{
+			return View();
+		}
+
+		// GET: Reset Password
+		[HttpGet]
+		public IActionResult ResetPassword(string userId, string token)
+		{
+			if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+			{
+				TempData["ErrorMessage"] = "Invalid password reset link.";
+				return RedirectToAction("Login");
+			}
+
+			var model = new ResetPasswordViewModel
+			{
+				Token = token,
+				UserId = userId
+			};
+
+			return View(model);
+		}
+
+		// POST: Reset Password
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+		{
+			if (!ModelState.IsValid)
+			{
+				return View(model);
+			}
+
+			var user = await _userManager.FindByIdAsync(model.UserId);
+			if (user == null)
+			{
+				TempData["ErrorMessage"] = "Invalid password reset request.";
+				return RedirectToAction("Login");
+			}
+
+			var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+			if (result.Succeeded)
+			{
+				// Update security stamp to invalidate existing sessions
+				await _userManager.UpdateSecurityStampAsync(user);
+				
+				_logger.LogInformation("User {UserId} reset their password successfully", user.Id);
+				TempData["SuccessMessage"] = "Your password has been reset successfully. Please sign in with your new password.";
+				return RedirectToAction("Login");
+			}
+
+			foreach (var error in result.Errors)
+			{
+				ModelState.AddModelError(string.Empty, error.Description);
+			}
+
+			return View(model);
+		}
+
+		// POST: External Login
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+		{
+			// Request a redirect to the external login provider
+			var redirectUrl = Url.Action("ExternalLoginCallback", "Auth", new { ReturnUrl = returnUrl });
+			var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+			return new ChallengeResult(provider, properties);
+		}
+
+		// GET: External Login Callback
+		[HttpGet]
+		public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+		{
+			returnUrl = returnUrl ?? Url.Content("~/");
+
+			if (remoteError != null)
+			{
+				TempData["ErrorMessage"] = $"Error from external provider: {remoteError}";
+				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
+			}
+
+			var info = await _signInManager.GetExternalLoginInfoAsync();
+			if (info == null)
+			{
+				TempData["ErrorMessage"] = "Error loading external login information.";
+				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
+			}
+
+			// Sign in the user with this external login provider if the user already has a login
+			var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+			if (result.Succeeded)
+			{
+				_logger.LogInformation("User logged in with {Name} provider.", info.LoginProvider);
+				return LocalRedirect(returnUrl);
+			}
+			if (result.IsLockedOut)
+			{
+				return RedirectToAction("Lockout");
+			}
+			else
+			{
+				// If the user does not have an account, then create one
+				ViewData["ReturnUrl"] = returnUrl;
+				ViewData["LoginProvider"] = info.LoginProvider;
+				
+				var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+				var name = info.Principal.FindFirstValue(ClaimTypes.Name) ?? "";
+				
+				return View("ExternalLogin", new ExternalLoginViewModel 
+				{ 
+					Email = email ?? "", 
+					FullName = name,
+					ReturnUrl = returnUrl ?? "",
+					LoginProvider = info.LoginProvider
+				});
+			}
+		}
+
+		// POST: External Login Confirmation
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ExternalLoginConfirmation(ExternalLoginViewModel model, string? returnUrl = null)
+		{
+			returnUrl = returnUrl ?? Url.Content("~/");
+
+			// Get the information about the user from the external login provider
+			var info = await _signInManager.GetExternalLoginInfoAsync();
+			if (info == null)
+			{
+				TempData["ErrorMessage"] = "Error loading external login information during confirmation.";
+				return View(model);
+			}
+
+			if (ModelState.IsValid)
+			{
+				// Check if email already exists
+				var existingUser = await _userManager.FindByEmailAsync(model.Email);
+				if (existingUser != null)
+				{
+					ModelState.AddModelError("Email", "A user with this email already exists.");
+					return View(model);
+				}
+
+				var user = new ApplicationUser 
+				{ 
+					UserName = model.Email,
+					Email = model.Email,
+					FirstName = model.FullName.Split(' ').FirstOrDefault() ?? "",
+					LastName = string.Join(" ", model.FullName.Split(' ').Skip(1)),
+					EmailConfirmed = true, // External providers are considered verified
+					CreatedAt = DateTime.UtcNow,
+					UpdatedAt = DateTime.UtcNow
+				};
+
+				var result = await _userManager.CreateAsync(user);
+				if (result.Succeeded)
+				{
+					result = await _userManager.AddLoginAsync(user, info);
+					if (result.Succeeded)
+					{
+						// Assign default role
+						await _userManager.AddToRoleAsync(user, "User");
+						
+						_logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+						
+						await _signInManager.SignInAsync(user, isPersistent: false);
+						return LocalRedirect(returnUrl);
+					}
+				}
+				
+				foreach (var error in result.Errors)
+				{
+					ModelState.AddModelError(string.Empty, error.Description);
+				}
+			}
+
+			ViewData["ReturnUrl"] = returnUrl;
+			return View(model);
 		}
 
 		[Authorize]

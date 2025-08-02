@@ -192,7 +192,7 @@ namespace BulkyBooksWeb.Models.ViewModels
         public List<UserLoginInfo> ExternalLogins { get; set; } = new();
     }
 
-    public class ResetPasswordViewModel
+    public class AdminResetPasswordViewModel
     {
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
