@@ -406,20 +406,18 @@ namespace BulkyBooksWeb.Controllers
                 return NotFound();
 
             var currentRoles = await _userManager.GetRolesAsync(user);
-            var allRoles = await _roleManager.Roles.ToListAsync();
+            var allRoles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
 
-            var viewModel = new UserRoleManagementViewModel
+            var viewModel = new ManageRolesViewModel
             {
                 UserId = user.Id,
                 UserName = user.UserName ?? "",
+                FullName = $"{user.FirstName} {user.LastName}".Trim(),
                 Email = user.Email ?? "",
+                AvatarUrl = user.AvatarUrl ?? "",
                 CurrentRoles = currentRoles.ToList(),
-                AvailableRoles = allRoles.Select(role => new RoleAssignmentItem
-                {
-                    RoleName = role.Name!,
-                    Description = GetRoleDescription(role.Name!),
-                    IsAssigned = currentRoles.Contains(role.Name!)
-                }).ToList()
+                AllRoles = allRoles.Where(r => r != null).Select(r => r!).ToList(),
+                SelectedRoles = currentRoles.ToList()
             };
 
             return View(viewModel);
@@ -428,14 +426,14 @@ namespace BulkyBooksWeb.Controllers
         // POST: UserManagement/ManageRoles/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ManageRoles(UserRoleManagementViewModel model)
+        public async Task<IActionResult> ManageRoles(ManageRolesViewModel model)
         {
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null)
                 return NotFound();
 
             var currentRoles = await _userManager.GetRolesAsync(user);
-            var selectedRoles = model.AvailableRoles.Where(r => r.IsAssigned).Select(r => r.RoleName).ToList();
+            var selectedRoles = model.SelectedRoles ?? new List<string>();
 
             var rolesToRemove = currentRoles.Except(selectedRoles);
             var rolesToAdd = selectedRoles.Except(currentRoles);
