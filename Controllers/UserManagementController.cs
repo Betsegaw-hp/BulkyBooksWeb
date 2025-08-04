@@ -41,7 +41,8 @@ namespace BulkyBooksWeb.Controllers
             {
                 query = query.Where(u => u.UserName!.Contains(searchTerm) || 
                                        u.Email!.Contains(searchTerm) || 
-                                       u.FullName.Contains(searchTerm));
+                                       u.FirstName.Contains(searchTerm) ||
+                                       u.LastName.Contains(searchTerm));
             }
 
             var totalUsers = await query.CountAsync();
