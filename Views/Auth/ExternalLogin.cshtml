@@ -45,6 +45,19 @@
                             <span asp-validation-for="FullName" class="text-danger small"></span>
                         </div>
 
+                        <!-- Role Selection -->
+                        <div class="mb-4">
+                            <label asp-for="Role" class="form-label fw-semibold">
+                                <i class="fas fa-users me-2 text-primary"></i>Role
+                            </label>
+                            <select asp-for="Role" class="form-select form-select-lg" 
+                                    style="border-radius: 10px; border: 2px solid #e9ecef;">
+                                <option value="User">User</option>
+                                <option value="Author">Author</option>
+                            </select>
+                            <span asp-validation-for="Role" class="text-danger small"></span>
+                        </div>
+
                         <!-- Hidden Fields -->
                         <input asp-for="ReturnUrl" type="hidden" />
                         <input asp-for="LoginProvider" type="hidden" />

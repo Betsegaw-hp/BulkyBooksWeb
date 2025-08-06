@@ -98,6 +98,9 @@ namespace BulkyBooksWeb.Models.ViewModels
         [Required]
         public string FullName { get; set; } = string.Empty;
 
+        [Required]
+        public RoleOpt Role { get; set; } = RoleOpt.User;
+
         public string ReturnUrl { get; set; } = string.Empty;
         public string LoginProvider { get; set; } = string.Empty;
     }

@@ -653,7 +653,8 @@ namespace BulkyBooksWeb.Controllers
 			if (info == null)
 			{
 				TempData["ErrorMessage"] = "Error loading external login information during confirmation.";
-				return View(model);
+				ViewData["LoginProvider"] = model.LoginProvider;
+				return View("ExternalLogin", model);
 			}
 
 			if (ModelState.IsValid)
@@ -663,7 +664,9 @@ namespace BulkyBooksWeb.Controllers
 				if (existingUser != null)
 				{
 					ModelState.AddModelError("Email", "A user with this email already exists.");
-					return View(model);
+					ViewData["ReturnUrl"] = returnUrl;
+					ViewData["LoginProvider"] = model.LoginProvider;
+					return View("ExternalLogin", model);
 				}
 
 				var user = new ApplicationUser 
@@ -672,7 +675,8 @@ namespace BulkyBooksWeb.Controllers
 					Email = model.Email,
 					FirstName = model.FullName.Split(' ').FirstOrDefault() ?? "",
 					LastName = string.Join(" ", model.FullName.Split(' ').Skip(1)),
-					EmailConfirmed = true, // External providers are considered verified
+					// Only mark email as confirmed if it matches the OAuth provider's email
+					EmailConfirmed = model.Email.Equals(info.Principal.FindFirstValue(ClaimTypes.Email), StringComparison.OrdinalIgnoreCase),
 					CreatedAt = DateTime.UtcNow,
 					UpdatedAt = DateTime.UtcNow
 				};
@@ -683,10 +687,32 @@ namespace BulkyBooksWeb.Controllers
 					result = await _userManager.AddLoginAsync(user, info);
 					if (result.Succeeded)
 					{
-						// Assign default role
-						await _userManager.AddToRoleAsync(user, "User");
+						// Assign the selected role from the form
+						string roleName = model.Role.ToString();
+						await _userManager.AddToRoleAsync(user, roleName);
 						
-						_logger.LogInformation("User created an account using {Name} provider.", info.LoginProvider);
+						if (!user.EmailConfirmed)
+						{
+							try
+							{
+								var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+								var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
+									new { userId = user.Id, token = token }, Request.Scheme);
+
+								// TODO: Send actual email - for now just log the confirmation link
+								_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
+								
+								_logger.LogInformation("User created an account using {Name} provider with role {Role}. Email verification required.", info.LoginProvider, roleName);
+							}
+							catch (Exception ex)
+							{
+								_logger.LogError(ex, "Error sending email verification for OAuth user {UserId}", user.Id);
+							}
+						}
+						else
+						{
+							_logger.LogInformation("User created an account using {Name} provider with role {Role}. Email pre-verified.", info.LoginProvider, roleName);
+						}
 						
 						await _signInManager.SignInAsync(user, isPersistent: false);
 						return LocalRedirect(returnUrl);
@@ -700,7 +726,8 @@ namespace BulkyBooksWeb.Controllers
 			}
 
 			ViewData["ReturnUrl"] = returnUrl;
-			return View(model);
+			ViewData["LoginProvider"] = model.LoginProvider;
+			return View("ExternalLogin", model);
 		}
 
 		[Authorize]
