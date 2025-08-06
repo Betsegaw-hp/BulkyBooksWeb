@@ -54,11 +54,17 @@ namespace BulkyBooksWeb.Controllers
 			return RedirectToAction("ManageProfile");
 		}
 
-		public IActionResult Login(string? returnUrl)
+		public IActionResult Login(string? returnUrl, string? error = null)
 		{
 			if (User?.Identity?.IsAuthenticated ?? false)
 			{
 				return RedirectToAction("Index", "Home");
+			}
+
+			// Handle error messages from OAuth failures
+			if (!string.IsNullOrEmpty(error))
+			{
+				ModelState.AddModelError(string.Empty, error);
 			}
 
 			ViewData["ReturnUrl"] = returnUrl;
@@ -594,25 +600,70 @@ namespace BulkyBooksWeb.Controllers
 
 		// GET: External Login Callback
 		[HttpGet]
-		public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+		public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null, string? error = null, string? error_description = null)
 		{
 			returnUrl = returnUrl ?? Url.Content("~/");
 
+			// Handle OAuth errors that come as query parameters (e.g., when user cancels)
+			if (!string.IsNullOrEmpty(error))
+			{
+				string errorMessage = error switch
+				{
+					"access_denied" => "Login was cancelled. You can try again or sign in with a different method.",
+					"invalid_request" => "Invalid login request. Pleas					dotnet watch rune try again.",
+					"unauthorized_client" => "This application is not authorized for this login method.",
+					"unsupported_response_type" => "Login method not supported.",
+					"invalid_scope" => "Requested permissions are not available.",
+					"server_error" => "The login provider encountered an error. Please try again.",
+					"temporarily_unavailable" => "The login provider is temporarily unavailable. Please try again later.",
+					_ => $"Login failed: {error_description ?? error}"
+				};
+				
+				_logger.LogWarning("External login failed with error: {Error}, description: {ErrorDescription}", error, error_description);
+				TempData["ErrorMessage"] = errorMessage;
+				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
+			}
+
+			// Handle remote errors from the authentication middleware
 			if (remoteError != null)
 			{
+				_logger.LogWarning("External login failed with remote error: {RemoteError}", remoteError);
 				TempData["ErrorMessage"] = $"Error from external provider: {remoteError}";
 				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
 			}
 
-			var info = await _signInManager.GetExternalLoginInfoAsync();
+			ExternalLoginInfo? info;
+			try
+			{
+				info = await _signInManager.GetExternalLoginInfoAsync();
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Exception occurred while getting external login info");
+				TempData["ErrorMessage"] = "An error occurred during login. Please try again.";
+				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
+			}
+			
 			if (info == null)
 			{
-				TempData["ErrorMessage"] = "Error loading external login information.";
+				_logger.LogWarning("External login info was null, possibly due to user cancellation or provider error");
+				TempData["ErrorMessage"] = "Login was cancelled or an error occurred. Please try again.";
 				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
 			}
 
 			// Sign in the user with this external login provider if the user already has a login
-			var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+			Microsoft.AspNetCore.Identity.SignInResult result;
+			try
+			{
+				result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Exception occurred during external login sign-in for provider {Provider}", info.LoginProvider);
+				TempData["ErrorMessage"] = "An error occurred during login. Please try again.";
+				return RedirectToAction("Login", new { ReturnUrl = returnUrl });
+			}
+			
 			if (result.Succeeded)
 			{
 				_logger.LogInformation("User logged in with {Name} provider.", info.LoginProvider);
@@ -659,10 +710,37 @@ namespace BulkyBooksWeb.Controllers
 
 			if (ModelState.IsValid)
 			{
-				// Check if email already exists
-				var existingUser = await _userManager.FindByEmailAsync(model.Email);
-				if (existingUser != null)
+				// Validate that we have a proper email address
+				if (string.IsNullOrWhiteSpace(model.Email))
 				{
+					_logger.LogWarning("External login confirmation attempted with empty email for provider {Provider}", info.LoginProvider);
+					ModelState.AddModelError("Email", "Email address is required.");
+					ViewData["ReturnUrl"] = returnUrl;
+					ViewData["LoginProvider"] = model.LoginProvider;
+					return View("ExternalLogin", model);
+				}
+				
+				_logger.LogInformation("Processing external login confirmation for {Provider}:{ProviderKey} with email {Email}", 
+					info.LoginProvider, info.ProviderKey, model.Email);
+				
+				// FIRST: Check if this specific external login already exists (most specific check)
+				var existingUserForThisLogin = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+				if (existingUserForThisLogin != null)
+				{
+					// This external login is already registered - sign them in
+					_logger.LogInformation("External login {Provider}:{ProviderKey} is already registered to user {UserId}. Signing in.", 
+						info.LoginProvider, info.ProviderKey, existingUserForThisLogin.Id);
+					await _signInManager.SignInAsync(existingUserForThisLogin, isPersistent: false);
+					return LocalRedirect(returnUrl);
+				}
+				
+				// SECOND: Check if email already exists with a different user
+				var existingUserWithEmail = await _userManager.FindByEmailAsync(model.Email);
+				if (existingUserWithEmail != null)
+				{
+					// Email exists but external login doesn't - this is a conflict
+					_logger.LogWarning("External login confirmation failed: Email {Email} already exists for different user {UserId} but external login {Provider}:{ProviderKey} is not linked", 
+						model.Email, existingUserWithEmail.Id, info.LoginProvider, info.ProviderKey);
 					ModelState.AddModelError("Email", "A user with this email already exists.");
 					ViewData["ReturnUrl"] = returnUrl;
 					ViewData["LoginProvider"] = model.LoginProvider;
@@ -684,12 +762,18 @@ namespace BulkyBooksWeb.Controllers
 				var result = await _userManager.CreateAsync(user);
 				if (result.Succeeded)
 				{
+					_logger.LogInformation("Successfully created new user {UserId} with email {Email} via {Provider} external login", 
+						user.Id, user.Email, info.LoginProvider);
+						
 					result = await _userManager.AddLoginAsync(user, info);
 					if (result.Succeeded)
 					{
 						// Assign the selected role from the form
 						string roleName = model.Role.ToString();
 						await _userManager.AddToRoleAsync(user, roleName);
+						
+						_logger.LogInformation("Added role {Role} to user {UserId} and linked external login for {Provider}", 
+							roleName, user.Id, info.LoginProvider);
 						
 						if (!user.EmailConfirmed)
 						{
@@ -703,20 +787,39 @@ namespace BulkyBooksWeb.Controllers
 								_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
 								
 								_logger.LogInformation("User created an account using {Name} provider with role {Role}. Email verification required.", info.LoginProvider, roleName);
+								
+								// Don't sign in the user if email needs verification
+								TempData["SuccessMessage"] = "Account created successfully! Please check your email to verify your account before signing in.";
+								TempData["Email"] = user.Email;
+								TempData["UserId"] = user.Id;
+								
+								return RedirectToAction("EmailVerificationRequired");
 							}
 							catch (Exception ex)
 							{
 								_logger.LogError(ex, "Error sending email verification for OAuth user {UserId}", user.Id);
+								
+								// Still redirect to verification page even if email sending failed
+								TempData["WarningMessage"] = "Account created successfully! However, we couldn't send the verification email. You can request a new one below.";
+								TempData["Email"] = user.Email;
+								TempData["UserId"] = user.Id;
+								
+								return RedirectToAction("EmailVerificationRequired");
 							}
 						}
 						else
 						{
 							_logger.LogInformation("User created an account using {Name} provider with role {Role}. Email pre-verified.", info.LoginProvider, roleName);
+							// Only sign in if email is verified (matches OAuth provider email)
+							await _signInManager.SignInAsync(user, isPersistent: false);
+							return LocalRedirect(returnUrl);
 						}
-						
-						await _signInManager.SignInAsync(user, isPersistent: false);
-						return LocalRedirect(returnUrl);
 					}
+				}
+				else
+				{
+					_logger.LogError("Failed to create user with email {Email} via {Provider} external login. Errors: {Errors}", 
+						model.Email, info.LoginProvider, string.Join(", ", result.Errors.Select(e => e.Description)));
 				}
 				
 				foreach (var error in result.Errors)

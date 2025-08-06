@@ -83,12 +83,60 @@ builder.Services.AddAuthentication()
         options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
         options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
         options.SaveTokens = true;
+        
+        // Handle OAuth cancellation and other errors gracefully
+        options.Events.OnRemoteFailure = context =>
+        {
+            // Log the specific error for debugging
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Google OAuth failed: {Error} - {ErrorDescription}", 
+                context.Failure?.Message, context.Properties?.Items.ContainsKey("error_description") == true ? 
+                context.Properties.Items["error_description"] : "No description");
+            
+            // Redirect to login page with user-friendly error message
+            var errorMessage = "Login was cancelled or failed. Please try again.";
+            
+            // Check if it's a user cancellation
+            if (context.Failure?.Message?.Contains("Access was denied") == true ||
+                context.Request.Query.ContainsKey("error") && context.Request.Query["error"] == "access_denied")
+            {
+                errorMessage = "Login was cancelled. You can try again or sign in with a different method.";
+            }
+            
+            context.Response.Redirect($"/Auth/Login?error={Uri.EscapeDataString(errorMessage)}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
     })
     .AddMicrosoftAccount(options =>
     {
         options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "";
         options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
         options.SaveTokens = true;
+        
+        // Handle OAuth cancellation and other errors gracefully
+        options.Events.OnRemoteFailure = context =>
+        {
+            // Log the specific error for debugging
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Microsoft OAuth failed: {Error} - {ErrorDescription}", 
+                context.Failure?.Message, context.Properties?.Items.ContainsKey("error_description") == true ? 
+                context.Properties.Items["error_description"] : "No description");
+            
+            // Redirect to login page with user-friendly error message
+            var errorMessage = "Login was cancelled or failed. Please try again.";
+            
+            // Check if it's a user cancellation
+            if (context.Failure?.Message?.Contains("Access was denied") == true ||
+                context.Request.Query.ContainsKey("error") && context.Request.Query["error"] == "access_denied")
+            {
+                errorMessage = "Login was cancelled. You can try again or sign in with a different method.";
+            }
+            
+            context.Response.Redirect($"/Auth/Login?error={Uri.EscapeDataString(errorMessage)}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
     });
 
 // Configure Identity cookies
