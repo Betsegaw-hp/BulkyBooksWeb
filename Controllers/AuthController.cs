@@ -1189,20 +1189,41 @@ namespace BulkyBooksWeb.Controllers
 		[Authorize]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> UpdatePersonalInfo(PersonalInfoViewModel model)
+		public async Task<IActionResult> UpdatePersonalInfo(ProfileManagementViewModel model)
 		{
 			var user = await _userManager.GetUserAsync(User);
 			if (user == null) return RedirectToAction("Login");
 
-			if (ModelState.IsValid)
+			// Debug logging - log the raw form data
+			_logger.LogInformation("UpdatePersonalInfo called for user {UserId}. Raw form data:", user.Id);
+			foreach (var item in Request.Form)
 			{
-				bool emailChanged = user.Email != model.Email;
-				bool phoneChanged = user.PhoneNumber != model.PhoneNumber;
+				_logger.LogInformation("Form key: '{Key}' = '{Value}'", item.Key, string.Join(", ", item.Value.ToArray()));
+			}
 
-				user.FirstName = model.FirstName;
-				user.LastName = model.LastName;
-				user.Email = model.Email;
-				user.PhoneNumber = model.PhoneNumber;
+			// Get the personal info from the nested model
+			var personalInfo = model.PersonalInfo;
+
+			_logger.LogInformation("UpdatePersonalInfo called for user {UserId}. Model: FirstName='{FirstName}', LastName='{LastName}', Email='{Email}', PhoneNumber='{PhoneNumber}'", 
+				user.Id, personalInfo.FirstName, personalInfo.LastName, personalInfo.Email, personalInfo.PhoneNumber);
+			
+			_logger.LogInformation("Current user data: FirstName='{FirstName}', LastName='{LastName}', Email='{Email}', PhoneNumber='{PhoneNumber}'", 
+				user.FirstName, user.LastName, user.Email, user.PhoneNumber);
+
+			// Validate only the PersonalInfo part of the model
+			if (TryValidateModel(personalInfo, nameof(model.PersonalInfo)))
+			{
+				bool emailChanged = user.Email != personalInfo.Email;
+				bool phoneChanged = user.PhoneNumber != personalInfo.PhoneNumber;
+				bool nameChanged = user.FirstName != personalInfo.FirstName || user.LastName != personalInfo.LastName;
+
+				_logger.LogInformation("Change detection: emailChanged={EmailChanged}, phoneChanged={PhoneChanged}, nameChanged={NameChanged}", 
+					emailChanged, phoneChanged, nameChanged);
+
+				user.FirstName = personalInfo.FirstName;
+				user.LastName = personalInfo.LastName;
+				user.Email = personalInfo.Email;
+				user.PhoneNumber = personalInfo.PhoneNumber;
 				user.UpdatedAt = DateTime.UtcNow;
 
 				// If email changed, mark as unconfirmed
@@ -1218,16 +1239,20 @@ namespace BulkyBooksWeb.Controllers
 				}
 
 				// Handle avatar upload
-				if (model.NewAvatar != null && model.NewAvatar.Length > 0)
+				if (personalInfo.NewAvatar != null && personalInfo.NewAvatar.Length > 0)
 				{
 					// TODO: Implement file upload to storage
 					// For now, just log the upload attempt
 					_logger.LogInformation($"Avatar upload attempted for user {user.Id}");
 				}
 
+				_logger.LogInformation("Attempting to update user {UserId} with new data: FirstName='{FirstName}', LastName='{LastName}', Email='{Email}'", 
+					user.Id, user.FirstName, user.LastName, user.Email);
+
 				var result = await _userManager.UpdateAsync(user);
 				if (result.Succeeded)
 				{
+					_logger.LogInformation("User {UserId} updated successfully", user.Id);
 					TempData["SuccessMessage"] = "Personal information updated successfully.";
 					
 					if (emailChanged)
@@ -1239,17 +1264,25 @@ namespace BulkyBooksWeb.Controllers
 					if (phoneChanged)
 					{
 						TempData["InfoMessage"] = "Please verify your new phone number.";
-						// TODO: Send SMS confirmation
 					}
 				}
 				else
 				{
+					_logger.LogError("Failed to update user {UserId}. Errors: {Errors}", 
+						user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
+					
 					foreach (var error in result.Errors)
 					{
 						ModelState.AddModelError("", error.Description);
 					}
 					TempData["ErrorMessage"] = "Failed to update personal information.";
 				}
+			}
+			else
+			{
+				_logger.LogWarning("ModelState is invalid for user {UserId}. Errors: {Errors}", 
+					user.Id, string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+				TempData["ErrorMessage"] = "Please correct the validation errors.";
 			}
 
 			return RedirectToAction("ManageProfile", new { tab = "personal" });
