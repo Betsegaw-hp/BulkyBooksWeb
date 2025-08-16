@@ -89,15 +89,27 @@
            $('.add-to-cart').click(function() {
                 var bookId = $(this).data('book-id');
                 $.ajax({
-                    url: '@Url.Action("AddToCart", "Home", new { id = "__bookId__" })'.replace('__bookId__', bookId),
+                    url: '@Url.Action("AddToCart", "Home")',
                     type: 'POST',
+                    data: { id: bookId },
                     success: function(response) {
                         window.location.href = '@Url.Action("Index", "Checkout")';
                     },
                     error: function(xhr, status, error) {
-                        console.error(xhr);
-                        alert('Error adding book to cart. Please try again.');
-                        window.location.href = '@Url.Action("Login", "Auth")';
+                        console.error('AJAX Error:', xhr);
+                        console.error('Status:', status);
+                        console.error('Error:', error);
+                        console.error('Response Text:', xhr.responseText);
+                        
+                        if (xhr.status === 403) {
+                            alert('Access denied. Please login first.');
+                            window.location.href = '@Url.Action("Login", "Auth")';
+                        } else if (xhr.status === 401) {
+                            alert('Please login to add items to cart.');
+                            window.location.href = '@Url.Action("Login", "Auth")';
+                        } else {
+                            alert('Error adding book to cart: ' + (xhr.responseText || error));
+                        }
                     }
                 });
             });

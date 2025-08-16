@@ -122,8 +122,9 @@ public class HomeController : Controller
         return View(model);
     }
 
-    [Authorize(Roles = "user,admin,author")]
+    [Authorize(Roles = "User,Admin,Author")]
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddToCart(int id)
     {
         var book = await _bookService.GetBookById(id);
@@ -151,7 +152,7 @@ public class HomeController : Controller
         return RedirectToAction("Index", "Checkout");
     }
 
-    [Authorize(Roles = "user,admin,author")]
+    [Authorize(Roles = "User,Admin,Author")]
     public IActionResult RemoveFromCart(int id)
     {
         var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
@@ -167,7 +168,7 @@ public class HomeController : Controller
         return RedirectToAction("Index", "Checkout");
     }
 
-    [Authorize(Roles = "user,admin,author")]
+    [Authorize(Roles = "User,Admin,Author")]
     public IActionResult UpdateCart(int id, [FromQuery] int Quantity)
     {
         var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();

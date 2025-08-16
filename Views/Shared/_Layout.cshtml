@@ -36,7 +36,7 @@
     <meta name="author" content="@ViewData["Author"]" />
     <meta name="robots" content="@ViewData["Robots"]" />
     @* <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /> *@
-    <link rel="stylesheet" href="~/css/bootswatch/sketchy.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/bootswatch/bootstrap.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BulkyBooksWeb.styles.css" asp-append-version="true" />
     
@@ -297,8 +297,27 @@
                     }, dismissTime);
                 }
             });
+            
+            // Setup AJAX to include anti-forgery token
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (settings.type.toUpperCase() === 'POST') {
+                        var token = $('input[name="__RequestVerificationToken"]').val();
+                        if (token) {
+                            if (settings.data) {
+                                settings.data += '&__RequestVerificationToken=' + encodeURIComponent(token);
+                            } else {
+                                settings.data = '__RequestVerificationToken=' + encodeURIComponent(token);
+                            }
+                        }
+                    }
+                }
+            });
         });
     </script>
+    
+    <!-- Anti-forgery token for AJAX requests -->
+    @Html.AntiForgeryToken()
     
     @await RenderSectionAsync("Scripts", required: false)
 </body>
