@@ -192,18 +192,32 @@
         </div>
     }
     
-    @if (TempData["success"] != null)
+    @if (TempData["success"] != null || TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-success position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;">
+        <div class="alert alert-dismissible alert-success position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="5000">
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-check-circle me-2"></i> @TempData["success"]
+            <i class="fas fa-check-circle me-2"></i> @(TempData["success"] ?? TempData["SuccessMessage"])
         </div>
     }
-    @if (TempData["error"] != null)
+    @if (TempData["error"] != null || TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-danger position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;">
+        <div class="alert alert-dismissible alert-danger position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="8000">
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-exclamation-circle me-2"></i> @TempData["error"]
+            <i class="fas fa-exclamation-circle me-2"></i> @(TempData["error"] ?? TempData["ErrorMessage"])
+        </div>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="alert alert-dismissible alert-warning position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="7000">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["WarningMessage"]
+        </div>
+    }
+    @if (TempData["InfoMessage"] != null)
+    {
+        <div class="alert alert-dismissible alert-info position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="6000">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="fas fa-info-circle me-2"></i> @TempData["InfoMessage"]
         </div>
     }
     
@@ -268,6 +282,24 @@
     @* <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script> *@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- Auto-dismiss alerts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-dismiss alerts after specified time
+            const alerts = document.querySelectorAll('[data-auto-dismiss]');
+            alerts.forEach(function(alert) {
+                const dismissTime = parseInt(alert.dataset.autoDismiss);
+                if (dismissTime > 0) {
+                    setTimeout(function() {
+                        const alertInstance = bootstrap.Alert.getOrCreateInstance(alert);
+                        alertInstance.close();
+                    }, dismissTime);
+                }
+            });
+        });
+    </script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

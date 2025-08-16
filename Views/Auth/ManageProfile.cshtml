@@ -68,17 +68,26 @@
                     <div class="mb-2">
                         <small class="text-muted">Account status:</small>
                         <p class="mb-0">
-                            @if (Model.PersonalInfo.EmailConfirmed)
+                            @if (Model.Security.LockoutEnd.HasValue && Model.Security.LockoutEnd > DateTimeOffset.UtcNow)
                             {
-                                <span class="badge bg-success">Email Verified</span>
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-lock me-1"></i>Locked
+                                </span>
                             }
                             else
                             {
-                                <span class="badge bg-warning">Email Pending</span>
-                            }
-                            @if (Model.PersonalInfo.PhoneNumberConfirmed)
-                            {
-                                <span class="badge bg-success">Phone Verified</span>
+                                @if (Model.PersonalInfo.EmailConfirmed)
+                                {
+                                    <span class="badge bg-success">Email Verified</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Email Pending</span>
+                                }
+                                @if (Model.PersonalInfo.PhoneNumberConfirmed)
+                                {
+                                    <span class="badge bg-success">Phone Verified</span>
+                                }
                             }
                         </p>
                     </div>
@@ -780,6 +789,61 @@
                 <!-- Data & Privacy Tab -->
                 <div class="tab-pane fade" id="data-privacy">
                     <div class="row">
+                        <!-- Account Status Information -->
+                        <div class="col-12 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>Account Status
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    @if (Model.Security.LockoutEnd.HasValue && Model.Security.LockoutEnd > DateTimeOffset.UtcNow)
+                                    {
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-lock me-2"></i>
+                                            <strong>Account Locked:</strong> Your account has been temporarily locked by an administrator.
+                                            <br />
+                                            <small class="text-muted">
+                                                Lockout expires: @Model.Security.LockoutEnd.Value.ToString("F")
+                                            </small>
+                                            <br />
+                                            <small class="text-muted mt-2">
+                                                If you believe this is an error, please contact support for assistance.
+                                            </small>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="alert alert-success">
+                                            <i class="fas fa-check-circle me-2"></i>
+                                            <strong>Account Active:</strong> Your account is in good standing and has full access.
+                                        </div>
+                                    }
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Account Created:</small>
+                                            <p class="mb-0">@Model.PersonalInfo.CreatedAt.ToString("F")</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Last Login:</small>
+                                            <p class="mb-0">
+                                                @if (Model.PersonalInfo.LastLoginAt.HasValue)
+                                                {
+                                                    @Model.PersonalInfo.LastLoginAt.Value.ToString("F")
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">Never</span>
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Download Data -->
                         <div class="col-12 mb-4">
                             <div class="card shadow-sm">
@@ -809,13 +873,26 @@
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <p class="text-muted mb-3">
-                                        Temporarily deactivate your account. You can reactivate it anytime by signing back in.
-                                        Your data will be preserved during deactivation.
-                                    </p>
-                                    <button type="button" class="btn btn-outline-warning" onclick="confirmDeactivateAccount()">
-                                        <i class="fas fa-pause me-2"></i>Deactivate Account
-                                    </button>
+                                    @if (Model.Security.LockoutEnd.HasValue && Model.Security.LockoutEnd > DateTimeOffset.UtcNow)
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Account deactivation is not available while your account is locked by an administrator.
+                                        </div>
+                                        <button type="button" class="btn btn-outline-warning" disabled>
+                                            <i class="fas fa-pause me-2"></i>Deactivate Account
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mb-3">
+                                            Temporarily deactivate your account. You can reactivate it anytime by signing back in.
+                                            Your data will be preserved during deactivation.
+                                        </p>
+                                        <button type="button" class="btn btn-outline-warning" onclick="confirmDeactivateAccount()">
+                                            <i class="fas fa-pause me-2"></i>Deactivate Account
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -829,14 +906,28 @@
                                     </h5>
                                 </div>
                                 <div class="card-body">
-                                    <p class="text-muted mb-3">
-                                        <strong>Warning:</strong> This action cannot be undone. Deleting your account will 
-                                        permanently remove all your data, including your profile, order history, and any 
-                                        books you've authored.
-                                    </p>
-                                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()">
-                                        <i class="fas fa-trash me-2"></i>Delete My Account
-                                    </button>
+                                    @if (Model.Security.LockoutEnd.HasValue && Model.Security.LockoutEnd > DateTimeOffset.UtcNow)
+                                    {
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Account deletion is not available while your account is locked by an administrator. 
+                                            Please contact support if you wish to proceed with account deletion.
+                                        </div>
+                                        <button type="button" class="btn btn-danger" disabled>
+                                            <i class="fas fa-trash me-2"></i>Delete My Account
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-muted mb-3">
+                                            <strong>Warning:</strong> This action cannot be undone. Deleting your account will 
+                                            permanently remove all your data, including your profile, order history, and any 
+                                            books you've authored.
+                                        </p>
+                                        <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()">
+                                            <i class="fas fa-trash me-2"></i>Delete My Account
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>

@@ -296,13 +296,14 @@ namespace BulkyBooksWeb.Controllers
                 // Unlock user
                 await _userManager.SetLockoutEndDateAsync(user, null);
                 await _userManager.ResetAccessFailedCountAsync(user);
-                TempData["SuccessMessage"] = $"User '{user.UserName}' has been unlocked.";
+                TempData["SuccessMessage"] = $"✅ Account unlocked! User '{user.UserName}' can now access their account normally. All failed login attempts have been reset.";
             }
             else
             {
                 // Lock user for 1 year
-                await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(1));
-                TempData["SuccessMessage"] = $"User '{user.UserName}' has been locked out.";
+                var lockoutEnd = DateTimeOffset.UtcNow.AddYears(1);
+                await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
+                TempData["WarningMessage"] = $"🔒 Account locked! User '{user.UserName}' has been locked until {lockoutEnd.ToString("F")}. They will not be able to access their account during this period.";
             }
 
             return RedirectToAction(nameof(Details), new { id });
@@ -317,10 +318,19 @@ namespace BulkyBooksWeb.Controllers
             if (user == null)
                 return NotFound();
 
+            var wasLocked = await _userManager.IsLockedOutAsync(user);
             await _userManager.SetLockoutEndDateAsync(user, null);
             await _userManager.ResetAccessFailedCountAsync(user);
             
-            TempData["SuccessMessage"] = $"User '{user.UserName}' has been unlocked successfully.";
+            if (wasLocked)
+            {
+                TempData["SuccessMessage"] = $"✅ Account unlocked successfully! User '{user.UserName}' now has full access to their account and all failed login attempts have been reset.";
+            }
+            else
+            {
+                TempData["InfoMessage"] = $"ℹ️ User '{user.UserName}' was not locked. No changes were made.";
+            }
+            
             return RedirectToAction(nameof(Edit), new { id });
         }
 
@@ -334,19 +344,30 @@ namespace BulkyBooksWeb.Controllers
                 return NotFound();
 
             DateTimeOffset? lockoutEnd = null;
+            string durationText = "";
+            
             if (lockoutDuration > 0)
             {
                 lockoutEnd = DateTimeOffset.UtcNow.AddHours(lockoutDuration);
+                durationText = lockoutDuration switch
+                {
+                    1 => "1 hour",
+                    24 => "24 hours", 
+                    168 => "1 week",
+                    720 => "1 month",
+                    _ => $"{lockoutDuration} hours"
+                };
             }
             else
             {
                 lockoutEnd = DateTimeOffset.UtcNow.AddYears(100); // Permanent lockout
+                durationText = "permanently";
             }
 
             await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
             
-            string durationText = lockoutDuration > 0 ? $"for {lockoutDuration} hours" : "permanently";
-            TempData["SuccessMessage"] = $"User '{user.UserName}' has been locked {durationText}.";
+            TempData["WarningMessage"] = $"🔒 Account locked successfully! User '{user.UserName}' has been locked {durationText}. " +
+                                        $"They will not be able to access their account until {(lockoutDuration > 0 ? lockoutEnd.Value.ToString("F") : "manually unlocked")}.";
             
             return RedirectToAction(nameof(Details), new { id });
         }

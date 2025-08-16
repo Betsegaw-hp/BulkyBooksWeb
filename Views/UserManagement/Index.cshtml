@@ -224,7 +224,7 @@
                                                     @Html.AntiForgeryToken()
                                                     <button type="submit" class="btn btn-sm btn-outline-success" 
                                                             data-bs-toggle="tooltip" title="Unlock User"
-                                                            onclick="return confirm('Are you sure you want to unlock this user?')">
+                                                            onclick="return confirm('Are you sure you want to unlock @user.UserName? This will immediately restore access to their account.')">
                                                         <i class="fas fa-unlock"></i>
                                                     </button>
                                                 </form>

@@ -199,7 +199,7 @@
                                         <div class="mt-2">
                                             <form asp-action="UnlockUser" asp-route-id="@Model.Id" method="post" class="d-inline">
                                                 @Html.AntiForgeryToken()
-                                                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to unlock this account?')">
+                                                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to unlock @Model.UserName? This will immediately restore access to their account and reset any failed login attempts.')">
                                                     <i class="fas fa-unlock me-2"></i>Unlock Account
                                                 </button>
                                             </form>
