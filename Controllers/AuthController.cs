@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Identity;
 using System.Text;
 using System.Linq;
 using QRCoder;
+using Microsoft.AspNetCore.Identity.UI.Services;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -28,6 +29,7 @@ namespace BulkyBooksWeb.Controllers
 		private readonly SignInManager<ApplicationUser> _signInManager;
 		private readonly RoleManager<IdentityRole> _roleManager;
 		private readonly IWebHostEnvironment _environment;
+		private readonly IEmailSender _emailSender;
 
 		public AuthController(
 			ApplicationDbContext context,
@@ -37,7 +39,8 @@ namespace BulkyBooksWeb.Controllers
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager,
 			RoleManager<IdentityRole> roleManager,
-			IWebHostEnvironment environment)
+			IWebHostEnvironment environment,
+			IEmailSender emailSender)
 		{
 			_context = context;
 			_authService = authorizationService;
@@ -48,6 +51,7 @@ namespace BulkyBooksWeb.Controllers
 			_signInManager = signInManager;
 			_roleManager = roleManager;
 			_environment = environment;
+			_emailSender = emailSender;
 		}
 
 
@@ -382,8 +386,18 @@ namespace BulkyBooksWeb.Controllers
 					var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
 						new { userId = newUser.Id, token = token }, Request.Scheme);
 
-					// TODO: Send actual email - for now just log the confirmation link
-					_logger.LogInformation($"Email confirmation link for {newUser.Email}: {callbackUrl}");
+					// Send actual email using Mailgun
+					if (_emailSender is IMailgunEmailService mailgunService)
+					{
+						await mailgunService.SendEmailConfirmationAsync(newUser.Email, newUser.FirstName, callbackUrl ?? "");
+						_logger.LogInformation($"Email confirmation sent to {newUser.Email}");
+					}
+					else
+					{
+						await _emailSender.SendEmailAsync(newUser.Email, "Confirm your email - BulkyBooks", 
+							$"Please confirm your account by <a href='{callbackUrl}'>clicking here</a>.");
+						_logger.LogInformation($"Email confirmation sent to {newUser.Email}");
+					}
 					
 					// Set success message and redirect to email verification page
 					TempData["SuccessMessage"] = "Account created successfully! Please check your email to verify your account before signing in.";
@@ -454,8 +468,18 @@ namespace BulkyBooksWeb.Controllers
 				var callbackUrl = Url.Action("ConfirmEmail", "Auth", 
 					new { userId = user.Id, token = token }, Request.Scheme);
 
-				// TODO: Send actual email - for now just log the confirmation link
-				_logger.LogInformation($"Email confirmation link for {user.Email}: {callbackUrl}");
+				// Send actual email using Mailgun
+				if (_emailSender is IMailgunEmailService mailgunService)
+				{
+					await mailgunService.SendEmailConfirmationAsync(user.Email ?? "", user.FirstName ?? "", callbackUrl ?? "");
+					_logger.LogInformation($"Email verification resent to {user.Email}");
+				}
+				else
+				{
+					await _emailSender.SendEmailAsync(user.Email ?? "", "Confirm your email - BulkyBooks", 
+						$"Please confirm your account by <a href='{callbackUrl}'>clicking here</a>.");
+					_logger.LogInformation($"Email verification resent to {user.Email}");
+				}
 				
 				TempData["SuccessMessage"] = "Verification email sent! Please check your inbox.";
 			}
@@ -506,8 +530,18 @@ namespace BulkyBooksWeb.Controllers
 					var callbackUrl = Url.Action("ResetPassword", "Auth", 
 						new { userId = user.Id, token = token }, Request.Scheme);
 
-					// TODO: Send actual email - for now just log the reset link
-					_logger.LogInformation($"Password reset link for {user.Email}: {callbackUrl}");
+					// Send actual email using Mailgun
+					if (_emailSender is IMailgunEmailService mailgunService)
+					{
+						await mailgunService.SendPasswordResetAsync(user.Email ?? "", user.FirstName ?? "", callbackUrl ?? "");
+						_logger.LogInformation($"Password reset email sent to {user.Email}");
+					}
+					else
+					{
+						await _emailSender.SendEmailAsync(user.Email ?? "", "Reset your password - BulkyBooks", 
+							$"Please reset your password by <a href='{callbackUrl}'>clicking here</a>.");
+						_logger.LogInformation($"Password reset email sent to {user.Email}");
+					}
 					
 					_logger.LogInformation("Password reset requested for user {UserId}", user.Id);
 				}

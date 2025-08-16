@@ -29,6 +29,10 @@ builder.Services.AddScoped<UserMigrationService>();
 builder.Services.AddScoped<DataSeedService>();
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
+// Register Mailgun email service
+builder.Services.AddHttpClient<IMailgunEmailService, MailgunEmailService>();
+builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, MailgunEmailService>();
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
