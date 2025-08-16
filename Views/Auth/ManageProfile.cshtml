@@ -624,42 +624,53 @@
                         <div class="card-body">
                             <p class="text-muted mb-4">Choose how you want to be notified about activities on your account.</p>
                             
-                            <form>
+                            <form asp-action="UpdateNotificationSettings" method="post">
+                                @Html.AntiForgeryToken()
+                                
                                 <div class="row">
                                     <div class="col-md-6">
                                         <h6 class="fw-bold mb-3">Email Notifications</h6>
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="orderUpdates" checked>
+                                            <input class="form-check-input" type="checkbox" id="emailNotifications" name="EmailNotifications" 
+                                                   @(Model.Notifications.EmailNotifications ? "checked" : "") />
+                                            <label class="form-check-label" for="emailNotifications">
+                                                General email notifications
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" id="orderUpdates" name="OrderUpdates" 
+                                                   @(Model.Notifications.OrderUpdates ? "checked" : "") />
                                             <label class="form-check-label" for="orderUpdates">
                                                 Order status updates
                                             </label>
                                         </div>
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
+                                            <input class="form-check-input" type="checkbox" id="securityAlerts" name="SecurityAlerts" 
+                                                   @(Model.Notifications.SecurityAlerts ? "checked" : "") />
                                             <label class="form-check-label" for="securityAlerts">
                                                 Security alerts
                                             </label>
                                         </div>
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="bookRecommendations">
+                                            <input class="form-check-input" type="checkbox" id="bookRecommendations" name="BookRecommendations" 
+                                                   @(Model.Notifications.BookRecommendations ? "checked" : "") />
                                             <label class="form-check-label" for="bookRecommendations">
                                                 Book recommendations
                                             </label>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <h6 class="fw-bold mb-3">SMS Notifications</h6>
+                                        <h6 class="fw-bold mb-3">Newsletter & Marketing</h6>
                                         <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="smsOrders">
-                                            <label class="form-check-label" for="smsOrders">
-                                                Order confirmations
+                                            <input class="form-check-input" type="checkbox" id="newsletterSubscription" name="NewsletterSubscription" 
+                                                   @(Model.Notifications.NewsletterSubscription ? "checked" : "") />
+                                            <label class="form-check-label" for="newsletterSubscription">
+                                                Newsletter subscription
                                             </label>
                                         </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" id="smsSecurity">
-                                            <label class="form-check-label" for="smsSecurity">
-                                                Security alerts
-                                            </label>
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <small>SMS notifications require phone number verification.</small>
                                         </div>
                                     </div>
                                 </div>
@@ -692,15 +703,32 @@
                                 {
                                     <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-2">
                                         <div class="d-flex align-items-center">
-                                            <i class="fab fa-@login.LoginProvider.ToLower() fa-2x me-3"></i>
+                                            @if (login.LoginProvider == "Google")
+                                            {
+                                                <i class="fab fa-google fa-2x me-3 text-danger"></i>
+                                            }
+                                            else if (login.LoginProvider == "Microsoft")
+                                            {
+                                                <i class="fab fa-microsoft fa-2x me-3 text-primary"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="fas fa-user-circle fa-2x me-3"></i>
+                                            }
                                             <div>
                                                 <div class="fw-bold">@login.LoginProvider</div>
-                                                <small class="text-muted">@login.ProviderDisplayName</small>
+                                                <small class="text-muted">Connected external account</small>
                                             </div>
                                         </div>
-                                        <button class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-unlink me-1"></i>Disconnect
-                                        </button>
+                                        <form asp-action="DisconnectExternalAccount" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="loginProvider" value="@login.LoginProvider" />
+                                            <input type="hidden" name="providerKey" value="@login.ProviderKey" />
+                                            <button type="submit" class="btn btn-outline-danger btn-sm" 
+                                                    onclick="return confirm('Are you sure you want to disconnect this account? Make sure you have another way to sign in.')">
+                                                <i class="fas fa-unlink me-1"></i>Disconnect
+                                            </button>
+                                        </form>
                                     </div>
                                 }
                             }
@@ -717,17 +745,45 @@
                             
                             <h6 class="fw-bold mb-3">Available Connections</h6>
                             <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <button class="btn btn-outline-primary w-100">
-                                        <i class="fab fa-google me-2"></i>Connect Google
-                                    </button>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <button class="btn btn-outline-dark w-100">
-                                        <i class="fab fa-github me-2"></i>Connect GitHub
-                                    </button>
-                                </div>
+                                @foreach (var provider in Model.ConnectedAccounts.AvailableProviders)
+                                {
+                                    var isConnected = Model.ConnectedAccounts.ExternalLogins.Any(l => l.LoginProvider == provider);
+                                    if (!isConnected)
+                                    {
+                                        <div class="col-md-6 mb-2">
+                                            <form asp-action="ConnectExternalAccount" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="provider" value="@provider" />
+                                                <button type="submit" class="btn btn-outline-primary w-100">
+                                                    @if (provider == "Google")
+                                                    {
+                                                        <i class="fab fa-google me-2"></i>
+                                                    }
+                                                    else if (provider == "Microsoft")
+                                                    {
+                                                        <i class="fab fa-microsoft me-2"></i>
+                                                    }
+                                                    else
+                                                    {
+                                                        <i class="fas fa-link me-2"></i>
+                                                    }
+                                                    Connect @provider
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                }
                             </div>
+                            
+                            @if (!Model.Security.HasPassword)
+                            {
+                                <div class="alert alert-warning mt-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Security Notice:</strong> You're currently using external login only. 
+                                    Consider <a href="#" data-bs-toggle="tab" data-bs-target="#security">setting a password</a> 
+                                    for additional security.
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -747,7 +803,7 @@
                                 @Html.AntiForgeryToken()
                                 
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="profileVisibility" name="ProfileVisibility" checked />
+                                    <input class="form-check-input" type="checkbox" id="profileVisibility" name="profileVisibility" checked />
                                     <label class="form-check-label" for="profileVisibility">
                                         <strong>Profile Visibility</strong><br>
                                         <small class="text-muted">Allow other users to see your profile information</small>
@@ -755,26 +811,34 @@
                                 </div>
                                 
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="orderHistory" name="OrderHistoryPrivacy" />
-                                    <label class="form-check-label" for="orderHistory">
-                                        <strong>Order History Privacy</strong><br>
-                                        <small class="text-muted">Keep your order history private from other users</small>
+                                    <input class="form-check-input" type="checkbox" id="showEmail" name="showEmail" />
+                                    <label class="form-check-label" for="showEmail">
+                                        <strong>Show Email Address</strong><br>
+                                        <small class="text-muted">Display your email address on your public profile</small>
                                     </label>
                                 </div>
                                 
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="dataProcessing" name="AllowDataProcessing" checked />
+                                    <input class="form-check-input" type="checkbox" id="showBooks" name="showBooks" checked />
+                                    <label class="form-check-label" for="showBooks">
+                                        <strong>Show My Books</strong><br>
+                                        <small class="text-muted">Display books you've authored on your profile</small>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="allowRecommendations" name="allowRecommendations" checked />
+                                    <label class="form-check-label" for="allowRecommendations">
+                                        <strong>Personalized Recommendations</strong><br>
+                                        <small class="text-muted">Allow us to recommend books based on your reading history</small>
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="dataProcessing" name="dataProcessing" checked />
                                     <label class="form-check-label" for="dataProcessing">
                                         <strong>Analytics & Improvements</strong><br>
                                         <small class="text-muted">Allow us to use your data to improve our services</small>
-                                    </label>
-                                </div>
-                                
-                                <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="marketingEmails" name="AllowMarketingEmails" />
-                                    <label class="form-check-label" for="marketingEmails">
-                                        <strong>Marketing Communications</strong><br>
-                                        <small class="text-muted">Receive promotional emails about new books and offers</small>
                                     </label>
                                 </div>
                                 

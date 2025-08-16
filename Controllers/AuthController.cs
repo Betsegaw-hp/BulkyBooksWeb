@@ -27,6 +27,7 @@ namespace BulkyBooksWeb.Controllers
 		private readonly UserManager<ApplicationUser> _userManager;
 		private readonly SignInManager<ApplicationUser> _signInManager;
 		private readonly RoleManager<IdentityRole> _roleManager;
+		private readonly IWebHostEnvironment _environment;
 
 		public AuthController(
 			ApplicationDbContext context,
@@ -35,7 +36,8 @@ namespace BulkyBooksWeb.Controllers
 			UserService userService,
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager,
-			RoleManager<IdentityRole> roleManager)
+			RoleManager<IdentityRole> roleManager,
+			IWebHostEnvironment environment)
 		{
 			_context = context;
 			_authService = authorizationService;
@@ -45,6 +47,7 @@ namespace BulkyBooksWeb.Controllers
 			_userManager = userManager;
 			_signInManager = signInManager;
 			_roleManager = roleManager;
+			_environment = environment;
 		}
 
 
@@ -1159,45 +1162,12 @@ namespace BulkyBooksWeb.Controllers
 			var user = await _userManager.GetUserAsync(User);
 			if (user == null) return RedirectToAction("Login");
 
-			var externalLogins = await _userManager.GetLoginsAsync(user);
+			var viewModel = await LoadProfileManagementViewModelAsync(user, tab);
+			
+			// Add additional security data
 			var twoFactorProviders = await _userManager.GetValidTwoFactorProvidersAsync(user);
-			var hasPassword = await _userManager.HasPasswordAsync(user);
-
-			var viewModel = new ProfileManagementViewModel
-			{
-				ActiveTab = tab,
-				PersonalInfo = new PersonalInfoViewModel
-				{
-					UserId = user.Id,
-					FirstName = user.FirstName,
-					LastName = user.LastName,
-					Email = user.Email ?? "",
-					PhoneNumber = user.PhoneNumber ?? "",
-					UserName = user.UserName ?? "",
-					CurrentAvatarUrl = user.AvatarUrl ?? "",
-					EmailConfirmed = user.EmailConfirmed,
-					PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-					CreatedAt = user.CreatedAt,
-					LastLoginAt = user.LastLoginAt
-				},
-				Security = new AccountSecurityViewModel
-				{
-					UserId = user.Id,
-					TwoFactorEnabled = user.TwoFactorEnabled,
-					EmailConfirmed = user.EmailConfirmed,
-					PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-					AccessFailedCount = user.AccessFailedCount,
-					LockoutEnd = user.LockoutEnd,
-					ExternalLogins = externalLogins.ToList(),
-					TwoFactorProviders = twoFactorProviders.ToList(),
-					HasRecoveryCodes = await _userManager.CountRecoveryCodesAsync(user) > 0,
-					HasPassword = hasPassword
-				},
-				ConnectedAccounts = new ConnectedAccountsViewModel
-				{
-					ExternalLogins = externalLogins.ToList()
-				}
-			};
+			viewModel.Security.TwoFactorProviders = twoFactorProviders.ToList();
+			viewModel.Security.HasRecoveryCodes = await _userManager.CountRecoveryCodesAsync(user) > 0;
 
 			return View(viewModel);
 		}
@@ -1258,9 +1228,67 @@ namespace BulkyBooksWeb.Controllers
 				// Handle avatar upload
 				if (personalInfo.NewAvatar != null && personalInfo.NewAvatar.Length > 0)
 				{
-					// TODO: Implement file upload to storage
-					// For now, just log the upload attempt
-					_logger.LogInformation($"Avatar upload attempted for user {user.Id}");
+					try
+					{
+						// Validate file type
+						var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+						var fileExtension = Path.GetExtension(personalInfo.NewAvatar.FileName).ToLowerInvariant();
+						
+						if (!allowedExtensions.Contains(fileExtension))
+						{
+							ModelState.AddModelError("PersonalInfo.NewAvatar", "Only image files (JPG, PNG, GIF, WebP) are allowed.");
+							TempData["ErrorMessage"] = "Only image files (JPG, PNG, GIF, WebP) are allowed.";
+							return RedirectToAction("ManageProfile", new { tab = "personal" });
+						}
+
+						// Validate file size (5MB max)
+						if (personalInfo.NewAvatar.Length > 5 * 1024 * 1024)
+						{
+							ModelState.AddModelError("PersonalInfo.NewAvatar", "File size cannot exceed 5MB.");
+							TempData["ErrorMessage"] = "File size cannot exceed 5MB.";
+							return RedirectToAction("ManageProfile", new { tab = "personal" });
+						}
+
+						// Create uploads directory if it doesn't exist
+						var uploadsDir = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
+						if (!Directory.Exists(uploadsDir))
+						{
+							Directory.CreateDirectory(uploadsDir);
+						}
+
+						// Generate unique filename
+						var fileName = $"{user.Id}_{Guid.NewGuid()}{fileExtension}";
+						var filePath = Path.Combine(uploadsDir, fileName);
+
+						// Delete old avatar if exists
+						if (!string.IsNullOrEmpty(user.AvatarUrl))
+						{
+							var oldFileName = Path.GetFileName(user.AvatarUrl);
+							var oldFilePath = Path.Combine(uploadsDir, oldFileName);
+							if (System.IO.File.Exists(oldFilePath))
+							{
+								System.IO.File.Delete(oldFilePath);
+							}
+						}
+
+						// Save new avatar
+						using (var fileStream = new FileStream(filePath, FileMode.Create))
+						{
+							await personalInfo.NewAvatar.CopyToAsync(fileStream);
+						}
+
+						// Update user avatar URL
+						user.AvatarUrl = $"/uploads/avatars/{fileName}";
+						
+						_logger.LogInformation("Avatar uploaded successfully for user {UserId}: {AvatarUrl}", user.Id, user.AvatarUrl);
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Error uploading avatar for user {UserId}", user.Id);
+						ModelState.AddModelError("PersonalInfo.NewAvatar", "An error occurred while uploading the image. Please try again.");
+						TempData["ErrorMessage"] = "An error occurred while uploading the image. Please try again.";
+						return RedirectToAction("ManageProfile", new { tab = "personal" });
+					}
 				}
 
 				_logger.LogInformation("Attempting to update user {UserId} with new data: FirstName='{FirstName}', LastName='{LastName}', Email='{Email}'", 
@@ -2201,7 +2229,214 @@ namespace BulkyBooksWeb.Controllers
 			return View(model);
 		}
 
+		// Connected Accounts Management
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ConnectExternalAccount(string provider)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			// Check if provider is already connected
+			var existingLogins = await _userManager.GetLoginsAsync(user);
+			if (existingLogins.Any(l => l.LoginProvider == provider))
+			{
+				TempData["InfoMessage"] = $"{provider} account is already connected.";
+				return RedirectToAction("ManageProfile", new { tab = "connected" });
+			}
+
+			// Redirect to external provider for authorization
+			var redirectUrl = Url.Action("LinkExternalLoginCallback", "Auth");
+			var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl, user.Id);
+			return Challenge(properties, provider);
+		}
+
+		[Authorize]
+		public async Task<IActionResult> LinkExternalLoginCallback()
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			var info = await _signInManager.GetExternalLoginInfoAsync(user.Id);
+			if (info == null)
+			{
+				TempData["ErrorMessage"] = "Error loading external login information.";
+				return RedirectToAction("ManageProfile", new { tab = "connected" });
+			}
+
+			var result = await _userManager.AddLoginAsync(user, info);
+			if (result.Succeeded)
+			{
+				TempData["SuccessMessage"] = $"{info.LoginProvider} account has been connected successfully.";
+			}
+			else
+			{
+				TempData["ErrorMessage"] = $"Failed to connect {info.LoginProvider} account.";
+			}
+
+			return RedirectToAction("ManageProfile", new { tab = "connected" });
+		}
+
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> DisconnectExternalAccount(string loginProvider, string providerKey)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			var hasPassword = await _userManager.HasPasswordAsync(user);
+			var externalLogins = await _userManager.GetLoginsAsync(user);
+
+			// Prevent user from removing their only login method
+			if (!hasPassword && externalLogins.Count <= 1)
+			{
+				TempData["ErrorMessage"] = "Cannot disconnect your only login method. Please set a password first or connect another account.";
+				return RedirectToAction("ManageProfile", new { tab = "connected" });
+			}
+
+			var result = await _userManager.RemoveLoginAsync(user, loginProvider, providerKey);
+			if (result.Succeeded)
+			{
+				TempData["SuccessMessage"] = $"{loginProvider} account has been disconnected successfully.";
+			}
+			else
+			{
+				TempData["ErrorMessage"] = $"Failed to disconnect {loginProvider} account.";
+			}
+
+			return RedirectToAction("ManageProfile", new { tab = "connected" });
+		}
+
+		// Privacy Settings Update
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> UpdatePrivacySettings(bool profileVisibility, bool showEmail, bool showBooks, bool allowRecommendations, bool dataProcessing)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			// Store privacy settings in user claims
+			var existingClaims = await _userManager.GetClaimsAsync(user);
+			var privacyClaims = existingClaims.Where(c => c.Type.StartsWith("privacy:")).ToList();
+			
+			// Remove existing privacy claims
+			if (privacyClaims.Any())
+			{
+				await _userManager.RemoveClaimsAsync(user, privacyClaims);
+			}
+
+			// Add new privacy claims
+			var newClaims = new[]
+			{
+				new Claim("privacy:profile_visibility", profileVisibility.ToString()),
+				new Claim("privacy:show_email", showEmail.ToString()),
+				new Claim("privacy:show_books", showBooks.ToString()),
+				new Claim("privacy:allow_recommendations", allowRecommendations.ToString()),
+				new Claim("privacy:data_processing", dataProcessing.ToString())
+			};
+
+			await _userManager.AddClaimsAsync(user, newClaims);
+
+			TempData["SuccessMessage"] = "Privacy settings updated successfully.";
+			return RedirectToAction("ManageProfile", new { tab = "privacy" });
+		}
+
+		// Notification Settings Update
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> UpdateNotificationSettings(NotificationSettingsViewModel model)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			// Store notification preferences in user claims
+			var existingClaims = await _userManager.GetClaimsAsync(user);
+			var notificationClaims = existingClaims.Where(c => c.Type.StartsWith("notification:")).ToList();
+			
+			// Remove existing notification claims
+			if (notificationClaims.Any())
+			{
+				await _userManager.RemoveClaimsAsync(user, notificationClaims);
+			}
+
+			// Add new notification claims
+			var newClaims = new[]
+			{
+				new Claim("notification:email", model.EmailNotifications.ToString()),
+				new Claim("notification:orders", model.OrderUpdates.ToString()),
+				new Claim("notification:recommendations", model.BookRecommendations.ToString()),
+				new Claim("notification:security", model.SecurityAlerts.ToString()),
+				new Claim("notification:newsletter", model.NewsletterSubscription.ToString())
+			};
+
+			await _userManager.AddClaimsAsync(user, newClaims);
+
+			TempData["SuccessMessage"] = "Notification settings updated successfully.";
+			return RedirectToAction("ManageProfile", new { tab = "notifications" });
+		}
+
 		// Private helper methods
+		private async Task<ProfileManagementViewModel> LoadProfileManagementViewModelAsync(ApplicationUser user, string activeTab = "personal")
+		{
+			var externalLogins = await _userManager.GetLoginsAsync(user);
+			var userClaims = await _userManager.GetClaimsAsync(user);
+			
+			// Get privacy settings from claims
+			var privacyClaims = userClaims.Where(c => c.Type.StartsWith("privacy:")).ToDictionary(c => c.Type, c => c.Value);
+			var notificationClaims = userClaims.Where(c => c.Type.StartsWith("notification:")).ToDictionary(c => c.Type, c => c.Value);
+
+			var viewModel = new ProfileManagementViewModel
+			{
+				ActiveTab = activeTab,
+				PersonalInfo = new PersonalInfoViewModel
+				{
+					UserId = user.Id,
+					FirstName = user.FirstName,
+					LastName = user.LastName,
+					Email = user.Email ?? "",
+					PhoneNumber = user.PhoneNumber ?? "",
+					UserName = user.UserName ?? "",
+					CurrentAvatarUrl = user.AvatarUrl ?? "",
+					EmailConfirmed = user.EmailConfirmed,
+					PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+					CreatedAt = user.CreatedAt,
+					LastLoginAt = user.LastLoginAt
+				},
+				Security = new AccountSecurityViewModel
+				{
+					UserId = user.Id,
+					TwoFactorEnabled = user.TwoFactorEnabled,
+					EmailConfirmed = user.EmailConfirmed,
+					PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+					AccessFailedCount = user.AccessFailedCount,
+					LockoutEnd = user.LockoutEnd,
+					ExternalLogins = externalLogins.ToList(),
+					HasPassword = await _userManager.HasPasswordAsync(user)
+				},
+				ConnectedAccounts = new ConnectedAccountsViewModel
+				{
+					ExternalLogins = externalLogins.ToList(),
+					AvailableProviders = (await _signInManager.GetExternalAuthenticationSchemesAsync())
+						.Select(scheme => scheme.Name)
+						.ToList()
+				},
+				Notifications = new NotificationSettingsViewModel
+				{
+					EmailNotifications = bool.Parse(notificationClaims.GetValueOrDefault("notification:email", "true")),
+					OrderUpdates = bool.Parse(notificationClaims.GetValueOrDefault("notification:orders", "true")),
+					BookRecommendations = bool.Parse(notificationClaims.GetValueOrDefault("notification:recommendations", "false")),
+					SecurityAlerts = bool.Parse(notificationClaims.GetValueOrDefault("notification:security", "true")),
+					NewsletterSubscription = bool.Parse(notificationClaims.GetValueOrDefault("notification:newsletter", "false"))
+				}
+			};
+
+			return viewModel;
+		}
+
 		private async Task<bool> IsUsernameAvailableAsync(string username)
 		{
 			var existingUser = await _userManager.FindByNameAsync(username);
