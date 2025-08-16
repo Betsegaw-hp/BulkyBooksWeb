@@ -179,7 +179,7 @@ file: "appsettings.json"
 - [x] Core E-commerce Features
 - [x] Azure Deployment Pipeline
 - [ ] S3 Image Storage Integration
-- [ ] Social Auth (Google/Apple)
+- [x] Social Auth (Google/Apple)
 - [ ] Book Rental System
 - [ ] Community Review System
 
