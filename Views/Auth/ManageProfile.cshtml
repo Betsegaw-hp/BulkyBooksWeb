@@ -267,42 +267,67 @@
                 <div class="tab-pane fade @(Model.ActiveTab == "security" ? "show active" : "")" id="security">
                     <div class="row">
                         <!-- Password Section -->
-                        <div class="col-12 mb-4">
-                            <div class="card shadow-sm">
-                                <div class="card-header">
-                                    <h5 class="mb-0">
-                                        <i class="fas fa-key me-2"></i>Change Password
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <form asp-action="ChangePasswordForm" method="post">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-group mb-3">
-                                                    <label class="form-label fw-bold">Current Password</label>
-                                                    <input name="CurrentPassword" type="password" class="form-control" required />
+                        @if (Model.Security.HasPassword)
+                        {
+                            <div class="col-12 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <form asp-action="ChangePasswordForm" method="post">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label fw-bold">Current Password</label>
+                                                        <input name="CurrentPassword" type="password" class="form-control" required />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label fw-bold">New Password</label>
+                                                        <input name="NewPassword" type="password" class="form-control" required />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group mb-3">
+                                                        <label class="form-label fw-bold">Confirm New Password</label>
+                                                        <input name="ConfirmPassword" type="password" class="form-control" required />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group mb-3">
-                                                    <label class="form-label fw-bold">New Password</label>
-                                                    <input name="NewPassword" type="password" class="form-control" required />
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group mb-3">
-                                                    <label class="form-label fw-bold">Confirm New Password</label>
-                                                    <input name="ConfirmPassword" type="password" class="form-control" required />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <button type="submit" class="btn btn-warning">
-                                            <i class="fas fa-lock me-2"></i>Change Password
-                                        </button>
-                                    </form>
+                                            <button type="submit" class="btn btn-warning">
+                                                <i class="fas fa-lock me-2"></i>Change Password
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        }
+                        else
+                        {
+                            <div class="col-12 mb-4">
+                                <div class="card shadow-sm">
+                                    <div class="card-header">
+                                        <h5 class="mb-0">
+                                            <i class="fas fa-key me-2"></i>Password Management
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Your account uses external authentication (Google, Microsoft, etc.) and doesn't have a local password.
+                                            You can add a password to enable additional sign-in options.
+                                        </div>
+                                        <a asp-action="SetPassword" class="btn btn-primary">
+                                            <i class="fas fa-plus me-2"></i>Add Password
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
 
                         <!-- Two-Factor Authentication -->
                         <div class="col-12 mb-4">
@@ -788,7 +813,7 @@
                                         Temporarily deactivate your account. You can reactivate it anytime by signing back in.
                                         Your data will be preserved during deactivation.
                                     </p>
-                                    <button type="button" class="btn btn-outline-warning" onclick="deactivateAccount()">
+                                    <button type="button" class="btn btn-outline-warning" onclick="confirmDeactivateAccount()">
                                         <i class="fas fa-pause me-2"></i>Deactivate Account
                                     </button>
                                 </div>
@@ -809,9 +834,9 @@
                                         permanently remove all your data, including your profile, order history, and any 
                                         books you've authored.
                                     </p>
-                                    <a asp-action="DeleteAccount" class="btn btn-danger">
+                                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()">
                                         <i class="fas fa-trash me-2"></i>Delete My Account
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1140,6 +1165,50 @@
             if (verificationTab) {
                 verificationTab.click();
                 window.location.hash = '#verification';
+            }
+        }
+
+        // Account Deactivation
+        function confirmDeactivateAccount() {
+            const confirmed = confirm(
+                'Are you sure you want to deactivate your account?\n\n' +
+                'Your account will be temporarily disabled, but you can reactivate it by signing in again.\n' +
+                'Your data will be preserved during deactivation.'
+            );
+            
+            if (confirmed) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("DeactivateAccount", "Auth")';
+                
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // Account Deletion
+        function confirmDeleteAccount() {
+            const confirmed = confirm(
+                'WARNING: This action cannot be undone!\n\n' +
+                'Deleting your account will permanently remove:\n' +
+                '• Your profile and personal information\n' +
+                '• Your order history\n' +
+                '• Any books you have authored\n' +
+                '• All associated data\n\n' +
+                'Are you absolutely sure you want to proceed?'
+            );
+            
+            if (confirmed) {
+                // Redirect to the detailed delete account page
+                window.location.href = '@Url.Action("DeleteAccount", "Auth")';
             }
         }
     </script>

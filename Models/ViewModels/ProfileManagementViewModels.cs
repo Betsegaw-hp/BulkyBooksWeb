@@ -57,6 +57,7 @@ namespace BulkyBooksWeb.Models.ViewModels
         public List<UserLoginInfo> ExternalLogins { get; set; } = new();
         public string? AuthenticatorKey { get; set; }
         public List<string> TwoFactorProviders { get; set; } = new();
+        public bool HasPassword { get; set; }
     }
 
     public class ChangePasswordFormViewModel
@@ -108,7 +109,6 @@ namespace BulkyBooksWeb.Models.ViewModels
 
     public class DeleteAccountViewModel
     {
-        [Required(ErrorMessage = "Password is required to delete account")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
 
@@ -130,6 +130,12 @@ namespace BulkyBooksWeb.Models.ViewModels
         public DateTime CreatedAt { get; set; }
         public int TotalOrders { get; set; }
         public int BooksAuthored { get; set; }
+        
+        // Indicates if user has a password (not external-only)
+        public bool HasPassword { get; set; }
+        
+        // Computed property for validation
+        public bool IsPasswordRequired => HasPassword;
     }
 
     public class DownloadDataViewModel

@@ -104,8 +104,8 @@
                                         <i class="fas fa-pause fa-2x text-warning mb-2"></i>
                                         <h6>Deactivate Instead</h6>
                                         <p class="text-muted small">Temporarily disable your account</p>
-                                        <button class="btn btn-warning btn-sm" disabled>
-                                            Coming Soon
+                                        <button type="button" class="btn btn-warning btn-sm" onclick="deactivateAccount()">
+                                            Deactivate Account
                                         </button>
                                     </div>
                                 </div>
@@ -122,14 +122,25 @@
                                 <h5 class="mb-0 text-danger">Final Confirmation Required</h5>
                             </div>
                             <div class="card-body">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Password" class="form-label fw-bold">
-                                        <i class="fas fa-lock me-2"></i>Enter Your Password to Confirm
-                                    </label>
-                                    <input asp-for="Password" type="password" class="form-control" 
-                                           placeholder="Enter your current password" required />
-                                    <span asp-validation-for="Password" class="text-danger"></span>
-                                </div>
+                                @if(Model.HasPassword)
+                                {
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Password" class="form-label fw-bold">
+                                            <i class="fas fa-lock me-2"></i>Enter Your Password to Confirm
+                                        </label>
+                                        <input asp-for="Password" type="password" class="form-control" 
+                                               placeholder="Enter your current password" required />
+                                        <span asp-validation-for="Password" class="text-danger"></span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>External Account Authentication:</strong> Since you sign in using an external provider (Google, Microsoft, etc.), 
+                                        no password verification is required for account deletion.
+                                    </div>
+                                }
 
                                 <div class="form-group mb-3">
                                     <label asp-for="ConfirmationText" class="form-label fw-bold">
@@ -189,11 +200,18 @@
             const deleteButton = document.getElementById('deleteButton');
 
             function validateForm() {
-                const passwordValid = passwordField.value.length > 0;
+                // Check if password field exists (for accounts with passwords)
+                const passwordValid = passwordField ? passwordField.value.length > 0 : true;
                 const confirmationValid = confirmationField.value === 'DELETE MY ACCOUNT';
                 const checkboxValid = checkboxField.checked;
 
-                deleteButton.disabled = !(passwordValid && confirmationValid && checkboxValid);
+                // For accounts without passwords, only require confirmation text and checkbox
+                // For accounts with passwords, require all three validations
+                const allValid = passwordField ? 
+                    (passwordValid && confirmationValid && checkboxValid) : 
+                    (confirmationValid && checkboxValid);
+                
+                deleteButton.disabled = !allValid;
 
                 // Update button appearance based on validation
                 if (!deleteButton.disabled) {
@@ -206,7 +224,9 @@
             }
 
             // Validate form on input changes
-            passwordField.addEventListener('input', validateForm);
+            if (passwordField) {
+                passwordField.addEventListener('input', validateForm);
+            }
             confirmationField.addEventListener('input', function() {
                 validateForm();
                 
@@ -235,5 +255,31 @@
             // Initial validation
             validateForm();
         });
+
+        // Account Deactivation function
+        function deactivateAccount() {
+            const confirmed = confirm(
+                'Are you sure you want to deactivate your account?\n\n' +
+                'Your account will be temporarily disabled, but you can reactivate it by signing in again.\n' +
+                'Your data will be preserved during deactivation.'
+            );
+            
+            if (confirmed) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("DeactivateAccount", "Auth")';
+                
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
     </script>
 }

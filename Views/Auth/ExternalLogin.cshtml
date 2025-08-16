@@ -23,6 +23,18 @@
                     <form asp-action="ExternalLoginConfirmation" asp-route-returnUrl="@Model.ReturnUrl" method="post" novalidate>
                         @Html.AntiForgeryToken()
                         
+                        <!-- Username Field -->
+                        <div class="mb-4">
+                            <label asp-for="UserName" class="form-label fw-semibold">
+                                <i class="fas fa-at me-2 text-primary"></i>Username
+                            </label>
+                            <input asp-for="UserName" class="form-control form-control-lg" 
+                                   style="border-radius: 10px; border: 2px solid #e9ecef;" 
+                                   placeholder="Choose a unique username" />
+                            <span asp-validation-for="UserName" class="text-danger small"></span>
+                            <small class="text-muted">This will be your unique identifier on BulkyBooks</small>
+                        </div>
+
                         <!-- Email Field -->
                         <div class="mb-3">
                             <label asp-for="Email" class="form-label fw-semibold">
@@ -32,6 +44,7 @@
                                    style="border-radius: 10px; border: 2px solid #e9ecef;" 
                                    placeholder="Enter your email address" />
                             <span asp-validation-for="Email" class="text-danger small"></span>
+                            <small class="text-muted">We'll use this to verify your account</small>
                         </div>
 
                         <!-- Full Name Field -->

@@ -682,10 +682,14 @@ namespace BulkyBooksWeb.Controllers
 				var email = info.Principal.FindFirstValue(ClaimTypes.Email);
 				var name = info.Principal.FindFirstValue(ClaimTypes.Name) ?? "";
 				
+				// Suggest a username based on email or name
+				string suggestedUsername = await GenerateUniqueUsernameAsync(email, name);
+				
 				return View("ExternalLogin", new ExternalLoginViewModel 
 				{ 
 					Email = email ?? "", 
 					FullName = name,
+					UserName = suggestedUsername,
 					ReturnUrl = returnUrl ?? "",
 					LoginProvider = info.LoginProvider
 				});
@@ -747,9 +751,20 @@ namespace BulkyBooksWeb.Controllers
 					return View("ExternalLogin", model);
 				}
 
+				// THIRD: Check if username already exists
+				var existingUserWithUsername = await _userManager.FindByNameAsync(model.UserName);
+				if (existingUserWithUsername != null)
+				{
+					_logger.LogWarning("External login confirmation failed: Username {Username} already exists", model.UserName);
+					ModelState.AddModelError("UserName", "This username is already taken. Please choose another one.");
+					ViewData["ReturnUrl"] = returnUrl;
+					ViewData["LoginProvider"] = model.LoginProvider;
+					return View("ExternalLogin", model);
+				}
+
 				var user = new ApplicationUser 
 				{ 
-					UserName = model.Email,
+					UserName = model.UserName,  // Use the chosen username instead of email
 					Email = model.Email,
 					FirstName = model.FullName.Split(' ').FirstOrDefault() ?? "",
 					LastName = string.Join(" ", model.FullName.Split(' ').Skip(1)),
@@ -1146,6 +1161,7 @@ namespace BulkyBooksWeb.Controllers
 
 			var externalLogins = await _userManager.GetLoginsAsync(user);
 			var twoFactorProviders = await _userManager.GetValidTwoFactorProvidersAsync(user);
+			var hasPassword = await _userManager.HasPasswordAsync(user);
 
 			var viewModel = new ProfileManagementViewModel
 			{
@@ -1174,7 +1190,8 @@ namespace BulkyBooksWeb.Controllers
 					LockoutEnd = user.LockoutEnd,
 					ExternalLogins = externalLogins.ToList(),
 					TwoFactorProviders = twoFactorProviders.ToList(),
-					HasRecoveryCodes = await _userManager.CountRecoveryCodesAsync(user) > 0
+					HasRecoveryCodes = await _userManager.CountRecoveryCodesAsync(user) > 0,
+					HasPassword = hasPassword
 				},
 				ConnectedAccounts = new ConnectedAccountsViewModel
 				{
@@ -1581,9 +1598,69 @@ namespace BulkyBooksWeb.Controllers
 
 		// GET: Delete Account
 		[Authorize]
-		public IActionResult DeleteAccount()
+		public async Task<IActionResult> DeleteAccount()
 		{
-			return View(new DeleteAccountViewModel());
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			// Get user's data summary
+			var orderCount = await _context.Orders.CountAsync(o => o.UserId == user.Id);
+			var bookCount = await _context.Books.CountAsync(b => b.AuthorId == user.Id);
+			var hasPassword = await _userManager.HasPasswordAsync(user);
+
+			var model = new DeleteAccountViewModel
+			{
+				FullName = user.FullName,
+				Email = user.Email ?? "",
+				UserName = user.UserName ?? "",
+				CreatedAt = user.CreatedAt,
+				TotalOrders = orderCount,
+				BooksAuthored = bookCount,
+				HasPassword = hasPassword
+			};
+
+			return View(model);
+		}
+
+		// POST: Deactivate Account
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> DeactivateAccount()
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			try
+			{
+				// Set lockout end to far future (effectively deactivating)
+				var lockoutEnd = DateTimeOffset.UtcNow.AddYears(100);
+				var result = await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
+
+				if (result.Succeeded)
+				{
+					_logger.LogInformation("User {UserId} deactivated their account", user.Id);
+					
+					// Sign out the user
+					await _signInManager.SignOutAsync();
+					
+					TempData["SuccessMessage"] = "Your account has been deactivated. You can reactivate it by signing in again.";
+					return RedirectToAction("Login");
+				}
+				else
+				{
+					_logger.LogError("Failed to deactivate account for user {UserId}. Errors: {Errors}", 
+						user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
+					TempData["ErrorMessage"] = "Failed to deactivate account. Please try again.";
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error deactivating account for user {UserId}", user.Id);
+				TempData["ErrorMessage"] = "An error occurred while deactivating your account. Please try again.";
+			}
+
+			return RedirectToAction("ManageProfile", new { tab = "data-privacy" });
 		}
 
 		// POST: Delete Account
@@ -1625,6 +1702,138 @@ namespace BulkyBooksWeb.Controllers
 			}
 
 			return View(model);
+		}
+
+		// POST: Confirm Delete Account (handles the detailed deletion form)
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ConfirmDeleteAccount(DeleteAccountViewModel model)
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			// Check if user has external logins only (no password)
+			var hasPassword = await _userManager.HasPasswordAsync(user);
+			var externalLogins = await _userManager.GetLoginsAsync(user);
+
+			if (!ModelState.IsValid)
+			{
+				// Repopulate model data
+				var orderCount = await _context.Orders.CountAsync(o => o.UserId == user.Id);
+				var bookCount = await _context.Books.CountAsync(b => b.AuthorId == user.Id);
+				
+				model.FullName = user.FullName;
+				model.Email = user.Email ?? "";
+				model.UserName = user.UserName ?? "";
+				model.CreatedAt = user.CreatedAt;
+				model.TotalOrders = orderCount;
+				model.BooksAuthored = bookCount;
+				
+				return View("DeleteAccount", model);
+			}
+
+			// Verify password only if user has a password
+			if (hasPassword)
+			{
+				var passwordCheck = await _userManager.CheckPasswordAsync(user, model.Password);
+				if (!passwordCheck)
+				{
+					ModelState.AddModelError("Password", "Incorrect password.");
+					// Repopulate model data
+					var orderCount = await _context.Orders.CountAsync(o => o.UserId == user.Id);
+					var bookCount = await _context.Books.CountAsync(b => b.AuthorId == user.Id);
+					
+					model.FullName = user.FullName;
+					model.Email = user.Email ?? "";
+					model.UserName = user.UserName ?? "";
+					model.CreatedAt = user.CreatedAt;
+					model.TotalOrders = orderCount;
+					model.BooksAuthored = bookCount;
+					model.HasPassword = hasPassword;
+					
+					return View("DeleteAccount", model);
+				}
+			}
+
+			// Verify confirmation text
+			if (model.ConfirmationText.Trim().ToUpper() != "DELETE MY ACCOUNT")
+			{
+				ModelState.AddModelError("ConfirmationText", "Please type 'DELETE MY ACCOUNT' exactly as shown.");
+				// Repopulate model data
+				var orderCount = await _context.Orders.CountAsync(o => o.UserId == user.Id);
+				var bookCount = await _context.Books.CountAsync(b => b.AuthorId == user.Id);
+				
+				model.FullName = user.FullName;
+				model.Email = user.Email ?? "";
+				model.UserName = user.UserName ?? "";
+				model.CreatedAt = user.CreatedAt;
+				model.TotalOrders = orderCount;
+				model.BooksAuthored = bookCount;
+				model.HasPassword = hasPassword;
+				
+				return View("DeleteAccount", model);
+			}
+
+			try
+			{
+				using var transaction = await _context.Database.BeginTransactionAsync();
+
+				// Delete related data
+				var orders = await _context.Orders.Where(o => o.UserId == user.Id).ToListAsync();
+				foreach (var order in orders)
+				{
+					_context.OrderItems.RemoveRange(order.OrderItems);
+					_context.Orders.Remove(order);
+				}
+
+				var books = await _context.Books.Where(b => b.AuthorId == user.Id).ToListAsync();
+				_context.Books.RemoveRange(books);
+
+				await _context.SaveChangesAsync();
+
+				// Delete user account
+				var result = await _userManager.DeleteAsync(user);
+				if (result.Succeeded)
+				{
+					await transaction.CommitAsync();
+					_logger.LogInformation("User {UserId} ({Email}) deleted their account. Had password: {HasPassword}, External logins: {ExternalLogins}", 
+						user.Id, user.Email, hasPassword, string.Join(", ", externalLogins.Select(l => l.LoginProvider)));
+					
+					// Sign out
+					await _signInManager.SignOutAsync();
+					
+					TempData["SuccessMessage"] = "Your account has been permanently deleted. We're sorry to see you go.";
+					return RedirectToAction("Index", "Home");
+				}
+				else
+				{
+					await transaction.RollbackAsync();
+					_logger.LogError("Failed to delete account for user {UserId}. Errors: {Errors}", 
+						user.Id, string.Join(", ", result.Errors.Select(e => e.Description)));
+					ModelState.AddModelError("", "Failed to delete account. Please try again or contact support.");
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error deleting account for user {UserId}", user.Id);
+				ModelState.AddModelError("", "An error occurred while deleting your account. Please try again.");
+			}
+
+			// Repopulate model data on error
+			var finalOrderCount = await _context.Orders.CountAsync(o => o.UserId == user.Id);
+			var finalBookCount = await _context.Books.CountAsync(b => b.AuthorId == user.Id);
+			var finalHasPassword = await _userManager.HasPasswordAsync(user);
+			
+			model.FullName = user.FullName;
+			model.Email = user.Email ?? "";
+			model.UserName = user.UserName ?? "";
+			model.CreatedAt = user.CreatedAt;
+			model.TotalOrders = finalOrderCount;
+			model.BooksAuthored = finalBookCount;
+			model.HasPassword = finalHasPassword;
+			
+			return View("DeleteAccount", model);
 		}
 
 		// POST: Send Email Confirmation
@@ -1878,6 +2087,139 @@ namespace BulkyBooksWeb.Controllers
 			using var qrCode = new PngByteQRCode(qrCodeData);
 			var qrCodeBytes = qrCode.GetGraphic(20);
 			return Convert.ToBase64String(qrCodeBytes);
+		}
+
+		private async Task<string> GenerateUniqueUsernameAsync(string? email, string? name)
+		{
+			var suggestions = new List<string>();
+			
+			// Try to extract username from email
+			if (!string.IsNullOrEmpty(email))
+			{
+				var emailPart = email.Split('@')[0];
+				suggestions.Add(emailPart);
+			}
+			
+			// Try to create username from name
+			if (!string.IsNullOrEmpty(name))
+			{
+				var nameParts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+				if (nameParts.Length >= 2)
+				{
+					// FirstnameLastname format
+					suggestions.Add($"{nameParts[0].ToLower()}{nameParts[1].ToLower()}");
+					// FirstnameL format
+					suggestions.Add($"{nameParts[0].ToLower()}{nameParts[1][0].ToString().ToLower()}");
+				}
+				else if (nameParts.Length == 1)
+				{
+					suggestions.Add(nameParts[0].ToLower());
+				}
+			}
+			
+			// Clean suggestions (remove special characters, ensure valid format)
+			var cleanSuggestions = suggestions
+				.Select(s => System.Text.RegularExpressions.Regex.Replace(s, @"[^a-zA-Z0-9_]", ""))
+				.Where(s => s.Length >= 3 && s.Length <= 50)
+				.Distinct()
+				.ToList();
+			
+			// Find first available username
+			foreach (var suggestion in cleanSuggestions)
+			{
+				if (await IsUsernameAvailableAsync(suggestion))
+				{
+					return suggestion;
+				}
+				
+				// Try with numbers if base suggestion is taken
+				for (int i = 1; i <= 99; i++)
+				{
+					var numberedSuggestion = $"{suggestion}{i}";
+					if (await IsUsernameAvailableAsync(numberedSuggestion))
+					{
+						return numberedSuggestion;
+					}
+				}
+			}
+			
+			// Fallback: generate random username
+			return await GenerateRandomUsernameAsync();
+		}
+
+		// GET: SetPassword
+		[Authorize]
+		[HttpGet]
+		public async Task<IActionResult> SetPassword()
+		{
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			var hasPassword = await _userManager.HasPasswordAsync(user);
+			if (hasPassword)
+			{
+				// User already has a password, redirect to change password
+				return RedirectToAction("ManageProfile", new { tab = "security" });
+			}
+
+			return View(new SetPasswordViewModel());
+		}
+
+		// POST: SetPassword
+		[Authorize]
+		[HttpPost]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> SetPassword(SetPasswordViewModel model)
+		{
+			if (!ModelState.IsValid)
+			{
+				return View(model);
+			}
+
+			var user = await _userManager.GetUserAsync(User);
+			if (user == null) return RedirectToAction("Login");
+
+			var hasPassword = await _userManager.HasPasswordAsync(user);
+			if (hasPassword)
+			{
+				TempData["ErrorMessage"] = "User already has a password set.";
+				return RedirectToAction("ManageProfile", new { tab = "security" });
+			}
+
+			var result = await _userManager.AddPasswordAsync(user, model.NewPassword);
+			if (result.Succeeded)
+			{
+				TempData["SuccessMessage"] = "Password has been set successfully.";
+				return RedirectToAction("ManageProfile", new { tab = "security" });
+			}
+
+			foreach (var error in result.Errors)
+			{
+				ModelState.AddModelError(string.Empty, error.Description);
+			}
+
+			return View(model);
+		}
+
+		// Private helper methods
+		private async Task<bool> IsUsernameAvailableAsync(string username)
+		{
+			var existingUser = await _userManager.FindByNameAsync(username);
+			return existingUser == null;
+		}
+
+		private async Task<string> GenerateRandomUsernameAsync()
+		{
+			var random = new Random();
+			string username;
+			
+			do
+			{
+				username = $"user{random.Next(10000, 99999)}";
+			} 
+			while (!await IsUsernameAvailableAsync(username));
+			
+			return username;
 		}
 	}
 }
