@@ -19,7 +19,7 @@
     <!-- Search and Filter Section -->
     <div class="card mb-4 shadow-sm">
         <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
+            <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label for="searchTerm" class="form-label">Search Users</label>
                     <input type="text" class="form-control" id="searchTerm" name="searchTerm" 
@@ -36,16 +36,16 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">
+                    <button type="button" onclick="performSearch()" class="btn btn-outline-primary w-100">
                         <i class="fas fa-search me-2"></i>Search
                     </button>
                 </div>
                 <div class="col-md-2">
-                    <a asp-action="Index" class="btn btn-outline-secondary w-100">
+                    <button type="button" onclick="clearSearch()" class="btn btn-outline-secondary w-100">
                         <i class="fas fa-times me-2"></i>Clear
-                    </a>
+                    </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -214,6 +214,21 @@
                                                class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Manage Roles">
                                                 <i class="fas fa-user-tag"></i>
                                             </a>
+                                            <a asp-action="ResetPassword" asp-route-id="@user.Id" 
+                                               class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </a>
+                                            @if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
+                                            {
+                                                <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="btn btn-sm btn-outline-success" 
+                                                            data-bs-toggle="tooltip" title="Unlock User"
+                                                            onclick="return confirm('Are you sure you want to unlock this user?')">
+                                                        <i class="fas fa-unlock"></i>
+                                                    </button>
+                                                </form>
+                                            }
                                             <button type="button" class="btn btn-sm btn-outline-danger" 
                                                     data-bs-toggle="modal" data-bs-target="#deleteModal" 
                                                     data-user-id="@user.Id" data-username="@user.UserName"
@@ -322,5 +337,170 @@
             deleteForm.action = '@Url.Action("Delete")/' + userId;
             deleteUsername.textContent = username;
         });
+
+        // AJAX Search Implementation
+        let searchTimeout;
+        
+        document.getElementById('searchTerm').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 500); // Debounce search
+        });
+
+        document.getElementById('roleFilter').addEventListener('change', function() {
+            performSearch();
+        });
+
+        function performSearch() {
+            const searchTerm = document.getElementById('searchTerm').value;
+            const roleFilter = document.getElementById('roleFilter').value;
+            
+            // Show loading indicator
+            showLoadingIndicator();
+            
+            fetch(`@Url.Action("SearchUsers")?searchTerm=${encodeURIComponent(searchTerm)}&roleFilter=${encodeURIComponent(roleFilter)}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateUserTable(data.users);
+                    updateUserStats(data.users, data.totalCount);
+                    hideLoadingIndicator();
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    hideLoadingIndicator();
+                });
+        }
+
+        function clearSearch() {
+            document.getElementById('searchTerm').value = '';
+            document.getElementById('roleFilter').value = '';
+            performSearch();
+        }
+
+        function updateUserTable(users) {
+            const tbody = document.querySelector('table tbody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No users found</h4>
+                            <p class="text-muted">Try adjusting your search criteria.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            ${user.avatarUrl ? 
+                                `<img src="${user.avatarUrl}" alt="Avatar" class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">` :
+                                `<div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                    <span class="text-white fw-bold">${user.fullName.charAt(0)}</span>
+                                </div>`
+                            }
+                            <div>
+                                <div class="fw-bold">${user.fullName}</div>
+                                <small class="text-muted">${user.userName}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            ${user.email}
+                            ${!user.emailConfirmed ? '<span class="badge bg-warning text-dark ms-1">Unconfirmed</span>' : ''}
+                        </div>
+                    </td>
+                    <td>
+                        ${user.roles.map(role => 
+                            `<span class="badge bg-${role === 'Admin' ? 'danger' : role === 'Author' ? 'primary' : 'secondary'} me-1">${role}</span>`
+                        ).join('')}
+                    </td>
+                    <td>
+                        ${user.lockoutEnd && new Date(user.lockoutEnd) > new Date() ?
+                            '<span class="badge bg-danger"><i class="fas fa-lock me-1"></i>Locked</span>' :
+                            '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Active</span>'
+                        }
+                        ${user.twoFactorEnabled ? '<span class="badge bg-info ms-1"><i class="fas fa-shield-alt me-1"></i>2FA</span>' : ''}
+                    </td>
+                    <td>
+                        <span data-bs-toggle="tooltip" title="${new Date(user.createdAt).toLocaleString()}">
+                            ${new Date(user.createdAt).toLocaleDateString()}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group" role="group">
+                            <a href="@Url.Action("Details")/${user.id}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="@Url.Action("Edit")/${user.id}" class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" title="Edit User">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="@Url.Action("ManageRoles")/${user.id}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Manage Roles">
+                                <i class="fas fa-user-tag"></i>
+                            </a>
+                            <a href="@Url.Action("ResetPassword")/${user.id}" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="Reset Password">
+                                <i class="fas fa-key"></i>
+                            </a>
+                            ${user.lockoutEnd && new Date(user.lockoutEnd) > new Date() ?
+                                `<form action="@Url.Action("UnlockUser")/${user.id}" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" title="Unlock User" onclick="return confirm('Are you sure you want to unlock this user?')">
+                                        <i class="fas fa-unlock"></i>
+                                    </button>
+                                </form>` : ''
+                            }
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-user-id="${user.id}" data-username="${user.userName}" title="Delete User">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Reinitialize tooltips for new content
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
+
+        function updateUserStats(users, totalCount) {
+            document.querySelector('.card-header .badge').textContent = users.length;
+            
+            // Update stats cards
+            const activeUsers = users.filter(u => !u.lockoutEnd || new Date(u.lockoutEnd) <= new Date()).length;
+            const adminUsers = users.filter(u => u.roles.includes('Admin')).length;
+            const lockedUsers = users.filter(u => u.lockoutEnd && new Date(u.lockoutEnd) > new Date()).length;
+            
+            const statCards = document.querySelectorAll('.row .card h2');
+            if (statCards.length >= 4) {
+                statCards[0].textContent = totalCount; // Total Users
+                statCards[1].textContent = activeUsers; // Active Users  
+                statCards[2].textContent = adminUsers; // Admins
+                statCards[3].textContent = lockedUsers; // Locked Users
+            }
+        }
+
+        function showLoadingIndicator() {
+            const tbody = document.querySelector('table tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Searching users...</p>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function hideLoadingIndicator() {
+            // Loading indicator is replaced by search results
+        }
     </script>
 }

@@ -247,9 +247,7 @@ namespace BulkyBooksWeb.Controllers
                 if (user == null)
                     return NotFound();
 
-                // Update user properties
-                user.UserName = model.UserName;
-                user.Email = model.Email;
+                // Update only allowed properties (no username, email, or password changes)
                 user.FirstName = model.FirstName;
                 user.LastName = model.LastName;
                 user.PhoneNumber = model.PhoneNumber;
@@ -266,18 +264,11 @@ namespace BulkyBooksWeb.Controllers
                     // For now, just keeping the current avatar
                 }
 
-                // Handle password change
-                if (!string.IsNullOrEmpty(model.NewPassword))
-                {
-                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                    await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
-                }
-
                 var result = await _userManager.UpdateAsync(user);
 
                 if (result.Succeeded)
                 {
-                    TempData["SuccessMessage"] = $"User '{model.UserName}' updated successfully.";
+                    TempData["SuccessMessage"] = $"User '{user.UserName}' updated successfully.";
                     return RedirectToAction(nameof(Details), new { id = model.Id });
                 }
 
@@ -315,6 +306,101 @@ namespace BulkyBooksWeb.Controllers
             }
 
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // POST: UserManagement/UnlockUser/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UnlockUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            await _userManager.SetLockoutEndDateAsync(user, null);
+            await _userManager.ResetAccessFailedCountAsync(user);
+            
+            TempData["SuccessMessage"] = $"User '{user.UserName}' has been unlocked successfully.";
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
+        // POST: UserManagement/LockUser/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> LockUser(string id, int lockoutDuration)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            DateTimeOffset? lockoutEnd = null;
+            if (lockoutDuration > 0)
+            {
+                lockoutEnd = DateTimeOffset.UtcNow.AddHours(lockoutDuration);
+            }
+            else
+            {
+                lockoutEnd = DateTimeOffset.UtcNow.AddYears(100); // Permanent lockout
+            }
+
+            await _userManager.SetLockoutEndDateAsync(user, lockoutEnd);
+            
+            string durationText = lockoutDuration > 0 ? $"for {lockoutDuration} hours" : "permanently";
+            TempData["SuccessMessage"] = $"User '{user.UserName}' has been locked {durationText}.";
+            
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // GET: UserManagement/SearchUsers (AJAX endpoint)
+        [HttpGet]
+        public async Task<IActionResult> SearchUsers(string searchTerm = "", string roleFilter = "", int page = 1, int pageSize = 10)
+        {
+            var query = _userManager.Users.AsQueryable();
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                query = query.Where(u => u.UserName!.Contains(searchTerm) || 
+                                       u.Email!.Contains(searchTerm) || 
+                                       u.FirstName.Contains(searchTerm) ||
+                                       u.LastName.Contains(searchTerm));
+            }
+
+            var users = await query
+                .OrderBy(u => u.UserName)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var userItems = new List<UserManagementItem>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                
+                // Apply role filter
+                if (!string.IsNullOrEmpty(roleFilter) && !roles.Contains(roleFilter))
+                    continue;
+
+                userItems.Add(new UserManagementItem
+                {
+                    Id = user.Id,
+                    UserName = user.UserName ?? "",
+                    Email = user.Email ?? "",
+                    FullName = user.FullName,
+                    AvatarUrl = user.AvatarUrl ?? "",
+                    Roles = roles.ToList(),
+                    EmailConfirmed = user.EmailConfirmed,
+                    LockoutEnabled = user.LockoutEnabled,
+                    LockoutEnd = user.LockoutEnd,
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    AccessFailedCount = user.AccessFailedCount,
+                    TwoFactorEnabled = user.TwoFactorEnabled
+                });
+            }
+
+            return Json(new { users = userItems, totalCount = await query.CountAsync() });
         }
 
         // GET: UserManagement/ResetPassword/5

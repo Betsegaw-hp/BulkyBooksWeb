@@ -75,55 +75,23 @@
                                 <h5 class="text-warning border-bottom pb-2 mb-3">
                                     <i class="fas fa-key me-2"></i>Account Information
                                 </h5>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="UserName" class="form-label fw-bold">Username</label>
-                                    <input asp-for="UserName" class="form-control" placeholder="Enter username" />
-                                    <span asp-validation-for="UserName" class="text-danger"></span>
-                                    <div class="form-text">Username must be unique</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group mb-3">
-                                    <label asp-for="Email" class="form-label fw-bold">Email Address</label>
-                                    <input asp-for="Email" type="email" class="form-control" placeholder="Enter email address" />
-                                    <span asp-validation-for="Email" class="text-danger"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Password Change -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h5 class="text-warning border-bottom pb-2 mb-3">
-                                    <i class="fas fa-lock me-2"></i>Change Password
-                                </h5>
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle me-2"></i>
-                                    Leave password fields empty to keep the current password unchanged.
+                                    Username and email address cannot be changed by administrators for security reasons.
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label asp-for="NewPassword" class="form-label fw-bold">New Password</label>
-                                    <div class="input-group">
-                                        <input asp-for="NewPassword" type="password" class="form-control" 
-                                               placeholder="Enter new password" id="newPasswordInput" />
-                                        <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
-                                            <i class="fas fa-eye" id="toggleNewIcon"></i>
-                                        </button>
-                                    </div>
-                                    <span asp-validation-for="NewPassword" class="text-danger"></span>
-                                    <div class="form-text">Password must be at least 6 characters long</div>
+                                    <label class="form-label fw-bold">Username</label>
+                                    <input type="text" class="form-control" value="@Model.UserName" readonly />
+                                    <div class="form-text">Username cannot be changed</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
-                                    <label asp-for="ConfirmNewPassword" class="form-label fw-bold">Confirm New Password</label>
-                                    <input asp-for="ConfirmNewPassword" type="password" class="form-control" 
-                                           placeholder="Confirm new password" />
-                                    <span asp-validation-for="ConfirmNewPassword" class="text-danger"></span>
+                                    <label class="form-label fw-bold">Email Address</label>
+                                    <input type="email" class="form-control" value="@Model.Email" readonly />
+                                    <div class="form-text">Email address cannot be changed</div>
                                 </div>
                             </div>
                         </div>
@@ -229,9 +197,12 @@
                                         <i class="fas fa-exclamation-triangle me-2"></i>
                                         <strong>Account Locked Until:</strong> @Model.LockoutEnd.Value.ToString("F")
                                         <div class="mt-2">
-                                            <a asp-action="UnlockUser" asp-route-id="@Model.Id" class="btn btn-warning btn-sm">
-                                                <i class="fas fa-unlock me-2"></i>Unlock Account
-                                            </a>
+                                            <form asp-action="UnlockUser" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to unlock this account?')">
+                                                    <i class="fas fa-unlock me-2"></i>Unlock Account
+                                                </button>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -269,38 +240,28 @@
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
     
     <script>
-        // Password visibility toggle
-        document.getElementById('toggleNewPassword').addEventListener('click', function () {
-            const passwordInput = document.getElementById('newPasswordInput');
-            const toggleIcon = document.getElementById('toggleNewIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
-            } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
-            }
-        });
-
         // Form validation enhancements
         document.addEventListener('DOMContentLoaded', function() {
-            const usernameInput = document.querySelector('input[name="UserName"]');
-            const emailInput = document.querySelector('input[name="Email"]');
-            
-            // Email format validation
-            emailInput.addEventListener('blur', function() {
-                const email = this.value;
-                const emailRegex = /^[^\\s@@]+@@[^\\s@@]+\\.[^\\s@@]+$/;
-                
-                if (email && !emailRegex.test(email)) {
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                }
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+            
+            // Phone number format validation
+            const phoneInput = document.querySelector('input[name="PhoneNumber"]');
+            if (phoneInput) {
+                phoneInput.addEventListener('blur', function() {
+                    const phone = this.value;
+                    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                    
+                    if (phone && !phoneRegex.test(phone.replace(/\s/g, ''))) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
         });
     </script>
 }

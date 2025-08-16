@@ -206,7 +206,6 @@
                 const checkboxValid = checkboxField.checked;
 
                 // For accounts without passwords, only require confirmation text and checkbox
-                // For accounts with passwords, require all three validations
                 const allValid = passwordField ? 
                     (passwordValid && confirmationValid && checkboxValid) : 
                     (confirmationValid && checkboxValid);

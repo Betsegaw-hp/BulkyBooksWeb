@@ -79,14 +79,6 @@ namespace BulkyBooksWeb.Models.ViewModels
     {
         public string Id { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Username is required")]
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 50 characters")]
-        public string UserName { get; set; } = string.Empty;
-
-        [Required(ErrorMessage = "Email is required")]
-        [EmailAddress(ErrorMessage = "Invalid email address")]
-        public string Email { get; set; } = string.Empty;
-
         [Required(ErrorMessage = "First name is required")]
         [StringLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
         public string FirstName { get; set; } = string.Empty;
@@ -98,16 +90,14 @@ namespace BulkyBooksWeb.Models.ViewModels
         [Phone(ErrorMessage = "Invalid phone number")]
         public string PhoneNumber { get; set; } = string.Empty;
 
+        // Read-only properties for display
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+
         public IFormFile? Avatar { get; set; }
         public string CurrentAvatarUrl { get; set; } = string.Empty;
 
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters")]
-        [DataType(DataType.Password)]
-        public string NewPassword { get; set; } = string.Empty;
-
-        [Compare("NewPassword", ErrorMessage = "Passwords do not match")]
-        [DataType(DataType.Password)]
-        public string ConfirmNewPassword { get; set; } = string.Empty;
+        // Remove password change functionality for admins
 
         public List<string> CurrentRoles { get; set; } = new();
         public List<string> AvailableRoles { get; set; } = new();

@@ -56,11 +56,18 @@
                         <a asp-action="ManageRoles" asp-route-id="@Model.Id" class="btn btn-outline-info">
                             <i class="fas fa-user-tag me-2"></i>Manage Roles
                         </a>
+                        <a asp-action="ResetPassword" asp-route-id="@Model.Id" class="btn btn-outline-warning">
+                            <i class="fas fa-key me-2"></i>Reset Password
+                        </a>
                         @if (Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTimeOffset.UtcNow)
                         {
-                            <a asp-action="UnlockUser" asp-route-id="@Model.Id" class="btn btn-outline-warning">
-                                <i class="fas fa-unlock me-2"></i>Unlock Account
-                            </a>
+                            <form asp-action="UnlockUser" asp-route-id="@Model.Id" method="post" class="d-grid gap-2">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-warning" 
+                                        onclick="return confirm('Are you sure you want to unlock this account?')">
+                                    <i class="fas fa-unlock me-2"></i>Unlock Account
+                                </button>
+                            </form>
                         }
                         else
                         {
