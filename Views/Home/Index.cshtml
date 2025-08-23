@@ -556,39 +556,238 @@
                 }
                 
                 // Submit the form to apply the updated filters
-                $('#filterForm').submit();
+                performAjaxFilter();
             });
-            
 
-            $('.add-to-cart').click(function() {
-                var bookId = $(this).data('book-id');
-                $.ajax({
-                    url: '@Url.Action("AddToCart", "Home")',
-                    type: 'POST',
-                    data: { id: bookId },
-                    success: function(response) {
-                        alert('Book added to cart!');
-                        // Optionally redirect to checkout or refresh cart display
-                        window.location.href = '@Url.Action("Index", "Checkout")';
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr);
-                        console.error('Status:', status);
-                        console.error('Error:', error);
-                        console.error('Response Text:', xhr.responseText);
-                        
-                        if (xhr.status === 403) {
-                            alert('Access denied. Please login first.');
-                            window.location.href = '@Url.Action("Login", "Auth")';
-                        } else if (xhr.status === 401) {
-                            alert('Please login to add items to cart.');
-                            window.location.href = '@Url.Action("Login", "Auth")';
-                        } else {
-                            alert('Error adding book to cart: ' + (xhr.responseText || error));
-                        }
-                    }
-                });
+            // AJAX Filter Form Submission
+            $('#filterForm').on('submit', function(e) {
+                e.preventDefault();
+                performAjaxFilter();
             });
+
+            // Debounced search input
+            let searchTimeout;
+            $('#searchQuery').on('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    performAjaxFilter();
+                }, 500);
+            });
+
+            // Filter change events
+            $('input[name="CategoryIds"], input[name="MinPrice"], input[name="MaxPrice"], select[name="SortOption"]').on('change', function() {
+                performAjaxFilter();
+            });
+
+            function performAjaxFilter() {
+                const formData = $('#filterForm').serialize();
+                
+                // Show loading indicator
+                showLoadingIndicator();
+                
+                fetch(`/Home/SearchBooks?${formData}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateBookResults(data);
+                        hideLoadingIndicator();
+                    })
+                    .catch(error => {
+                        console.error('Filter error:', error);
+                        hideLoadingIndicator();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Search Error',
+                            text: 'Failed to filter books. Please try again.',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                container: 'swal2-center-container'
+                            },
+                            didOpen: (popup) => {
+                                popup.style.zIndex = '9999';
+                            }
+                        });
+                    });
+            }
+
+            function updateBookResults(data) {
+                updateGridView(data.books);
+                updateListView(data.books);
+                updateResultsCount(data.books.length, data.totalBooks);
+                updatePagination(data.currentPage, data.totalPages);
+            }
+
+            function updateGridView(books) {
+                const gridView = document.getElementById('gridView');
+                gridView.innerHTML = books.map(book => `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 border-dark">
+                            <div class="position-relative">
+                                <img src="${book.coverImageUrl || '/images/placeholder-book.png'}" 
+                                     class="card-img-top" alt="${book.title}" style="height: 200px; object-fit: cover;">
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title">${book.title}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">${book.authorName || 'Unknown Author'}</h6>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-light text-dark">${book.categoryName || 'Uncategorized'}</span>
+                                    <strong class="text-primary">$${book.price.toFixed(2)}</strong>
+                                </div>
+                                <p class="card-text small">${book.description || 'No description available.'}</p>
+                            </div>
+                            <div class="card-footer bg-transparent border-top-0">
+                                <div class="d-grid gap-2">
+                                    <a href="/Book/${book.id}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                    <button class="btn btn-primary btn-sm add-to-cart" data-book-id="${book.id}">
+                                        <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Reinitialize add to cart handlers
+                initializeAddToCartHandlers();
+            }
+
+            function updateListView(books) {
+                const listView = document.getElementById('listView');
+                listView.innerHTML = books.map(book => `
+                    <div class="card mb-3 border-dark">
+                        <div class="row g-0">
+                            <div class="col-md-3">
+                                <img src="${book.coverImageUrl || '/images/placeholder-book.png'}" 
+                                     class="img-fluid rounded-start h-100" alt="${book.title}" style="object-fit: cover;" />
+                            </div>
+                            <div class="col-md-9">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="card-title">${book.title}</h5>
+                                            <h6 class="card-subtitle mb-2 text-muted">${book.authorName || 'Unknown Author'}</h6>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-light text-dark">${book.categoryName || 'Uncategorized'}</span>
+                                        </div>
+                                    </div>
+                                    <p class="card-text">${book.description || 'No description available.'}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <strong class="text-primary fs-5">$${book.price.toFixed(2)}</strong>
+                                        <div class="btn-group">
+                                            <a href="/Book/${book.id}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                            <button class="btn btn-primary btn-sm add-to-cart" data-book-id="${book.id}">
+                                                <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Reinitialize add to cart handlers
+                initializeAddToCartHandlers();
+            }
+
+            function updateResultsCount(count, total) {
+                const resultsText = document.querySelector('.d-flex.justify-content-between.align-items-center p');
+                if (resultsText) {
+                    resultsText.innerHTML = `Showing <strong>${count}</strong> of <strong>${total}</strong> books`;
+                }
+            }
+
+            function updatePagination(currentPage, totalPages) {
+                // For now, we'll hide pagination since AJAX results show all filtered books
+                // You could implement AJAX pagination here if needed
+            }
+
+            function showLoadingIndicator() {
+                const gridView = document.getElementById('gridView');
+                const listView = document.getElementById('listView');
+                
+                const loadingHtml = `
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Searching books...</p>
+                    </div>
+                `;
+                
+                gridView.innerHTML = loadingHtml;
+                listView.innerHTML = loadingHtml.replace('col-12', 'w-100');
+            }
+
+            function hideLoadingIndicator() {
+                // Loading indicator is replaced by search results
+            }
+
+            function initializeAddToCartHandlers() {
+                $('.add-to-cart').off('click').on('click', function() {
+                    var bookId = $(this).data('book-id');
+                    $.ajax({
+                        url: '@Url.Action("AddToCart", "Home")',
+                        type: 'POST',
+                        data: { 
+                            id: bookId,
+                            ajax: true
+                        },
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Added to Cart!',
+                                    text: `"${response.bookTitle}" has been added to your cart.`,
+                                    timer: 2000,
+                                    showConfirmButton: false,
+                                    toast: true,
+                                    position: 'top-end',
+                                    customClass: {
+                                        container: 'swal2-top-end-container'
+                                    },
+                                    didOpen: (toast) => {
+                                        toast.style.zIndex = '9999';
+                                    }
+                                });
+                                
+                                // Update cart count in real-time
+                                updateCartCount();
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            if (xhr.status === 403 || xhr.status === 401) {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Login Required',
+                                    text: 'Please login to add items to cart.',
+                                    confirmButtonText: 'Login Now',
+                                    showCancelButton: true
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = '@Url.Action("Login", "Auth")';
+                                    }
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to add book to cart. Please try again.',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Initialize add to cart handlers on page load
+            initializeAddToCartHandlers();
+            // Initialize add to cart handlers on page load
+            initializeAddToCartHandlers();
         });
     </script>
 }

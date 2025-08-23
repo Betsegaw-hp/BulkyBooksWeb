@@ -12,17 +12,6 @@
         bool actionMatch = action.IsNullOrEmpty() || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase);
         return (controllerMatch && actionMatch) ? "active" : "";
     }
-    
-    int cartCount = 0;
-    if (Context.Session.GetString("Cart") != null)
-    {
-        var cartItems = Context.Session.GetString("Cart");
-        if (!string.IsNullOrEmpty(cartItems))
-        {
-            var items = cartItems.Split(',');
-            cartCount = items.Length / 4;
-        }
-    }
 }
 
 <!DOCTYPE html>
@@ -42,6 +31,66 @@
     
     <!-- Add Font Awesome for icons -->
     <script src="https://kit.fontawesome.com/75c9ecad4c.js"></script>
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- SweetAlert2 custom styling to ensure it appears above sticky navigation -->
+    <style>
+        .swal2-container {
+            z-index: 9999 !important;
+        }
+        
+        /* Ensure sticky header has appropriate z-index */
+        .sticky-top {
+            z-index: 1030;
+        }
+        
+        /* Ensure toast notifications are positioned correctly */
+        .swal2-toast-container {
+            z-index: 9999 !important;
+        }
+        
+        /* Custom classes for different SweetAlert containers */
+        .swal2-top-end-container {
+            z-index: 9999 !important;
+        }
+        
+        .swal2-center-container {
+            z-index: 9999 !important;
+        }
+        
+        /* Ensure toasts appear below the navbar but above other content */
+        .swal2-container.swal2-top-end {
+            top: 80px !important; /* Adjust based on your navbar height */
+        }
+        
+        /* Additional styling for better visibility */
+        .swal2-toast {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        }
+        
+        /* Cart badge animation */
+        #cart-badge {
+            transition: all 0.3s ease;
+        }
+        
+        .cart-bounce {
+            animation: cartBounce 0.6s ease;
+        }
+        
+        @@keyframes cartBounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0) scale(1);
+            }
+            40% {
+                transform: translateY(-10px) scale(1.1);
+            }
+            60% {
+                transform: translateY(-5px) scale(1.05);
+            }
+        }
+    </style>
     
     @await RenderSectionAsync("Styles", required: false)
 </head>
@@ -82,9 +131,9 @@
                         </li>
                     </ul>
                     
-                    <form class="d-flex me-2 my-2 my-lg-0" action="@Url.Action("Index", "Home")" method="get">
+                    <form class="d-flex me-2 my-2 my-lg-0" id="search-form">
                         <div class="input-group">
-                            <input class="form-control" type="search" name="searchQuery" placeholder="Search books..." aria-label="Search">
+                            <input class="form-control" type="search" name="searchQuery" id="search-input" placeholder="Search books..." aria-label="Search">
                             <button class="btn btn-light" type="submit">
                                 <i class="fas fa-search"></i>
                             </button>
@@ -92,79 +141,14 @@
                     </form>
                     
                     <div class="d-flex me-2 gap-2">
-                        <a asp-controller="Checkout" asp-action="Index" class="btn btn-light position-relative">
+                        <a asp-controller="Checkout" asp-action="Index" class="btn btn-light position-relative" id="cart-icon">
                             <i class="fas fa-shopping-cart"></i>
-                            @if (cartCount > 0)
-                            {
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    @cartCount
-                                    <span class="visually-hidden">items in cart</span>
-                                </span>
-                            }
+                            <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">
+                                <span id="cart-count">0</span>
+                                <span class="visually-hidden">items in cart</span>
+                            </span>
                         </a>
-                        @if (User.Identity != null && User.Identity.IsAuthenticated)
-                        {
-                            <div class="d-flex align-items-center text-white">
-                                <div class="dropdown">
-                                    <a class="btn btn-primary dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        @if (User.IsInRole("Admin")) {
-                                            <i class="fas fa-user-tie me-2" style="font-size: 1.2rem;"></i> 
-                                        }
-                                        else if (User.IsInRole("Author")) {
-                                            <i class="fas fa-feather me-2" style="font-size: 1.2rem;"></i> 
-                                        }
-                                        else if (User.IsInRole("User")) {
-                                            <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i> 
-                                        }
-                                        <span class="d-none d-md-inline">@User.Identity.Name</span>
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Auth" asp-action="Profile">
-                                                <i class="fas fa-user me-2"></i> My Profile
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" asp-controller="Order" asp-action="History">
-                                                <i class="fas fa-history me-2"></i> Order History
-                                            </a>
-                                        </li>
-                                        @if (User.IsInRole("Admin"))
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="Order" asp-action="Index">
-                                                    <i class="fas fa-tachometer-alt me-2"></i> Admin Dashboard
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
-                                                    <i class="fas fa-users me-2"></i> User Management
-                                                </a>
-                                            </li>
-                                        }
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
-                                                <button type="submit" class="dropdown-item text-danger">
-                                                    <i class="fas fa-sign-out-alt me-2"></i> Logout
-                                                </button>
-                                            </form>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="d-flex">
-                                <a class="btn btn-outline-light me-2" asp-controller="Auth" asp-action="Login">
-                                    <i class="fas fa-sign-in-alt me-1"></i> Login
-                                </a>
-                                <a class="btn btn-light" asp-controller="Auth" asp-action="SignUp">
-                                    <i class="fas fa-user-plus me-1"></i> Sign Up
-                                </a>
-                            </div>
-                        }
+                        @await Component.InvokeAsync("UserNavigation")
                     </div>
                     
                 </div>
@@ -194,31 +178,91 @@
     
     @if (TempData["success"] != null || TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-success position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="5000">
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-check-circle me-2"></i> @(TempData["success"] ?? TempData["SuccessMessage"])
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: '@(TempData["success"] ?? TempData["SuccessMessage"])',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                    customClass: {
+                        container: 'swal2-top-end-container'
+                    },
+                    didOpen: (toast) => {
+                        toast.style.zIndex = '9999';
+                    }
+                });
+            });
+        </script>
     }
     @if (TempData["error"] != null || TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-danger position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="8000">
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-exclamation-circle me-2"></i> @(TempData["error"] ?? TempData["ErrorMessage"])
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: '@(TempData["error"] ?? TempData["ErrorMessage"])',
+                    timer: 5000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                    customClass: {
+                        container: 'swal2-top-end-container'
+                    },
+                    didOpen: (toast) => {
+                        toast.style.zIndex = '9999';
+                    }
+                });
+            });
+        </script>
     }
     @if (TempData["WarningMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-warning position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="7000">
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["WarningMessage"]
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Warning!',
+                    text: '@TempData["WarningMessage"]',
+                    timer: 4000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                    customClass: {
+                        container: 'swal2-top-end-container'
+                    },
+                    didOpen: (toast) => {
+                        toast.style.zIndex = '9999';
+                    }
+                });
+            });
+        </script>
     }
     @if (TempData["InfoMessage"] != null)
     {
-        <div class="alert alert-dismissible alert-info position-fixed top-6 end-0 m-3" role="alert" style="z-index: 1050; margin-top: 70px;" data-auto-dismiss="6000">
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            <i class="fas fa-info-circle me-2"></i> @TempData["InfoMessage"]
-        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Information',
+                    text: '@TempData["InfoMessage"]',
+                    timer: 4000,
+                    showConfirmButton: false,
+                    toast: true,
+                    position: 'top-end',
+                    customClass: {
+                        container: 'swal2-top-end-container'
+                    },
+                    didOpen: (toast) => {
+                        toast.style.zIndex = '9999';
+                    }
+                });
+            });
+        </script>
     }
     
     <!-- Main Content -->
@@ -286,6 +330,39 @@
     <!-- Auto-dismiss alerts -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Global SweetAlert2 configuration
+            if (typeof Swal !== 'undefined') {
+                // Set default configuration for all SweetAlert instances
+                const originalFire = Swal.fire;
+                Swal.fire = function(options) {
+                    // Ensure all SweetAlert instances have proper z-index
+                    if (typeof options === 'object') {
+                        options.didOpen = options.didOpen || function(element) {
+                            element.style.zIndex = '9999';
+                            // If it's a toast, position it below the navbar
+                            if (options.toast && options.position === 'top-end') {
+                                const container = element.closest('.swal2-container');
+                                if (container) {
+                                    container.style.top = '80px';
+                                }
+                            }
+                        };
+                        
+                        // Add custom classes for better styling
+                        options.customClass = options.customClass || {};
+                        if (options.toast) {
+                            options.customClass.container = options.customClass.container || 'swal2-toast-container';
+                        } else {
+                            options.customClass.container = options.customClass.container || 'swal2-center-container';
+                        }
+                    }
+                    return originalFire.call(this, options);
+                };
+            }
+
+            // Initialize cart count on page load
+            updateCartCount();
+
             // Auto-dismiss alerts after specified time
             const alerts = document.querySelectorAll('[data-auto-dismiss]');
             alerts.forEach(function(alert) {
@@ -313,7 +390,88 @@
                     }
                 }
             });
+
+            // AJAX Search functionality
+            const searchForm = document.getElementById('search-form');
+            const searchInput = document.getElementById('search-input');
+            
+            if (searchForm && searchInput) {
+                // Handle form submission
+                searchForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    performSearch();
+                });
+
+                // Handle input changes with debounce
+                let searchTimeout;
+                searchInput.addEventListener('input', function(e) {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        if (e.target.value.length >= 3 || e.target.value.length === 0) {
+                            performSearch();
+                        }
+                    }, 500);
+                });
+
+                function performSearch() {
+                    const searchQuery = searchInput.value;
+                    
+                    // Only perform search if we're on the home page
+                    if (window.location.pathname === '/' || window.location.pathname === '/Home' || window.location.pathname === '/Home/Index') {
+                        fetch(`/Home/SearchBooks?searchQuery=${encodeURIComponent(searchQuery)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                updateSearchResults(data);
+                            })
+                            .catch(error => {
+                                console.error('Search error:', error);
+                            });
+                    } else {
+                        // If not on home page, redirect to home with search
+                        window.location.href = `/?searchQuery=${encodeURIComponent(searchQuery)}`;
+                    }
+                }
+
+                function updateSearchResults(data) {
+                    // This function would update the home page results
+                    // For now, we'll just trigger a custom event
+                    const event = new CustomEvent('searchResults', { detail: data });
+                    document.dispatchEvent(event);
+                }
+            }
         });
+
+        // Cart management functions
+        function updateCartCount() {
+            fetch('/Home/GetCartCount')
+                .then(response => response.json())
+                .then(data => {
+                    const cartBadge = document.getElementById('cart-badge');
+                    const cartCount = document.getElementById('cart-count');
+                    const previousCount = parseInt(cartCount.textContent) || 0;
+                    
+                    if (data.count > 0) {
+                        cartCount.textContent = data.count;
+                        cartBadge.style.display = 'inline';
+                        
+                        // Add bounce animation if count increased
+                        if (data.count > previousCount) {
+                            cartBadge.classList.add('cart-bounce');
+                            setTimeout(() => {
+                                cartBadge.classList.remove('cart-bounce');
+                            }, 600);
+                        }
+                    } else {
+                        cartBadge.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching cart count:', error);
+                });
+        }
+
+        // Make updateCartCount globally available
+        window.updateCartCount = updateCartCount;
     </script>
     
     <!-- Anti-forgery token for AJAX requests -->

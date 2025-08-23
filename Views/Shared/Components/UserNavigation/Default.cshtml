@@ -1,0 +1,76 @@
+@model BulkyBooksWeb.ViewComponents.UserNavigationViewModel
+
+@if (User.Identity?.IsAuthenticated == true && Model?.User != null)
+{
+    <div class="d-flex align-items-center text-white">
+        <div class="dropdown">
+            <a class="btn btn-primary dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                @if (!string.IsNullOrEmpty(Model.User.AvatarUrl))
+                {
+                    <img src="@Model.User.AvatarUrl" alt="Profile" class="rounded-circle me-2" 
+                         style="width: 32px; height: 32px; object-fit: cover; border: 2px solid rgba(255,255,255,0.3);">
+                }
+                else
+                {
+                    @if (Model.Roles?.Contains("Admin") == true) {
+                        <i class="fas fa-user-tie me-2" style="font-size: 1.2rem;"></i> 
+                    }
+                    else if (Model.Roles?.Contains("Author") == true) {
+                        <i class="fas fa-feather me-2" style="font-size: 1.2rem;"></i> 
+                    }
+                    else if (Model.Roles?.Contains("User") == true) {
+                        <i class="fas fa-user-circle me-2" style="font-size: 1.2rem;"></i> 
+                    }
+                    else {
+                        <i class="fas fa-user me-2" style="font-size: 1.2rem;"></i> 
+                    }
+                }
+                <span class="d-none d-md-inline">@(Model.User?.FullName ?? User.Identity.Name)</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" asp-controller="Auth" asp-action="Profile">
+                        <i class="fas fa-user me-2"></i> My Profile
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" asp-controller="Order" asp-action="History">
+                        <i class="fas fa-history me-2"></i> Order History
+                    </a>
+                </li>
+                @if (Model.Roles?.Contains("Admin") == true)
+                {
+                    <li>
+                        <a class="dropdown-item" asp-controller="Order" asp-action="Index">
+                            <i class="fas fa-tachometer-alt me-2"></i> Admin Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
+                            <i class="fas fa-users me-2"></i> User Management
+                        </a>
+                    </li>
+                }
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form asp-controller="Auth" asp-action="Logout" method="post" class="form-inline">
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex">
+        <a class="btn btn-outline-light me-2" asp-controller="Auth" asp-action="Login">
+            <i class="fas fa-sign-in-alt me-1"></i> Login
+        </a>
+        <a class="btn btn-light" asp-controller="Auth" asp-action="SignUp">
+            <i class="fas fa-user-plus me-1"></i> Sign Up
+        </a>
+    </div>
+}

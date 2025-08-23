@@ -84,31 +84,64 @@
 </div>
 
 @section Scripts {
-    <script >
+    <script>
         $(document).ready(function () {
            $('.add-to-cart').click(function() {
                 var bookId = $(this).data('book-id');
                 $.ajax({
                     url: '@Url.Action("AddToCart", "Home")',
                     type: 'POST',
-                    data: { id: bookId },
+                    data: { 
+                        id: bookId,
+                        ajax: true
+                    },
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     success: function(response) {
-                        window.location.href = '@Url.Action("Index", "Checkout")';
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Added to Cart!',
+                                text: `"${response.bookTitle}" has been added to your cart.`,
+                                timer: 2000,
+                                showConfirmButton: false,
+                                toast: true,
+                                position: 'top-end',
+                                customClass: {
+                                    container: 'swal2-top-end-container'
+                                },
+                                didOpen: (toast) => {
+                                    toast.style.zIndex = '9999';
+                                }
+                            });
+                            
+                            // Update cart count in real-time
+                            if (typeof updateCartCount === 'function') {
+                                updateCartCount();
+                            }
+                        }
                     },
                     error: function(xhr, status, error) {
-                        console.error('AJAX Error:', xhr);
-                        console.error('Status:', status);
-                        console.error('Error:', error);
-                        console.error('Response Text:', xhr.responseText);
-                        
-                        if (xhr.status === 403) {
-                            alert('Access denied. Please login first.');
-                            window.location.href = '@Url.Action("Login", "Auth")';
-                        } else if (xhr.status === 401) {
-                            alert('Please login to add items to cart.');
-                            window.location.href = '@Url.Action("Login", "Auth")';
+                        if (xhr.status === 403 || xhr.status === 401) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Login Required',
+                                text: 'Please login to add items to cart.',
+                                confirmButtonText: 'Login Now',
+                                showCancelButton: true
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '@Url.Action("Login", "Auth")';
+                                }
+                            });
                         } else {
-                            alert('Error adding book to cart: ' + (xhr.responseText || error));
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to add book to cart. Please try again.',
+                                confirmButtonText: 'OK'
+                            });
                         }
                     }
                 });

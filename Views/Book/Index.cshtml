@@ -25,12 +25,8 @@
             {
                 <tr>
                     <td width="10%">@book.ISBN</td>
+                    <td width="25%">@book.Title</td>
                     <td width="25%">
-                        <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm">
-                            @book.Title
-                        </a>
-                    </td>
-                    <td width="20%">
                         @book.Author?.FullName - (@book.Author?.UserName)
                     </td>
                     <td width="15%">
@@ -39,10 +35,17 @@
                         </a>
                     </td>
                     <td width="10%">$@book.Price.ToString("0.00")</td>
-                    <td width="20%">
-                        <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm edit-button">Edit</a>
+                    <td width="25%">
+                        <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm me-1">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm me-1 edit-button">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
                         <form asp-controller="Book" asp-action="Delete" asp-route-id="@book.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            <button type="submit" class="btn btn-danger btn-sm delete-button" data-book-title="@book.Title">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
                         </form>
                     </td>
                 </tr>
@@ -53,10 +56,10 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-     <script>
-        document.getElementById("bookISBN").addEventListener("blur", async function(e) {
+    <script>
+        document.getElementById("bookISBN")?.addEventListener("blur", async function(e) {
             try {
-                const id: number = document.querySelector("form").getAttribute("data-book-id");
+                const id = document.querySelector("form")?.getAttribute("data-book-id");
 
                 const res = await fetch(`/Book/IsISBNUnique?ISBN=${this.value}&id=${id}`, {
                     method: "GET",
@@ -69,10 +72,44 @@
                     throw new Error("Network response was not ok");
                 }
                 const isUnique = await res.json();
-                if (!isUnique) alert("Book ISBN already exists.");
+                if (!isUnique) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Duplicate ISBN',
+                        text: 'Book ISBN already exists.',
+                        confirmButtonText: 'OK'
+                    });
+                }
             } catch (error) {
                 console.error("An error occurred while checking the book title uniqueness:", error);
             }
+        });
+
+        // SweetAlert confirmation for delete buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteButtons = document.querySelectorAll('.delete-button');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const bookTitle = this.getAttribute('data-book-title');
+                    const form = this.closest('form');
+                    
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: `You want to delete "${bookTitle}"? This action cannot be undone!`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                });
+            });
         });
     </script>
 }

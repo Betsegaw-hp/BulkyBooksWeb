@@ -222,9 +222,9 @@
                                             {
                                                 <form asp-action="UnlockUser" asp-route-id="@user.Id" method="post" class="d-inline">
                                                     @Html.AntiForgeryToken()
-                                                    <button type="submit" class="btn btn-sm btn-outline-success" 
+                                                    <button type="submit" class="btn btn-sm btn-outline-success unlock-user-btn" 
                                                             data-bs-toggle="tooltip" title="Unlock User"
-                                                            onclick="return confirm('Are you sure you want to unlock @user.UserName? This will immediately restore access to their account.')">
+                                                            data-username="@user.UserName">
                                                         <i class="fas fa-unlock"></i>
                                                     </button>
                                                 </form>
@@ -338,6 +338,33 @@
             deleteUsername.textContent = username;
         });
 
+        // SweetAlert for unlock user buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const unlockButtons = document.querySelectorAll('.unlock-user-btn');
+            unlockButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const username = this.getAttribute('data-username');
+                    const form = this.closest('form');
+                    
+                    Swal.fire({
+                        title: 'Unlock User Account?',
+                        text: `Are you sure you want to unlock ${username}? This will immediately restore access to their account.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, unlock it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                });
+            });
+        });
+
         // AJAX Search Implementation
         let searchTimeout;
         
@@ -448,7 +475,7 @@
                             ${user.lockoutEnd && new Date(user.lockoutEnd) > new Date() ?
                                 `<form action="@Url.Action("UnlockUser")/${user.id}" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" title="Unlock User" onclick="return confirm('Are you sure you want to unlock this user?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-success unlock-user-btn" data-bs-toggle="tooltip" title="Unlock User" data-username="${user.userName}">
                                         <i class="fas fa-unlock"></i>
                                     </button>
                                 </form>` : ''
@@ -465,6 +492,31 @@
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Reinitialize SweetAlert for unlock buttons
+            const unlockButtons = document.querySelectorAll('.unlock-user-btn');
+            unlockButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const username = this.getAttribute('data-username');
+                    const form = this.closest('form');
+                    
+                    Swal.fire({
+                        title: 'Unlock User Account?',
+                        text: `Are you sure you want to unlock ${username}? This will immediately restore access to their account.`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#198754',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, unlock it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                });
             });
         }
 

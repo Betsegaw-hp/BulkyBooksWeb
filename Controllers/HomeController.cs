@@ -122,6 +122,109 @@ public class HomeController : Controller
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> SearchBooks(string searchQuery, int[] categoryIds, decimal? minPrice, decimal? maxPrice, string sortOption = "newest", int page = 1)
+    {
+        int pageSize = 9;
+
+        var filter = new FilterViewModel
+        {
+            SearchQuery = searchQuery,
+            CategoryIds = categoryIds,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice,
+            SortOption = sortOption
+        };
+
+        var booksQuery = _bookService.GetBooksQuery();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            booksQuery = booksQuery.Where(b =>
+                b.Title.Contains(searchQuery) ||
+                (b.Author != null && b.Author.UserName != null && b.Author.UserName.Contains(searchQuery)) ||
+                b.Description.Contains(searchQuery) ||
+                b.ISBN.Contains(searchQuery));
+        }
+
+        // Apply category filter
+        if (categoryIds != null && categoryIds.Length > 0)
+        {
+            booksQuery = booksQuery.Where(b => categoryIds.Contains(b.CategoryId));
+        }
+
+        // Apply price filters
+        if (minPrice.HasValue)
+        {
+            booksQuery = booksQuery.Where(b => b.Price >= minPrice.Value);
+        }
+
+        if (maxPrice.HasValue)
+        {
+            booksQuery = booksQuery.Where(b => b.Price <= maxPrice.Value);
+        }
+
+        int totalBooks = await booksQuery.CountAsync();
+
+        // Apply sorting
+        switch (sortOption)
+        {
+            case "price_asc":
+                booksQuery = booksQuery.OrderBy(b => b.Price);
+                break;
+            case "price_desc":
+                booksQuery = booksQuery.OrderByDescending(b => b.Price);
+                break;
+            case "title_asc":
+                booksQuery = booksQuery.OrderBy(b => b.Title);
+                break;
+            case "title_desc":
+                booksQuery = booksQuery.OrderByDescending(b => b.Title);
+                break;
+            case "newest":
+            default:
+                booksQuery = booksQuery.OrderByDescending(b => b.Id);
+                break;
+        }
+
+        // Apply pagination
+        var books = await booksQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        int totalPages = (int)Math.Ceiling(totalBooks / (double)pageSize);
+
+        var result = new
+        {
+            books = books.Select(b => new
+            {
+                id = b.Id,
+                title = b.Title,
+                price = b.Price,
+                coverImageUrl = b.CoverImageUrl,
+                authorName = b.Author?.FullName,
+                categoryName = b.Category?.Name,
+                description = b.Description?.Length > 100 ? b.Description.Substring(0, 100) + "..." : b.Description
+            }),
+            totalPages = totalPages,
+            currentPage = page,
+            totalBooks = totalBooks
+        };
+
+        return Json(result);
+    }
+
+    [HttpGet]
+    public IActionResult GetCartCount()
+    {
+        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
+        var totalItems = cart.Sum(item => item.Quantity);
+        
+        return Json(new { count = totalItems });
+    }
+
     [Authorize(Roles = "User,Admin,Author")]
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -147,6 +250,20 @@ public class HomeController : Controller
         }
 
         HttpContext.Session.Set("Cart", cart);
+
+        // Check if this is an AJAX request
+        if (Request.Headers["X-Requested-With"] == "XMLHttpRequest" || 
+            Request.Headers["Content-Type"].ToString().Contains("application/json") ||
+            Request.Query.ContainsKey("ajax"))
+        {
+            var totalItems = cart.Sum(item => item.Quantity);
+            return Json(new { 
+                success = true, 
+                message = "Book added to cart successfully!",
+                cartCount = totalItems,
+                bookTitle = book.Title
+            });
+        }
 
         TempData["Success"] = "Book added to cart successfully!";
         return RedirectToAction("Index", "Checkout");

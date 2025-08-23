@@ -37,7 +37,28 @@ namespace BulkyBooksWeb.Controllers
 		[HttpGet]
 		public async Task<IActionResult> Index()
 		{
-			var books = await _bookService.GetAllBooks();
+			IEnumerable<Book> books;
+			
+			if (User.IsInRole("Admin"))
+			{
+				// Admin sees all books
+				books = await _bookService.GetAllBooks();
+			}
+			else if (User.IsInRole("Author"))
+			{
+				// Author sees only their own books
+				var authorId = _userContext.GetCurrentUserId();
+				if (authorId == null)
+				{
+					return BadRequest("Unable to identify the current user.");
+				}
+				books = await _bookService.GetBooksByAuthor(authorId);
+			}
+			else
+			{
+				return Forbid();
+			}
+			
 			return View(books);
 		}
 
