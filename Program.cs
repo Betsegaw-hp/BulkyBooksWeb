@@ -27,6 +27,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddScoped<UserMigrationService>();
 builder.Services.AddScoped<DataSeedService>();
+builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
 // Register Mailgun email service

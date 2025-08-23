@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using BulkyBooksWeb.Models.ViewModels;
 using BulkyBooksWeb.Extensions;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace BulkyBooksWeb.Controllers;
 
@@ -15,12 +16,14 @@ public class HomeController : Controller
     private readonly ILogger<HomeController> _logger;
     private readonly BookService _bookService;
     private readonly CategoryService _categoryService;
+    private readonly ICartService _cartService;
 
-    public HomeController(ILogger<HomeController> logger, BookService bookService, CategoryService categoryService)
+    public HomeController(ILogger<HomeController> logger, BookService bookService, CategoryService categoryService, ICartService cartService)
     {
         _logger = logger;
         _bookService = bookService;
         _categoryService = categoryService;
+        _cartService = cartService;
     }
 
 
@@ -217,11 +220,20 @@ public class HomeController : Controller
     }
 
     [HttpGet]
-    public IActionResult GetCartCount()
+    public async Task<IActionResult> GetCartCount()
     {
-        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
-        var totalItems = cart.Sum(item => item.Quantity);
-        
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Json(new { count = 0 });
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Json(new { count = 0 });
+        }
+
+        var totalItems = await _cartService.GetCartCountAsync(userId);
         return Json(new { count = totalItems });
     }
 
@@ -236,27 +248,33 @@ public class HomeController : Controller
             return NotFound();
         }
 
-        var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
-
-        // Find the cart item or create a new one
-        var cartItem = cart.FirstOrDefault(i => i.BookId == id);
-        if (cartItem != null)
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
         {
-            cartItem.Quantity++;
-        }
-        else
-        {
-            cart.Add(new CartItemDTO { BookId = id, Title = book.Title, Price = book.Price, Quantity = 1 });
+            return Unauthorized();
         }
 
-        HttpContext.Session.Set("Cart", cart);
+        // Migrate session cart to user cart if exists
+        var sessionCart = HttpContext.Session.Get<List<CartItemDTO>>("Cart");
+        if (sessionCart != null && sessionCart.Any())
+        {
+            await _cartService.MigrateSessionCartToUserAsync(sessionCart, userId);
+            HttpContext.Session.Remove("Cart");
+        }
+
+        // Add to user's cart
+        var cartItem = await _cartService.AddToCartAsync(userId, id, 1);
+        if (cartItem == null)
+        {
+            return BadRequest("Failed to add book to cart");
+        }
 
         // Check if this is an AJAX request
         if (Request.Headers["X-Requested-With"] == "XMLHttpRequest" || 
             Request.Headers["Content-Type"].ToString().Contains("application/json") ||
             Request.Query.ContainsKey("ajax"))
         {
-            var totalItems = cart.Sum(item => item.Quantity);
+            var totalItems = await _cartService.GetCartCountAsync(userId);
             return Json(new { 
                 success = true, 
                 message = "Book added to cart successfully!",
