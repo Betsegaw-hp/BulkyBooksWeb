@@ -27,7 +27,7 @@ public class HomeController : Controller
     }
 
 
-    public async Task<IActionResult> Index(string searchQuery, int[] categoryIds, decimal? minPrice, decimal? maxPrice, string sortOption = "newest", int page = 1)
+    public async Task<IActionResult> Index(string searchQuery, int[] categoryIds, decimal? minPrice, decimal? maxPrice, string sortOption = "newest", bool showFeaturedOnly = false, int page = 1)
     {
         int pageSize = 9;
 
@@ -37,7 +37,8 @@ public class HomeController : Controller
             CategoryIds = categoryIds,
             MinPrice = minPrice,
             MaxPrice = maxPrice,
-            SortOption = sortOption
+            SortOption = sortOption,
+            ShowFeaturedOnly = showFeaturedOnly
         };
 
         var booksQuery = _bookService.GetBooksQuery();
@@ -56,6 +57,12 @@ public class HomeController : Controller
         if (categoryIds != null && categoryIds.Length > 0)
         {
             booksQuery = booksQuery.Where(b => categoryIds.Contains(b.CategoryId));
+        }
+
+        // Apply featured filter
+        if (showFeaturedOnly)
+        {
+            booksQuery = booksQuery.Where(b => b.IsFeatured);
         }
 
         // Apply price filters

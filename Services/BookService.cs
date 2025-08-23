@@ -35,9 +35,38 @@ namespace BulkyBooksWeb.Services
 		{
 			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.Title.Contains(searchQuery) || b.Description.Contains(searchQuery)).ToListAsync();
 		}
-		public async Task<IEnumerable<Book>> GetFeaturedBooks(int count)
+
+		public async Task<IEnumerable<Book>> GetFeaturedBooks(int count = 6)
 		{
-			return await _db.Books.Include(b => b.Category).Include(b => b.Author).OrderByDescending(b => b.CreatedDateTime).Take(count).ToListAsync();
+			return await _db.Books
+				.Include(b => b.Category)
+				.Include(b => b.Author)
+				.Where(b => b.IsFeatured)
+				.OrderByDescending(b => b.CreatedDateTime)
+				.Take(count)
+				.ToListAsync();
+		}
+
+		public async Task<IEnumerable<Book>> GetLatestBooks(int count = 6)
+		{
+			return await _db.Books
+				.Include(b => b.Category)
+				.Include(b => b.Author)
+				.OrderByDescending(b => b.CreatedDateTime)
+				.Take(count)
+				.ToListAsync();
+		}
+
+		public async Task<bool> SetBookFeaturedStatus(int bookId, bool isFeatured)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book == null) return false;
+
+			book.IsFeatured = isFeatured;
+			book.UpdatedDateTime = DateTime.Now;
+			
+			await _db.SaveChangesAsync();
+			return true;
 		}
 
 		public IQueryable<Book> GetBooksQuery()
@@ -69,7 +98,8 @@ namespace BulkyBooksWeb.Services
 				Price = createBookDto.Price,
 				PublishedDate = createBookDto.PublishedDate,
 				CoverImageUrl = createBookDto.CoverImageUrl,
-				CategoryId = createBookDto.CategoryId
+				CategoryId = createBookDto.CategoryId,
+				IsFeatured = createBookDto.IsFeatured
 			};
 
 			await _db.Books.AddAsync(book);
@@ -88,6 +118,7 @@ namespace BulkyBooksWeb.Services
 				book.PublishedDate = updateBookDto.PublishedDate;
 				book.CoverImageUrl = updateBookDto.CoverImageUrl;
 				book.CategoryId = updateBookDto.CategoryId;
+				book.IsFeatured = updateBookDto.IsFeatured;
 				book.UpdatedDateTime = updateBookDto.UpdatedDateTime;
 
 				_db.Books.Update(book);

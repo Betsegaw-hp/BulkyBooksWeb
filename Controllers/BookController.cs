@@ -136,6 +136,7 @@ namespace BulkyBooksWeb.Controllers
 					Description = book.Description,
 					CoverImageUrl = book.CoverImageUrl,
 					CategoryId = book.CategoryId,
+					IsFeatured = book.IsFeatured
 				}
 			};
 
@@ -189,6 +190,32 @@ namespace BulkyBooksWeb.Controllers
 			await _bookService.DeleteBook(id);
 
 			return RedirectToAction(nameof(Index));
+		}
+
+		[Authorize(Roles = "Admin")]
+		[HttpPost("ToggleFeatured/{id:int}")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ToggleFeatured(int id)
+		{
+			var book = await _bookService.GetBookById(id);
+			if (book == null)
+			{
+				return Json(new { success = false, message = "Book not found" });
+			}
+
+			var newFeaturedStatus = !book.IsFeatured;
+			var success = await _bookService.SetBookFeaturedStatus(id, newFeaturedStatus);
+			if (success)
+			{
+				return Json(new 
+				{ 
+					success = true, 
+					isFeatured = newFeaturedStatus,
+					message = newFeaturedStatus ? "Book marked as featured" : "Book removed from featured"
+				});
+			}
+
+			return Json(new { success = false, message = "Failed to update featured status" });
 		}
 	}
 }

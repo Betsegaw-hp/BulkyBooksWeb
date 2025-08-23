@@ -37,6 +37,9 @@ namespace BulkyBooksWeb.Models
 
 		public string CoverImageUrl { get; set; } = string.Empty;
 
+		[Display(Name = "Featured Book")]
+		public bool IsFeatured { get; set; } = false;
+
 		// Navigation property
 		public virtual Category Category { get; set; } = null!;
 		public virtual ApplicationUser Author { get; set; } = null!;

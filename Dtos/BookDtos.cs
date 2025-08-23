@@ -31,6 +31,9 @@ namespace BulkyBooksWeb.Dtos
 		[Column(TypeName = "decimal(18, 2)")]
 		[Range(0.01, 1000.00)]
 		public decimal Price { get; set; }
+
+		[Display(Name = "Featured Book")]
+		public bool IsFeatured { get; set; } = false;
 	}
 
 	public class BookDto : BaseBookDto

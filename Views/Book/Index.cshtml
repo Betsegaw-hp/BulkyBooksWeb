@@ -3,6 +3,8 @@
     ViewData["Title"] = "Book List";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="text-center">
     <h1 class="display-4">Book List</h1>
     <p>Welcome to the Book List page. Here you can view all the books available in our system.</p>
@@ -17,6 +19,10 @@
                 <th>Author</th>
                 <th>Category</th>
                 <th>Price</th>
+                @if (User.IsInRole("Admin"))
+                {
+                    <th>Featured</th>
+                }
                 <th>Actions</th>
             </tr>
         </thead>
@@ -35,6 +41,24 @@
                         </a>
                     </td>
                     <td width="10%">$@book.Price.ToString("0.00")</td>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <td width="10%">
+                            <button type="button" 
+                                    class="btn btn-sm @(book.IsFeatured ? "btn-warning" : "btn-outline-warning") toggle-featured-btn" 
+                                    data-book-id="@book.Id" 
+                                    data-is-featured="@book.IsFeatured.ToString().ToLower()">
+                                @if (book.IsFeatured)
+                                {
+                                    <i class="fas fa-star"></i> @:Featured
+                                }
+                                else
+                                {
+                                    <i class="far fa-star"></i> @:Feature
+                                }
+                            </button>
+                        </td>
+                    }
                     <td width="25%">
                         <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm me-1">
                             <i class="fas fa-eye"></i> View
@@ -110,6 +134,87 @@
                     });
                 });
             });
+
+            // Featured toggle functionality
+            const featuredButtons = document.querySelectorAll('.toggle-featured-btn');
+            featuredButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const bookId = this.getAttribute('data-book-id');
+                    const isFeatured = this.getAttribute('data-is-featured') === 'true';
+                    const action = isFeatured ? 'remove from featured' : 'mark as featured';
+                    
+                    Swal.fire({
+                        title: 'Confirm Action',
+                        text: `Do you want to ${action} this book?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ffc107',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, proceed!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            toggleFeaturedStatus(bookId, this);
+                        }
+                    });
+                });
+            });
         });
+
+        async function toggleFeaturedStatus(bookId, button) {
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const formData = new FormData();
+                formData.append('__RequestVerificationToken', token);
+
+                const response = await fetch(`/Book/ToggleFeatured/${bookId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update button appearance
+                    if (result.isFeatured) {
+                        button.className = 'btn btn-sm btn-warning toggle-featured-btn';
+                        button.innerHTML = '<i class="fas fa-star"></i> Featured';
+                        button.setAttribute('data-is-featured', 'true');
+                    } else {
+                        button.className = 'btn btn-sm btn-outline-warning toggle-featured-btn';
+                        button.innerHTML = '<i class="far fa-star"></i> Feature';
+                        button.setAttribute('data-is-featured', 'false');
+                    }
+
+                    Swal.fire({
+                        title: 'Success!',
+                        text: result.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: result.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                console.error('Error toggling featured status:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: `An error occurred while updating the book status: ${error.message}`,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
     </script>
 }
