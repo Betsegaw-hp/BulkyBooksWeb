@@ -44,9 +44,16 @@
                     <div class="row mb-3">
                         <div class="col-md-3 fw-bold">Category:</div>
                         <div class="col-md-9">
-                            <a asp-controller="Category" asp-action="Detail" asp-route-id="@Model.CategoryId" class="btn btn-primary btn-sm">
-                                @Model.Category?.Name
-                            </a>
+                            @if(User.IsInRole("Admin") || User.IsInRole("Author"))
+                            {
+                                <a asp-controller="Category" asp-action="Detail" asp-route-id="@Model.CategoryId" class="btn btn-primary btn-sm">
+                                    @Model.Category?.Name
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="badge bg-primary">@Model.Category?.Name</span>
+                            }
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -67,7 +74,14 @@
                     <button class="btn btn-outline-primary btn-sm add-to-cart" data-book-id="@Model.Id">
                         <i class="fas fa-shopping-cart me-1"></i> Add to Cart
                     </button>
-                    <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+                    @if(User.IsInRole("Admin") || User.IsInRole("Author"))
+                    {
+                        <a asp-controller="Book" asp-action="Index" class="btn btn-secondary">Back to List</a>
+                    }
+                    else
+                    {
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-secondary">Back to Home</a>
+                    }
                 </div>
                 @if(!User.IsInRole("user"))
                 {
