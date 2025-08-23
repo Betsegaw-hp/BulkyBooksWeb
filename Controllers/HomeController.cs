@@ -220,7 +220,13 @@ public class HomeController : Controller
             }),
             totalPages = totalPages,
             currentPage = page,
-            totalBooks = totalBooks
+            totalBooks = totalBooks,
+            currentFilter = filter,
+            hasActiveFilters = !string.IsNullOrEmpty(filter.SearchQuery) || 
+                              (filter.CategoryIds != null && filter.CategoryIds.Any()) ||
+                              filter.MinPrice.HasValue || 
+                              filter.MaxPrice.HasValue,
+            allCategories = (await _categoryService.GetAllCategories()).Select(c => new { id = c.Id, name = c.Name })
         };
 
         return Json(result);

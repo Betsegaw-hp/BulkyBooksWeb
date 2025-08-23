@@ -534,31 +534,6 @@
                 $('#filterForm').submit();
             });
             
-            // Remove filter functionality
-            $('.remove-filter').click(function(e) {
-                e.preventDefault();
-                var filterType = $(this).data('filter-type');
-                
-                switch(filterType) {
-                    case 'search':
-                        $('#searchQuery').val('');
-                        break;
-                    case 'category':
-                        var categoryId = $(this).data('category-id');
-                        $('#category-' + categoryId).prop('checked', false);
-                        break;
-                    case 'min-price':
-                        $('input[name="MinPrice"]').val('');
-                        break;
-                    case 'max-price':
-                        $('input[name="MaxPrice"]').val('');
-                        break;
-                }
-                
-                // Submit the form to apply the updated filters
-                performAjaxFilter();
-            });
-
             // AJAX Filter Form Submission
             $('#filterForm').on('submit', function(e) {
                 e.preventDefault();
@@ -614,6 +589,7 @@
                 updateListView(data.books);
                 updateResultsCount(data.books.length, data.totalBooks);
                 updatePagination(data.currentPage, data.totalPages);
+                updateFilterChips(data.currentFilter, data.hasActiveFilters, data.allCategories);
             }
 
             function updateGridView(books) {
@@ -784,10 +760,115 @@
                 });
             }
 
+            function updateFilterChips(currentFilter, hasActiveFilters, allCategories) {
+                // Find or create the filter chips container
+                let filterContainer = document.querySelector('.col-lg-9 .mb-4');
+                
+                if (hasActiveFilters) {
+                    if (!filterContainer) {
+                        // Create the filter container if it doesn't exist
+                        const parentContainer = document.querySelector('.col-lg-9');
+                        filterContainer = document.createElement('div');
+                        filterContainer.className = 'mb-4';
+                        parentContainer.insertBefore(filterContainer, parentContainer.firstChild);
+                    }
+                    
+                    let filterChipsHtml = `
+                        <div class="d-flex align-items-center">
+                            <h5 class="me-3 mb-0">Active Filters:</h5>
+                            <div class="d-flex flex-wrap gap-2">`;
+                    
+                    // Search filter chip
+                    if (currentFilter.searchQuery && currentFilter.searchQuery.trim() !== '') {
+                        filterChipsHtml += `
+                            <span class="badge bg-primary">
+                                Search: ${currentFilter.searchQuery}
+                                <a href="#" class="text-white ms-1 remove-filter" data-filter-type="search"><i class="fas fa-times"></i></a>
+                            </span>`;
+                    }
+                    
+                    // Category filter chips
+                    if (currentFilter.categoryIds && currentFilter.categoryIds.length > 0) {
+                        currentFilter.categoryIds.forEach(categoryId => {
+                            const category = allCategories.find(c => c.id === categoryId);
+                            if (category) {
+                                filterChipsHtml += `
+                                    <span class="badge bg-info">
+                                        Category: ${category.name}
+                                        <a href="#" class="text-white ms-1 remove-filter" data-filter-type="category" data-category-id="${categoryId}"><i class="fas fa-times"></i></a>
+                                    </span>`;
+                            }
+                        });
+                    }
+                    
+                    // Price filter chips
+                    if (currentFilter.minPrice !== null && currentFilter.minPrice !== undefined) {
+                        filterChipsHtml += `
+                            <span class="badge bg-success">
+                                Min Price: $${currentFilter.minPrice.toFixed(2)}
+                                <a href="#" class="text-white ms-1 remove-filter" data-filter-type="min-price"><i class="fas fa-times"></i></a>
+                            </span>`;
+                    }
+                    
+                    if (currentFilter.maxPrice !== null && currentFilter.maxPrice !== undefined) {
+                        filterChipsHtml += `
+                            <span class="badge bg-success">
+                                Max Price: $${currentFilter.maxPrice.toFixed(2)}
+                                <a href="#" class="text-white ms-1 remove-filter" data-filter-type="max-price"><i class="fas fa-times"></i></a>
+                            </span>`;
+                    }
+                    
+                    filterChipsHtml += `
+                            </div>
+                        </div>`;
+                    
+                    filterContainer.innerHTML = filterChipsHtml;
+                    
+                    // Reinitialize remove filter handlers
+                    initializeRemoveFilterHandlers();
+                } else {
+                    // Remove the filter container if no active filters
+                    if (filterContainer) {
+                        filterContainer.remove();
+                    }
+                }
+            }
+
+            function initializeRemoveFilterHandlers() {
+                document.querySelectorAll('.remove-filter').forEach(link => {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const filterType = this.getAttribute('data-filter-type');
+                        const categoryId = this.getAttribute('data-category-id');
+                        
+                        switch (filterType) {
+                            case 'search':
+                                document.getElementById('searchQuery').value = '';
+                                break;
+                            case 'category':
+                                const categoryCheckbox = document.getElementById(`category-${categoryId}`);
+                                if (categoryCheckbox) {
+                                    categoryCheckbox.checked = false;
+                                }
+                                break;
+                            case 'min-price':
+                                document.getElementById('minPrice').value = '';
+                                break;
+                            case 'max-price':
+                                document.getElementById('maxPrice').value = '';
+                                break;
+                        }
+                        
+                        // Trigger the filter update
+                        performAjaxFilter();
+                    });
+                });
+            }
+
             // Initialize add to cart handlers on page load
             initializeAddToCartHandlers();
-            // Initialize add to cart handlers on page load
-            initializeAddToCartHandlers();
+            // Initialize remove filter handlers on page load
+            initializeRemoveFilterHandlers();
         });
     </script>
 }
