@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using BulkyBooksWeb.Policies;
 using BulkyBooksWeb.Data;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -15,23 +16,26 @@ namespace BulkyBooksWeb.Controllers
 	[Route("[controller]")]
 	public class BookController : Controller
 	{
-		private readonly BookService _bookService;
-		private readonly CategoryService _categoryService;
-		private readonly IAuthorizationService _authorizationService;
-		private readonly IUserContext _userContext;
+			private readonly BookService _bookService;
+			private readonly CategoryService _categoryService;
+			private readonly IAuthorizationService _authorizationService;
+			private readonly IUserContext _userContext;
+			private readonly UserManager<ApplicationUser> _userManager;
 
 
-		public BookController(
-			BookService bookService,
-			CategoryService categoryService,
-			IAuthorizationService authorizationService,
-			IUserContext userContext)
-		{
-			_bookService = bookService;
-			_categoryService = categoryService;
-			_authorizationService = authorizationService;
-			_userContext = userContext;
-		}
+			public BookController(
+				BookService bookService,
+				CategoryService categoryService,
+				IAuthorizationService authorizationService,
+				IUserContext userContext,
+				UserManager<ApplicationUser> userManager)
+			{
+				_bookService = bookService;
+				_categoryService = categoryService;
+				_authorizationService = authorizationService;
+				_userContext = userContext;
+				_userManager = userManager;
+			}
 
 		[Authorize(Roles = "Admin, Author")]
 		[HttpGet]
@@ -84,6 +88,15 @@ namespace BulkyBooksWeb.Controllers
 		[HttpGet("Create")]
 		public async Task<IActionResult> Create()
 		{
+			if (User.IsInRole("Author"))
+			{
+				var user = await _userManager.GetUserAsync(User);
+				if (user == null || user.KycStatus != KycStatus.Verified)
+				{
+					TempData["Error"] = "You must complete and verify your KYC before uploading books.";
+					return RedirectToAction("Index", "Kyc");
+				}
+			}
 			IEnumerable<Category> categories = await _categoryService.GetAllCategories();
 
 			BookCreateViewModel bookViewModel = new()
@@ -100,6 +113,15 @@ namespace BulkyBooksWeb.Controllers
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> Create([FromForm] CreateBookDto createBookDto)
 		{
+			if (User.IsInRole("Author"))
+			{
+				var user = await _userManager.GetUserAsync(User);
+				if (user == null || user.KycStatus != KycStatus.Verified)
+				{
+					TempData["Error"] = "You must complete and verify your KYC before uploading books.";
+					return RedirectToAction("Index", "Kyc");
+				}
+			}
 			if (ModelState.IsValid)
 			{
 				var authorId = _userContext.GetCurrentUserId();

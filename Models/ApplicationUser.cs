@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using BulkyBooksWeb.Models;
 
 namespace BulkyBooksWeb.Models
 {
+
     public class ApplicationUser : IdentityUser
     {
         [Required]
@@ -22,6 +24,14 @@ namespace BulkyBooksWeb.Models
         [Required]
         [MaxLength(100)]
         public string FullName => $"{FirstName} {LastName}".Trim();
+
+        // KYC fields
+        public KycStatus KycStatus { get; set; } = KycStatus.Pending;
+        public string? IdProofPath { get; set; }
+        public string? AddressProofPath { get; set; }
+        public string? AuthorPhotoPath { get; set; }
+        public DateTime? KycVerifiedAt { get; set; }
+        public string? KycAdminNotes { get; set; }
 
         // Navigation properties
         public virtual ICollection<Book> Books { get; set; } = new List<Book>();

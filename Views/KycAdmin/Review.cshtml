@@ -1,0 +1,72 @@
+@model BulkyBooksWeb.Models.ApplicationUser
+@{
+    ViewData["Title"] = "Review KYC Submission";
+}
+<h2>Review KYC Submission</h2>
+<div>
+    <strong>UserName:</strong> @Model.UserName <br />
+    <strong>Full Name:</strong> @Model.FullName <br />
+    <strong>Email:</strong> @Model.Email <br />
+    <strong>Submitted At:</strong> @Model.UpdatedAt.ToString("g") <br />
+</div>
+<hr />
+<h4>Documents</h4>
+<ul>
+    <li>
+        ID Proof:
+        @if (string.IsNullOrEmpty(Model.IdProofPath))
+        {
+            <span>Not uploaded</span>
+        }
+        else
+        {
+            <a href="@Model.IdProofPath" target="_blank">View</a>
+        }
+    </li>
+    <li>
+        Address Proof:
+        @if (string.IsNullOrEmpty(Model.AddressProofPath))
+        {
+            <span>Not uploaded</span>
+        }
+        else
+        {
+            <a href="@Model.AddressProofPath" target="_blank">View</a>
+        }
+    </li>
+    <li>
+        Author Photo:
+        @if (string.IsNullOrEmpty(Model.AuthorPhotoPath))
+        {
+            <span>Not uploaded</span>
+        }
+        else
+        {
+            <a href="@Model.AuthorPhotoPath" target="_blank">View</a>
+        }
+    </li>
+</ul>
+<hr />
+@if (!string.IsNullOrEmpty(Model.KycAdminNotes))
+{
+    <div class="alert alert-info">
+        <strong>Previous Admin Notes:</strong> @Model.KycAdminNotes
+    </div>
+}
+<form asp-action="Approve" method="post">
+    <input type="hidden" name="userId" value="@Model.Id" />
+    <div class="form-group">
+        <label>Admin Notes (optional):</label>
+        <textarea name="notes" class="form-control"></textarea>
+    </div>
+    <button type="submit" class="btn btn-success">Approve</button>
+</form>
+<form asp-action="Reject" method="post" style="margin-top:10px;">
+    <input type="hidden" name="userId" value="@Model.Id" />
+    <div class="form-group">
+        <label>Admin Notes (optional):</label>
+        <textarea name="notes" class="form-control"></textarea>
+    </div>
+    <button type="submit" class="btn btn-danger">Reject</button>
+</form>
+<a href="@Url.Action("Pending")" class="btn btn-secondary" style="margin-top:10px;">Back to Pending List</a>
