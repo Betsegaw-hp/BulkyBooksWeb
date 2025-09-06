@@ -1,0 +1,17 @@
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #007bff;">BulkyBooks</h1>
+        </div>
+        <h2>KYC Submitted</h2>
+        <p>Dear {{FullName}},</p>
+        <p>Your KYC has been submitted and is pending admin review. We will notify you once it is reviewed.</p>
+        {{#if AdminNotes}}
+        <div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 10px; margin: 20px 0;">
+            <strong>Admin Notes:</strong> {{AdminNotes}}
+        </div>
+        {{/if}}
+    </div>
+</body>
+</html>

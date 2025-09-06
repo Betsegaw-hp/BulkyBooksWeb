@@ -64,6 +64,24 @@ namespace BulkyBooksWeb.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        private async Task SendBookStatusEmail(Book book, string statusTitle, string statusMessage, string? adminComments)
+        {
+            if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+            {
+                var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplates", "BookStatus.html");
+                var template = System.IO.File.ReadAllText(templatePath);
+                var html = template
+                    .Replace("{{StatusTitle}}", statusTitle)
+                    .Replace("{{FullName}}", book.Author.FullName ?? "Author")
+                    .Replace("{{BookTitle}}", book.Title)
+                    .Replace("{{StatusMessage}}", statusMessage)
+                    .Replace("{{AdminComments}}", string.IsNullOrEmpty(adminComments) ? "" : adminComments);
+                await _emailService.SendEmailAsync(book.Author.Email, $"Book {statusTitle}: {book.Title}", html);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int id, string? comments)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -71,53 +89,43 @@ namespace BulkyBooksWeb.Controllers
             {
                 await _bookService.ApproveBook(id, user.Id, comments);
                 TempData["Message"] = "Book approved successfully.";
-                // Notify author
                 var book = await _bookService.GetBookById(id);
-                if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+                if (book != null)
                 {
-                    var html = $@"<h2>Your Book Was Approved</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' has been approved by the admin.</p>";
-                    if (!string.IsNullOrEmpty(comments))
-                        html += $"<p><strong>Admin Comments:</strong> {comments}</p>";
-                    await _emailService.SendEmailAsync(book.Author.Email, $"Book Approved: {book.Title}", html);
+                    await SendBookStatusEmail(book, "Approved", "has been approved by the admin", comments);
                 }
             }
             return RedirectToAction("Dashboard");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Reject(int id, string? comments)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reject(int id, string? comments)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user != null)
             {
                 await _bookService.RejectBook(id, user.Id, comments);
                 TempData["Message"] = "Book rejected.";
-                // Notify author
                 var book = await _bookService.GetBookById(id);
-                if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+                if (book != null)
                 {
-                    var html = $@"<h2>Your Book Was Rejected</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' was rejected by the admin.</p>";
-                    if (!string.IsNullOrEmpty(comments))
-                        html += $"<p><strong>Admin Comments:</strong> {comments}</p>";
-                    await _emailService.SendEmailAsync(book.Author.Email, $"Book Rejected: {book.Title}", html);
+                    await SendBookStatusEmail(book, "Rejected", "was rejected by the admin", comments);
                 }
             }
             return RedirectToAction("Dashboard");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Publish(int id)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Publish(int id)
         {
             await _bookService.PublishBook(id);
             TempData["Message"] = "Book published successfully.";
-            // Notify author
             var book = await _bookService.GetBookById(id);
-            if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+            if (book != null)
             {
-                var html = $@"<h2>Your Book Was Published</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' is now published and available to customers.</p>";
-                await _emailService.SendEmailAsync(book.Author.Email, $"Book Published: {book.Title}", html);
+                await SendBookStatusEmail(book, "Published", "is now published and available to customers", null);
             }
             return RedirectToAction("Dashboard");
         }

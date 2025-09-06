@@ -70,12 +70,16 @@ namespace BulkyBooksWeb.Controllers
             await _userManager.UpdateAsync(user);
             TempData["Message"] = "KYC submitted. Awaiting admin review.";
 
-            // Send KYC submission email
+            // Send KYC submission email using enhanced template
             try
             {
                 if (!string.IsNullOrEmpty(user.Email))
                 {
-                    var html = $@"<h2>KYC Submitted</h2><p>Dear {user.FullName},</p><p>Your KYC has been submitted and is pending admin review. We will notify you once it is reviewed.</p>";
+                    var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplates", "KycSubmitted.html");
+                    var template = System.IO.File.ReadAllText(templatePath);
+                    var html = template
+                        .Replace("{{FullName}}", user.FullName ?? "User")
+                        .Replace("{{AdminNotes}}", user.KycAdminNotes ?? "");
                     await _emailService.SendEmailAsync(user.Email, "KYC Submitted - BulkyBooks", html);
                 }
             }
