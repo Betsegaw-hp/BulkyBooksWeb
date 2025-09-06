@@ -12,12 +12,14 @@ namespace BulkyBooksWeb.Controllers
         private readonly BookService _bookService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMailgunEmailService _emailService;
+        private readonly IWebHostEnvironment _env;
 
-        public BookReviewAdminController(BookService bookService, UserManager<ApplicationUser> userManager, IMailgunEmailService emailService)
+        public BookReviewAdminController(BookService bookService, UserManager<ApplicationUser> userManager, IMailgunEmailService emailService, IWebHostEnvironment env)
         {
             _bookService = bookService;
             _userManager = userManager;
             _emailService = emailService;
+            _env = env;
         }
 
         [HttpGet]
@@ -68,7 +70,7 @@ namespace BulkyBooksWeb.Controllers
         {
             if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
             {
-                var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplates", "BookStatus.html");
+                var templatePath = Path.Combine(_env.WebRootPath, "EmailTemplates", "BookStatus.html");
                 var template = System.IO.File.ReadAllText(templatePath);
                 var html = template
                     .Replace("{{StatusTitle}}", statusTitle)

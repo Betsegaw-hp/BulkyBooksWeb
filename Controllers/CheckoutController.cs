@@ -30,13 +30,15 @@ namespace BulkyBooksWeb.Controllers
 		private readonly IUserContext _userContext;
 		private readonly ICartService _cartService;
 		private readonly IMailgunEmailService _emailService;
+		private readonly IWebHostEnvironment _env;
 
 		public CheckoutController(
 			Chapa chapa, ApplicationDbContext context,
 			OrderService orderService, ILogger<CheckoutController> logger,
 			IAuthorizationService authorizationService, IConfiguration configuration,
 			IUserContext userContext, ICartService cartService,
-			IMailgunEmailService emailService)
+			IMailgunEmailService emailService,
+			IWebHostEnvironment env)
 		{
 			_chapa = chapa;
 			_context = context;
@@ -47,6 +49,7 @@ namespace BulkyBooksWeb.Controllers
 			_userContext = userContext;
 			_cartService = cartService;
 			_emailService = emailService;
+			_env = env;
 		}
 
 		[HttpGet]
@@ -138,7 +141,7 @@ namespace BulkyBooksWeb.Controllers
 						   var url = Url.Action("BookPdf", "File", new { fileName = fileName }, protocol: Request.Scheme);
 						   return $"<a href='{url}'>Download {item.BookTitle} PDF</a>";
 					   }));
-					   var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplates", "OrderConfirmation.html");
+					   var templatePath = Path.Combine(_env.WebRootPath, "EmailTemplates", "OrderConfirmation.html");
 					   var template = System.IO.File.ReadAllText(templatePath);
 					   var html = template
 						   .Replace("{{OrderId}}", orderDto.Id.ToString())

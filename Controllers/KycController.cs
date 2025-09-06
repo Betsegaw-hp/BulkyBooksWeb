@@ -15,17 +15,21 @@ namespace BulkyBooksWeb.Controllers
         private readonly IFileUploadService _fileUploadService;
         private readonly AzureConfiguration _azureConfig;
         private readonly IMailgunEmailService _emailService;
+        private readonly IWebHostEnvironment _env;
+
 
         public KycController(
-            UserManager<ApplicationUser> userManager, 
+            UserManager<ApplicationUser> userManager,
             IFileUploadService fileUploadService,
             AzureConfiguration azureConfig,
-            IMailgunEmailService emailService)
+            IMailgunEmailService emailService,
+            IWebHostEnvironment env)
         {
             _userManager = userManager;
             _fileUploadService = fileUploadService;
             _azureConfig = azureConfig;
             _emailService = emailService;
+            _env = env;
         }
 
         [HttpGet]
@@ -75,7 +79,7 @@ namespace BulkyBooksWeb.Controllers
             {
                 if (!string.IsNullOrEmpty(user.Email))
                 {
-                    var templatePath = Path.Combine(Directory.GetCurrentDirectory(), "EmailTemplates", "KycSubmitted.html");
+                    var templatePath = Path.Combine(_env.WebRootPath, "EmailTemplates", "KycSubmitted.html");
                     var template = System.IO.File.ReadAllText(templatePath);
                     var html = template
                         .Replace("{{FullName}}", user.FullName ?? "User")
