@@ -90,9 +90,9 @@
     </div>
     
     <div class="col-md-4">
-        @if (!string.IsNullOrEmpty(Model.CoverImageUrl))
+        @if (!string.IsNullOrEmpty(Model.CoverImagePath))
         {
-            <img src="@Model.CoverImageUrl" class="img-fluid" alt="Book cover" />
+            <img src="@Model.CoverImagePath" class="img-fluid" alt="Book cover" />
         }
         
         <div class="mt-3">

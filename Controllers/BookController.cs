@@ -111,7 +111,7 @@ namespace BulkyBooksWeb.Controllers
 		[Authorize(Roles = "Admin, Author")]
 		[HttpPost("Create")]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Create([FromForm] CreateBookDto createBookDto)
+		public async Task<IActionResult> Create([FromForm] BookCreateViewModel viewModel)
 		{
 			if (User.IsInRole("Author"))
 			{
@@ -123,19 +123,40 @@ namespace BulkyBooksWeb.Controllers
 					// return Forbid();
 				}
 			}
+			
+			// Add debugging for validation issues
+			if (!ModelState.IsValid)
+			{
+				var errors = ModelState.Values.SelectMany(v => v.Errors);
+				Console.WriteLine("ModelState errors in Create:");
+				foreach (var error in errors)
+				{
+					Console.WriteLine($"Error: {error?.ErrorMessage}");
+				}
+				foreach (var modelError in ModelState)
+				{
+					Console.WriteLine($"Key: {modelError.Key}, Errors: {string.Join(", ", modelError.Value.Errors.Select(e => e.ErrorMessage))}");
+				}
+			}
+			
 			if (ModelState.IsValid)
 			{
 				var authorId = _userContext.GetCurrentUserId();
 				if (authorId != null)
 				{
 					Console.WriteLine("Author ID: " + authorId);
-					await _bookService.CreateBook(createBookDto, authorId);
+					await _bookService.CreateBook(viewModel.CreateBookDto, authorId);
+					TempData["Message"] = "Book created successfully!";
 					return RedirectToAction(nameof(Index));
 				}
 
 				return BadRequest("Author ID is null.");
 			}
-			return View(createBookDto);
+			
+			// If we reach here, there are validation errors
+			// Repopulate the Categories for the dropdown
+			viewModel.Categories = await _categoryService.GetAllCategories();
+			return View(viewModel);
 		}
 
 		[Authorize(Roles = "Admin, Author")]
@@ -147,32 +168,32 @@ namespace BulkyBooksWeb.Controllers
 			Book? book = await _bookService.GetBookById(id);
 			if (book == null) return NotFound();
 
-			BookUpdateViewModel bookViewModel = new BookUpdateViewModel()
-			{
-				Categories = await _categoryService.GetAllCategories(),
-				CurrentPdfFilePath = book.PdfFilePath,
-				UpdateBookDto = new UpdateBookDto()
-				{
-					Id = book.Id,
-					Title = book.Title,
-					ISBN = book.ISBN,
-					Price = book.Price,
-					Description = book.Description,
-					CoverImageUrl = book.CoverImageUrl,
-					CategoryId = book.CategoryId,
-					IsFeatured = book.IsFeatured
-				}
-			};
-
-			return View(bookViewModel);
-		}
-
-		[Authorize(Roles = "Admin, Author")]
-		[HttpPost("Edit/{id:int}")]
-		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto, IFormFile? PdfFile)
+		BookUpdateViewModel bookViewModel = new BookUpdateViewModel()
 		{
-			if (id != updateBookDto.Id || id <= 0) return NotFound();
+			Categories = await _categoryService.GetAllCategories(),
+			CurrentPdfFilePath = book.PdfFilePath,
+			CurrentCoverImagePath = book.CoverImagePath,
+			UpdateBookDto = new UpdateBookDto()
+			{
+				Id = book.Id,
+				Title = book.Title,
+				ISBN = book.ISBN,
+				Price = book.Price,
+				Description = book.Description,
+				CategoryId = book.CategoryId,
+				IsFeatured = book.IsFeatured
+			}
+		};
+
+		return View(bookViewModel);
+	}
+
+	[Authorize(Roles = "Admin, Author")]
+	[HttpPost("Edit/{id:int}")]
+	[ValidateAntiForgeryToken]
+	public async Task<IActionResult> Edit(int id, [FromForm] BookUpdateViewModel viewModel)
+		{
+			if (id != viewModel.UpdateBookDto.Id || id <= 0) return NotFound();
 
 			var book = await _bookService.GetBookById(id);
 			if (book == null) return NotFound();
@@ -181,16 +202,15 @@ namespace BulkyBooksWeb.Controllers
 			if (!authResult.Succeeded)
 				return Forbid();
 
-			Console.WriteLine(updateBookDto.CategoryId);
+			Console.WriteLine(viewModel.UpdateBookDto.CategoryId);
 			if (ModelState.IsValid)
 			{
-				// Check for significant changes before updating
-				bool pdfChanged = PdfFile != null;
-				bool hasSignificantChanges = await _bookService.CheckAndMarkSignificantChanges(id, updateBookDto, pdfChanged);
-				
-				await _bookService.UpdateBook(id, updateBookDto, PdfFile);
-				
-				if (hasSignificantChanges && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published))
+			// Check for significant changes before updating
+			bool pdfChanged = viewModel.UpdateBookDto.PdfFile != null;
+			bool coverImageChanged = viewModel.UpdateBookDto.CoverImageFile != null;
+			bool hasSignificantChanges = await _bookService.CheckAndMarkSignificantChanges(id, viewModel.UpdateBookDto, pdfChanged, coverImageChanged);
+			
+			await _bookService.UpdateBook(id, viewModel.UpdateBookDto, viewModel.UpdateBookDto.PdfFile, viewModel.UpdateBookDto.CoverImageFile);				if (hasSignificantChanges && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published))
 				{
 					TempData["Message"] = "Book updated successfully. Due to significant changes, it has been automatically resubmitted for review.";
 				}
@@ -213,7 +233,13 @@ namespace BulkyBooksWeb.Controllers
 				{
 					Console.WriteLine(error?.ErrorMessage);
 				}
-				return View(updateBookDto);
+				
+				// Repopulate the view model for display
+				viewModel.Categories = await _categoryService.GetAllCategories();
+				viewModel.CurrentPdfFilePath = book.PdfFilePath;
+				viewModel.CurrentCoverImagePath = book.CoverImagePath;
+				
+				return View(viewModel);
 			}
 		}
 

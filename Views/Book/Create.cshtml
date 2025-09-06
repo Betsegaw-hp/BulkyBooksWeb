@@ -31,15 +31,17 @@
                                 
                                 <div class="mt-3">
                                     <div class="mb-3">
-                                        <label asp-for="CreateBookDto.CoverImageUrl" class="form-label">Cover Image URL</label>
+                                        <label asp-for="CreateBookDto.CoverImageFile" class="form-label">Upload Cover Image</label>
                                         <div class="input-group">
-                                            <span class="input-group-text"><i class="fas fa-link"></i></span>
-                                            <input asp-for="CreateBookDto.CoverImageUrl" id="coverImageUrl" class="form-control" 
-                                                   placeholder="Enter image URL" />
+                                            <span class="input-group-text"><i class="fas fa-upload"></i></span>
+                                            <input asp-for="CreateBookDto.CoverImageFile" type="file" class="form-control" 
+                                                   accept="image/*" id="coverImageFile" />
                                         </div>
-                                        <span asp-validation-for="CreateBookDto.CoverImageUrl" class="text-danger"></span>
+                                        <span asp-validation-for="CreateBookDto.CoverImageFile" class="text-danger"></span>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle"></i> Supported formats: JPG, PNG, GIF (Max: 5MB)
+                                        </div>
                                     </div>
-                                    
                                 </div>
                             </div>
                         </div>
@@ -166,16 +168,20 @@
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     
     <script>
-        // Preview the cover image when URL changes
-        document.getElementById('coverImageUrl').addEventListener('blur', function() {
-            const imageUrl = this.value.trim();
+        // Preview the cover image when file is selected
+        document.getElementById('coverImageFile').addEventListener('change', function() {
+            const file = this.files[0];
             const previewElement = document.getElementById('coverPreview');
             const placeholderElement = document.getElementById('coverPlaceholder');
             
-            if (imageUrl) {
-                previewElement.src = imageUrl;
-                previewElement.style.display = 'block';
-                placeholderElement.style.display = 'none';
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewElement.src = e.target.result;
+                    previewElement.style.display = 'block';
+                    placeholderElement.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
             } else {
                 previewElement.style.display = 'none';
                 placeholderElement.style.display = 'flex';

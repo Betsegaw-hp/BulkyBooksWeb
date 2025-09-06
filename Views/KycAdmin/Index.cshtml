@@ -71,7 +71,7 @@
                     <td>@user.FullName</td>
                     <td>@user.Email</td>
                     <td>@user.UpdatedAt.ToString("g")</td>
-                    <td>@(user.IsKycSubmitted ? user.KycStatus.ToString() : "unavilable")</td>
+                    <td>@(user.IsKycSubmitted ? user.KycStatus.ToString() : "unavailable")</td>
                     <td>
                         @if (user.IsKycSubmitted && user.KycStatus == KycStatus.Pending)
                         {

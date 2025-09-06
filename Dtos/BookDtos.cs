@@ -19,8 +19,8 @@ namespace BulkyBooksWeb.Dtos
 			ErrorMessage = "Invalid ISBN format (e.g., 123-45-67890-12-3 or 1234567890123)")]
 		public virtual string ISBN { get; set; } = string.Empty;
 
-		[Url(ErrorMessage = "Invalid URL format.")]
-		public string CoverImageUrl { get; set; } = string.Empty;
+		[Display(Name = "Cover Image")]
+		public IFormFile? CoverImageFile { get; set; }
 
 		public DateTime PublishedDate { get; set; }
 
@@ -65,5 +65,8 @@ namespace BulkyBooksWeb.Dtos
 		public override string ISBN { get; set; } = string.Empty;
 
 		public DateTime UpdatedDateTime { get; set; } = DateTime.Now;
+
+		[Display(Name = "PDF File")]
+		public IFormFile? PdfFile { get; set; }
 	}
 }

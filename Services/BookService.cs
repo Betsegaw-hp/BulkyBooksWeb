@@ -12,6 +12,14 @@ namespace BulkyBooksWeb.Services
 		private readonly ApplicationDbContext _db;
 		private readonly IWebHostEnvironment _env;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="BookService"/> class.
+		/// </summary>
+		/// <param name="db">The application's database context.</param>
+		/// <param name="env">
+		/// The web host environment, used for accessing the web root path when saving PDF files uploaded for books.
+		/// This dependency is required to correctly store PDF files in the appropriate directory within the application's file system.
+		/// </param>
 		public BookService(ApplicationDbContext db, IWebHostEnvironment env)
 		{
 			_db = db;
@@ -102,74 +110,97 @@ namespace BulkyBooksWeb.Services
 			return !await _db.Books.AnyAsync(b => b.ISBN == isbn && (id == null || b.Id != id));
 		}
 
-		public async Task CreateBook(CreateBookDto createBookDto, string authorId)
+	public async Task CreateBook(CreateBookDto createBookDto, string authorId)
+	{
+		string? pdfPath = null;
+		if (createBookDto.PdfFile != null)
 		{
-			string? pdfPath = null;
-			if (createBookDto.PdfFile != null)
+			pdfPath = await SavePdfFile(createBookDto.PdfFile);
+		}
+
+		string? coverImagePath = null;
+		if (createBookDto.CoverImageFile != null)
+		{
+			coverImagePath = await SaveCoverImageFile(createBookDto.CoverImageFile);
+		}
+
+		Book book = new()
+		{
+			Title = createBookDto.Title,
+			ISBN = createBookDto.ISBN,
+			AuthorId = authorId,
+			Description = createBookDto.Description,
+			Price = createBookDto.Price,
+			PublishedDate = createBookDto.PublishedDate,
+			CoverImagePath = coverImagePath,
+			CategoryId = createBookDto.CategoryId,
+			IsFeatured = createBookDto.IsFeatured,
+			PdfFilePath = pdfPath,
+			Status = BookStatus.Draft // Authors can only create drafts initially
+		};
+
+		await _db.Books.AddAsync(book);
+		await _db.SaveChangesAsync();
+	}
+
+	private async Task<string> SavePdfFile(IFormFile pdfFile)
+	{
+		var uploads = Path.Combine(_env.WebRootPath, "uploads", "books");
+		Directory.CreateDirectory(uploads);
+		var fileName = Guid.NewGuid() + Path.GetExtension(pdfFile.FileName);
+		var filePath = Path.Combine(uploads, fileName);
+		using (var stream = new FileStream(filePath, FileMode.Create))
+		{
+			await pdfFile.CopyToAsync(stream);
+		}
+		return $"/uploads/books/{fileName}";
+	}
+
+	private async Task<string> SaveCoverImageFile(IFormFile imageFile)
+	{
+		var uploads = Path.Combine(_env.WebRootPath, "uploads", "covers");
+		Directory.CreateDirectory(uploads);
+		var fileName = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
+		var filePath = Path.Combine(uploads, fileName);
+		using (var stream = new FileStream(filePath, FileMode.Create))
+		{
+			await imageFile.CopyToAsync(stream);
+		}
+		return $"/uploads/covers/{fileName}";
+	}
+
+	public async Task UpdateBook(int id, UpdateBookDto updateBookDto, IFormFile? pdfFile = null, IFormFile? coverImageFile = null)
+	{
+		Book? book = await _db.Books.FindAsync(id);
+		if (book != null)
+		{
+			book.Title = updateBookDto.Title;
+			book.ISBN = updateBookDto.ISBN;
+			book.Price = updateBookDto.Price;
+			book.Description = updateBookDto.Description;
+			book.PublishedDate = updateBookDto.PublishedDate;
+			book.CategoryId = updateBookDto.CategoryId;
+			book.IsFeatured = updateBookDto.IsFeatured;
+			book.UpdatedDateTime = updateBookDto.UpdatedDateTime;
+
+			// Handle PDF file update
+			if (pdfFile != null)
 			{
-				pdfPath = await SavePdfFile(createBookDto.PdfFile);
+				string pdfPath = await SavePdfFile(pdfFile);
+				book.PdfFilePath = pdfPath;
 			}
 
-			Book book = new()
+			// Handle cover image file update
+			if (coverImageFile != null)
 			{
-				Title = createBookDto.Title,
-				ISBN = createBookDto.ISBN,
-				AuthorId = authorId,
-				Description = createBookDto.Description,
-				Price = createBookDto.Price,
-				PublishedDate = createBookDto.PublishedDate,
-				CoverImageUrl = createBookDto.CoverImageUrl,
-				CategoryId = createBookDto.CategoryId,
-				IsFeatured = createBookDto.IsFeatured,
-				PdfFilePath = pdfPath,
-				Status = BookStatus.Draft // Authors can only create drafts initially
-			};
+				string coverImagePath = await SaveCoverImageFile(coverImageFile);
+				book.CoverImagePath = coverImagePath;
+			}
 
-			await _db.Books.AddAsync(book);
+			_db.Books.Update(book);
 			await _db.SaveChangesAsync();
 		}
-
-		private async Task<string> SavePdfFile(IFormFile pdfFile)
-		{
-			var uploads = Path.Combine(_env.WebRootPath, "uploads", "books");
-			Directory.CreateDirectory(uploads);
-			var fileName = Guid.NewGuid() + Path.GetExtension(pdfFile.FileName);
-			var filePath = Path.Combine(uploads, fileName);
-			using (var stream = new FileStream(filePath, FileMode.Create))
-			{
-				await pdfFile.CopyToAsync(stream);
-			}
-			return $"/uploads/books/{fileName}";
-		}
-
-		public async Task UpdateBook(int id, UpdateBookDto updateBookDto, IFormFile? pdfFile = null)
-		{
-			Book? book = await _db.Books.FindAsync(id);
-			if (book != null)
-			{
-				book.Title = updateBookDto.Title;
-				book.ISBN = updateBookDto.ISBN;
-				book.Price = updateBookDto.Price;
-				book.Description = updateBookDto.Description;
-				book.PublishedDate = updateBookDto.PublishedDate;
-				book.CoverImageUrl = updateBookDto.CoverImageUrl;
-				book.CategoryId = updateBookDto.CategoryId;
-				book.IsFeatured = updateBookDto.IsFeatured;
-				book.UpdatedDateTime = updateBookDto.UpdatedDateTime;
-
-				// Handle PDF file update
-				if (pdfFile != null)
-				{
-					string pdfPath = await SavePdfFile(pdfFile);
-					book.PdfFilePath = pdfPath;
-				}
-
-				_db.Books.Update(book);
-				await _db.SaveChangesAsync();
-			}
-		}
-
-		public async Task DeleteBook(int id)
+	}		public async Task DeleteBook(int id)
 		{
 			var book = await _db.Books.FindAsync(id);
 			if (book != null)
@@ -259,35 +290,36 @@ namespace BulkyBooksWeb.Services
 			}
 		}
 
-		public async Task<bool> CheckAndMarkSignificantChanges(int bookId, UpdateBookDto updatedBook, bool pdfChanged = false)
+		public async Task<bool> CheckAndMarkSignificantChanges(int bookId, UpdateBookDto updatedBook, bool pdfChanged = false, bool coverImageChanged = false)
 		{
 			var existingBook = await _db.Books.FindAsync(bookId);
 			if (existingBook == null) return false;
 
-			// Define what constitutes significant changes
-			bool hasSignificantChanges = 
-				existingBook.Title != updatedBook.Title ||
-				existingBook.Description != updatedBook.Description ||
-				existingBook.ISBN != updatedBook.ISBN ||
-				existingBook.CategoryId != updatedBook.CategoryId ||
-				pdfChanged; // PDF file change is always significant
+		// Define what constitutes significant changes
+		bool hasSignificantChanges = 
+			existingBook.Title != updatedBook.Title ||
+			existingBook.Description != updatedBook.Description ||
+			existingBook.ISBN != updatedBook.ISBN ||
+			existingBook.CategoryId != updatedBook.CategoryId ||
+			pdfChanged || // PDF file change is always significant
+			coverImageChanged; // Cover image change is also significant
 
-			if (hasSignificantChanges && (existingBook.Status == BookStatus.Approved || existingBook.Status == BookStatus.Published))
-			{
-				existingBook.HasSignificantChanges = true;
-				existingBook.Status = BookStatus.ResubmittedForReview;
-				existingBook.SubmittedAt = DateTime.Now;
-				existingBook.ReviewSubmissionCount++;
-				await _db.SaveChangesAsync();
-				return true;
-			}
-			else if (hasSignificantChanges)
-			{
-				existingBook.HasSignificantChanges = true;
-				await _db.SaveChangesAsync();
-			}
+		if (hasSignificantChanges && (existingBook.Status == BookStatus.Approved || existingBook.Status == BookStatus.Published))
+		{
+			existingBook.HasSignificantChanges = true;
+			existingBook.Status = BookStatus.ResubmittedForReview;
+			existingBook.SubmittedAt = DateTime.Now;
+			existingBook.ReviewSubmissionCount++;
+			await _db.SaveChangesAsync();
+			return true;
+		}
+		else if (hasSignificantChanges)
+		{
+			existingBook.HasSignificantChanges = true;
+			await _db.SaveChangesAsync();
+		}
 
-			return hasSignificantChanges;
+		return hasSignificantChanges;
 		}
 
 	}

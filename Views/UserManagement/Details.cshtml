@@ -283,9 +283,9 @@
                                             <div class="card h-100">
                                                 <div class="row g-0">
                                                     <div class="col-4">
-                                                        @if (!string.IsNullOrEmpty(book.CoverImageUrl))
+                                                        @if (!string.IsNullOrEmpty(book.CoverImagePath))
                                                         {
-                                                            <img src="@book.CoverImageUrl" class="img-fluid rounded-start h-100" 
+                                                            <img src="@book.CoverImagePath" class="img-fluid rounded-start h-100" 
                                                                  alt="@book.Title" style="object-fit: cover;">
                                                         }
                                                         else

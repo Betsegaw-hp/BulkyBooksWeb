@@ -223,7 +223,7 @@
                         <div class="col-md-6 col-lg-4">
                             <div class="card h-100 border-dark">
                                 <div class="position-relative">
-                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImagePath) ? "/images/placeholder-book.png" : book.CoverImagePath)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
                                     @if (book.CreatedDateTime.Year < book.UpdatedDateTime.Year)
                                     {
@@ -261,7 +261,7 @@
                         <div class="card mb-3 border-dark">
                             <div class="row g-0">
                                 <div class="col-md-3">
-                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImagePath) ? "/images/placeholder-book.png" : book.CoverImagePath)" 
                                          class="img-fluid rounded-start h-100" alt="@book.Title" style="object-fit: cover;" />
                                 </div>
                                 <div class="col-md-9">
@@ -359,7 +359,7 @@
                         <div class="featured-book-item px-2">
                             <div class="card h-100 border-dark">
                                 <div class="position-relative">
-                                    <img src="@(string.IsNullOrEmpty(book.CoverImageUrl) ? "/images/placeholder-book.png" : book.CoverImageUrl)" 
+                                    <img src="@(string.IsNullOrEmpty(book.CoverImagePath) ? "/images/placeholder-book.png" : book.CoverImagePath)" 
                                          class="card-img-top" alt="@book.Title" style="height: 200px; object-fit: cover;">
                                     <div class="position-absolute top-0 start-0 m-2">
                                         <span class="badge bg-danger">Featured</span>
@@ -598,7 +598,7 @@
                     <div class="col-md-6 col-lg-4">
                         <div class="card h-100 border-dark">
                             <div class="position-relative">
-                                <img src="${book.coverImageUrl || '/images/placeholder-book.png'}" 
+                                <img src="${book.coverImagePath || '/images/placeholder-book.png'}" 
                                      class="card-img-top" alt="${book.title}" style="height: 200px; object-fit: cover;">
                             </div>
                             <div class="card-body">
@@ -632,7 +632,7 @@
                     <div class="card mb-3 border-dark">
                         <div class="row g-0">
                             <div class="col-md-3">
-                                <img src="${book.coverImageUrl || '/images/placeholder-book.png'}" 
+                                <img src="${book.coverImagePath || '/images/placeholder-book.png'}" 
                                      class="img-fluid rounded-start h-100" alt="${book.title}" style="object-fit: cover;" />
                             </div>
                             <div class="col-md-9">

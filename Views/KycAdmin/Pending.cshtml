@@ -39,3 +39,19 @@
     }
     </tbody>
 </table>
+
+@section Scripts {
+    <script>
+        function showNote() {
+            var button = event.target;
+            var note = button.getAttribute('data-admin-note');
+            
+            Swal.fire({
+                title: 'Admin Note',
+                text: note ? note : "No admin note available.",
+                icon: 'info',
+                confirmButtonText: 'Close'
+            });
+        }
+    </script>
+}

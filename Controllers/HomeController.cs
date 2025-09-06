@@ -213,7 +213,7 @@ public class HomeController : Controller
                 id = b.Id,
                 title = b.Title,
                 price = b.Price,
-                coverImageUrl = b.CoverImageUrl,
+                coverImagePath = b.CoverImagePath,
                 authorName = b.Author?.FullName,
                 categoryName = b.Category?.Name,
                 description = b.Description?.Length > 100 ? b.Description.Substring(0, 100) + "..." : b.Description

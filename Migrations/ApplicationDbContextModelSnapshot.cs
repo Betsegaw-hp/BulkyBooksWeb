@@ -149,8 +149,7 @@ namespace BulkyBooksWeb.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
-                    b.Property<string>("CoverImageUrl")
-                        .IsRequired()
+                    b.Property<string>("CoverImagePath")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDateTime")

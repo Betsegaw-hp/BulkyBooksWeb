@@ -35,7 +35,7 @@ namespace BulkyBooksWeb.Models
 		[DataType(DataType.Date)]
 		public DateTime PublishedDate { get; set; }
 
-		public string CoverImageUrl { get; set; } = string.Empty;
+		public string? CoverImagePath { get; set; }  // New field for file uploads
 
 		[Display(Name = "Featured Book")]
 		public bool IsFeatured { get; set; } = false;
