@@ -26,7 +26,14 @@
             <td>@user.Email</td>
             <td>@user.UpdatedAt.ToString("g")</td>
             <td>
-                <a class="btn btn-primary btn-sm" href="@Url.Action("Review", new { userId = user.Id })">Review</a>
+                @if (user.IsKycSubmitted && user.KycStatus == KycStatus.Pending)
+                {
+                    <a class="btn btn-primary btn-sm" href="@Url.Action("Review", new { userId = user.Id })">Review</a>
+                }
+                else if(user.KycStatus != KycStatus.Pending)
+                {
+                    <button type="button" class="btn btn-info btn-sm" onclick="showNote()" data-admin-note="@user.KycAdminNotes">View Note</button>
+                }
             </td>
         </tr>
     }

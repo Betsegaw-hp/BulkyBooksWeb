@@ -10,10 +10,12 @@ namespace BulkyBooksWeb.Services
 	public class BookService
 	{
 		private readonly ApplicationDbContext _db;
+		private readonly IWebHostEnvironment _env;
 
-		public BookService(ApplicationDbContext db)
+		public BookService(ApplicationDbContext db, IWebHostEnvironment env)
 		{
 			_db = db;
+			_env = env;
 		}
 
 		public async Task<IEnumerable<Book>> GetAllBooks()
@@ -21,9 +23,22 @@ namespace BulkyBooksWeb.Services
 			return await _db.Books.Include(b => b.Category).Include(b => b.Author).ToListAsync();
 		}
 
+		public async Task<IEnumerable<Book>> GetAllPublishedBooks()
+		{
+			return await _db.Books
+				.Include(b => b.Category)
+				.Include(b => b.Author)
+				.Where(b => b.Status == BookStatus.Published)
+				.ToListAsync();
+		}
+
 		public async Task<IEnumerable<Book>> GetBooksByCategory(int categoryId)
 		{
-			return await _db.Books.Include(b => b.Category).Include(b => b.Author).Where(b => b.CategoryId == categoryId).ToListAsync();
+			return await _db.Books
+				.Include(b => b.Category)
+				.Include(b => b.Author)
+				.Where(b => b.CategoryId == categoryId && b.Status == BookStatus.Published)
+				.ToListAsync();
 		}
 
 		public async Task<IEnumerable<Book>> GetBooksByAuthor(string authorId)
@@ -71,7 +86,7 @@ namespace BulkyBooksWeb.Services
 
 		public IQueryable<Book> GetBooksQuery()
 		{
-			return _db.Books.Include(b => b.Category).AsQueryable();
+			return _db.Books.Include(b => b.Category).Where(b => b.Status == BookStatus.Published).AsQueryable();
 		}
 
 		public async Task<Book?> GetBookById(int id)
@@ -89,6 +104,12 @@ namespace BulkyBooksWeb.Services
 
 		public async Task CreateBook(CreateBookDto createBookDto, string authorId)
 		{
+			string? pdfPath = null;
+			if (createBookDto.PdfFile != null)
+			{
+				pdfPath = await SavePdfFile(createBookDto.PdfFile);
+			}
+
 			Book book = new()
 			{
 				Title = createBookDto.Title,
@@ -99,14 +120,29 @@ namespace BulkyBooksWeb.Services
 				PublishedDate = createBookDto.PublishedDate,
 				CoverImageUrl = createBookDto.CoverImageUrl,
 				CategoryId = createBookDto.CategoryId,
-				IsFeatured = createBookDto.IsFeatured
+				IsFeatured = createBookDto.IsFeatured,
+				PdfFilePath = pdfPath,
+				Status = BookStatus.Draft // Authors can only create drafts initially
 			};
 
 			await _db.Books.AddAsync(book);
 			await _db.SaveChangesAsync();
 		}
 
-		public async Task UpdateBook(int id, UpdateBookDto updateBookDto)
+		private async Task<string> SavePdfFile(IFormFile pdfFile)
+		{
+			var uploads = Path.Combine(_env.WebRootPath, "uploads", "books");
+			Directory.CreateDirectory(uploads);
+			var fileName = Guid.NewGuid() + Path.GetExtension(pdfFile.FileName);
+			var filePath = Path.Combine(uploads, fileName);
+			using (var stream = new FileStream(filePath, FileMode.Create))
+			{
+				await pdfFile.CopyToAsync(stream);
+			}
+			return $"/uploads/books/{fileName}";
+		}
+
+		public async Task UpdateBook(int id, UpdateBookDto updateBookDto, IFormFile? pdfFile = null)
 		{
 			Book? book = await _db.Books.FindAsync(id);
 			if (book != null)
@@ -121,6 +157,13 @@ namespace BulkyBooksWeb.Services
 				book.IsFeatured = updateBookDto.IsFeatured;
 				book.UpdatedDateTime = updateBookDto.UpdatedDateTime;
 
+				// Handle PDF file update
+				if (pdfFile != null)
+				{
+					string pdfPath = await SavePdfFile(pdfFile);
+					book.PdfFilePath = pdfPath;
+				}
+
 				_db.Books.Update(book);
 				await _db.SaveChangesAsync();
 			}
@@ -134,6 +177,117 @@ namespace BulkyBooksWeb.Services
 				_db.Books.Remove(book);
 				await _db.SaveChangesAsync();
 			}
+		}
+
+		// Book review workflow methods
+		public async Task<IEnumerable<Book>> GetBooksByStatus(BookStatus status)
+		{
+			return await _db.Books
+				.Include(b => b.Category)
+				.Include(b => b.Author)
+				.Where(b => b.Status == status)
+				.ToListAsync();
+		}
+
+		public async Task SubmitBookForReview(int bookId)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book != null && (book.Status == BookStatus.Draft || book.Status == BookStatus.Rejected))
+			{
+				book.Status = BookStatus.UnderReview;
+				book.SubmittedAt = DateTime.Now;
+				book.UpdatedDateTime = DateTime.Now;
+				book.ReviewSubmissionCount++;
+				book.HasSignificantChanges = false; // Reset flag after submission
+				book.AdminReviewComments = null; // Clear previous comments
+				book.ReviewedAt = null; // Clear previous review date
+				book.ReviewedBy = null; // Clear previous reviewer
+				await _db.SaveChangesAsync();
+			}
+		}
+
+		public async Task ResubmitBookForReview(int bookId)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book != null && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published || book.Status == BookStatus.Rejected))
+			{
+				book.Status = BookStatus.ResubmittedForReview;
+				book.SubmittedAt = DateTime.Now;
+				book.UpdatedDateTime = DateTime.Now;
+				book.ReviewSubmissionCount++;
+				book.HasSignificantChanges = false; // Reset flag after resubmission
+				await _db.SaveChangesAsync();
+			}
+		}
+
+		public async Task ApproveBook(int bookId, string reviewerId, string? comments = null)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book != null && (book.Status == BookStatus.UnderReview || book.Status == BookStatus.ResubmittedForReview))
+			{
+				book.Status = BookStatus.Approved;
+				book.ReviewedAt = DateTime.UtcNow;
+				book.ReviewedBy = reviewerId;
+				book.AdminReviewComments = comments;
+				book.UpdatedDateTime = DateTime.Now;
+				await _db.SaveChangesAsync();
+			}
+		}
+
+		public async Task RejectBook(int bookId, string reviewerId, string? comments = null)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book != null && (book.Status == BookStatus.UnderReview || book.Status == BookStatus.ResubmittedForReview))
+			{
+				book.Status = BookStatus.Rejected;
+				book.ReviewedAt = DateTime.UtcNow;
+				book.ReviewedBy = reviewerId;
+				book.AdminReviewComments = comments;
+				book.UpdatedDateTime = DateTime.Now;
+				await _db.SaveChangesAsync();
+			}
+		}
+
+		public async Task PublishBook(int bookId)
+		{
+			var book = await _db.Books.FindAsync(bookId);
+			if (book != null && book.Status == BookStatus.Approved)
+			{
+				book.Status = BookStatus.Published;
+				book.UpdatedDateTime = DateTime.Now;
+				await _db.SaveChangesAsync();
+			}
+		}
+
+		public async Task<bool> CheckAndMarkSignificantChanges(int bookId, UpdateBookDto updatedBook, bool pdfChanged = false)
+		{
+			var existingBook = await _db.Books.FindAsync(bookId);
+			if (existingBook == null) return false;
+
+			// Define what constitutes significant changes
+			bool hasSignificantChanges = 
+				existingBook.Title != updatedBook.Title ||
+				existingBook.Description != updatedBook.Description ||
+				existingBook.ISBN != updatedBook.ISBN ||
+				existingBook.CategoryId != updatedBook.CategoryId ||
+				pdfChanged; // PDF file change is always significant
+
+			if (hasSignificantChanges && (existingBook.Status == BookStatus.Approved || existingBook.Status == BookStatus.Published))
+			{
+				existingBook.HasSignificantChanges = true;
+				existingBook.Status = BookStatus.ResubmittedForReview;
+				existingBook.SubmittedAt = DateTime.Now;
+				existingBook.ReviewSubmissionCount++;
+				await _db.SaveChangesAsync();
+				return true;
+			}
+			else if (hasSignificantChanges)
+			{
+				existingBook.HasSignificantChanges = true;
+				await _db.SaveChangesAsync();
+			}
+
+			return hasSignificantChanges;
 		}
 
 	}

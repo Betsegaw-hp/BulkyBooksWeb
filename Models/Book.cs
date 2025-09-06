@@ -40,6 +40,16 @@ namespace BulkyBooksWeb.Models
 		[Display(Name = "Featured Book")]
 		public bool IsFeatured { get; set; } = false;
 
+		// Book review fields
+		public BookStatus Status { get; set; } = BookStatus.Draft;
+		public string? PdfFilePath { get; set; }
+		public string? AdminReviewComments { get; set; }
+		public DateTime? ReviewedAt { get; set; }
+		public string? ReviewedBy { get; set; }
+		public DateTime? SubmittedAt { get; set; }
+		public int ReviewSubmissionCount { get; set; } = 0;
+		public bool HasSignificantChanges { get; set; } = false;
+
 		// Navigation property
 		public virtual Category Category { get; set; } = null!;
 		public virtual ApplicationUser Author { get; set; } = null!;

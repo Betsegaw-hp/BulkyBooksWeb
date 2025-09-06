@@ -19,6 +19,7 @@
                 <th>Author</th>
                 <th>Category</th>
                 <th>Price</th>
+                <th>Status</th>
                 @if (User.IsInRole("Admin"))
                 {
                     <th>Featured</th>
@@ -41,6 +42,30 @@
                         </a>
                     </td>
                     <td width="10%">$@book.Price.ToString("0.00")</td>
+                    <td width="10%">
+                        <span class="badge bg-@(book.Status switch 
+                        {
+                            BookStatus.Draft => "secondary",
+                            BookStatus.UnderReview => "warning",
+                            BookStatus.Approved => "success",
+                            BookStatus.Rejected => "danger",
+                            BookStatus.Published => "info",
+                            BookStatus.ResubmittedForReview => "warning",
+                            _ => "secondary"
+                        })">@(book.Status switch 
+                        {
+                            BookStatus.ResubmittedForReview => "Resubmitted",
+                            _ => book.Status.ToString()
+                        })</span>
+                        @if (book.ReviewSubmissionCount > 1)
+                        {
+                            <small class="text-muted d-block">Submission #@book.ReviewSubmissionCount</small>
+                        }
+                        @if (book.HasSignificantChanges && book.Status != BookStatus.ResubmittedForReview)
+                        {
+                            <small class="badge bg-warning text-dark d-block mt-1">Needs Review</small>
+                        }
+                    </td>
                     @if (User.IsInRole("Admin"))
                     {
                         <td width="10%">
@@ -59,18 +84,49 @@
                             </button>
                         </td>
                     }
-                    <td width="25%">
-                        <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm me-1">
-                            <i class="fas fa-eye"></i> View
-                        </a>
-                        <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm me-1 edit-button">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        <form asp-controller="Book" asp-action="Delete" asp-route-id="@book.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm delete-button" data-book-title="@book.Title">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
-                        </form>
+                    <td width="20%" style="white-space: nowrap;">
+                        <div class="btn-group" role="group" aria-label="Book actions">
+                            <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm edit-button" title="Edit Book">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            
+                            @if (User.IsInRole("Author") && book.Status == BookStatus.Draft)
+                            {
+                                <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Submit for Review">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            @if (User.IsInRole("Author") && book.Status == BookStatus.Rejected)
+                            {
+                                <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Resubmit for Review">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            @if (User.IsInRole("Author") && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published || book.HasSignificantChanges))
+                            {
+                                <form asp-controller="Book" asp-action="ResubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-warning btn-sm" title="Resubmit for Review" 
+                                            onclick="return confirm('This will resubmit your book for review. Are you sure?')">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            <form asp-controller="Book" asp-action="Delete" asp-route-id="@book.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm delete-button" data-book-title="@book.Title" title="Delete Book">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }

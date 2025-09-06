@@ -121,8 +121,23 @@
                                 </a>
                                 <div class="dropdown-menu">
                                     <a class="dropdown-item @IsActive("Book")" asp-area="" asp-controller="Book" asp-action="Index">Manage Books</a>
+                                    @if(User.IsInRole("Author"))
+                                    {
+                                        <a class="dropdown-item @IsActive("Book", "ReviewStatus")" asp-area="" asp-controller="Book" asp-action="ReviewStatus">Review Status</a>
+                                    }
                                     <div class="dropdown-divider"></div>
                                     <a class="dropdown-item @IsActive("Category")" asp-area="" asp-controller="Category" asp-action="Index">Manage Categories</a>
+                                    @if(User.IsInRole("Author"))
+                                    {
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item @IsActive("Kyc")" asp-area="" asp-controller="Kyc" asp-action="Submit">KYC Verification</a>
+                                    }
+                                    @if(User.IsInRole("Admin"))
+                                    {
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item @IsActive("BookReviewAdmin")" asp-area="" asp-controller="BookReviewAdmin" asp-action="Dashboard">Book Reviews</a>
+                                        <a class="dropdown-item @IsActive("KycAdmin")" asp-area="" asp-controller="KycAdmin" asp-action="Index">KYC Management</a>
+                                    }
                                     
                                 </div>
                             </li>

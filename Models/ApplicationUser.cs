@@ -33,6 +33,8 @@ namespace BulkyBooksWeb.Models
         public DateTime? KycVerifiedAt { get; set; }
         public string? KycAdminNotes { get; set; }
 
+        public bool IsKycSubmitted => !string.IsNullOrEmpty(IdProofPath) && !string.IsNullOrEmpty(AddressProofPath) && !string.IsNullOrEmpty(AuthorPhotoPath);
+
         // Navigation properties
         public virtual ICollection<Book> Books { get; set; } = new List<Book>();
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();

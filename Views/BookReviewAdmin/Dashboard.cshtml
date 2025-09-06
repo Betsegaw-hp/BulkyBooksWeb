@@ -1,0 +1,133 @@
+@model IEnumerable<BulkyBooksWeb.Models.Book>
+@{
+    ViewData["Title"] = "Book Review Dashboard";
+}
+
+<h2>Book Review Dashboard</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<div class="row">
+    <div class="col-md-2">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-header">Under Review</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.PendingCount</h3>
+                <a href="@Url.Action("Pending")" class="btn btn-light btn-sm">Review</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-header">Resubmitted</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.ResubmittedCount</h3>
+                <a href="@Url.Action("Pending")" class="btn btn-light btn-sm">Review</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Approved</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.ApprovedCount</h3>
+                <a href="@Url.Action("FilterBooks", new { status = "Approved" })" class="btn btn-light btn-sm" onclick="filterBooks('Approved'); return false;">View</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-header">Rejected</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.RejectedCount</h3>
+                <a href="@Url.Action("FilterBooks", new { status = "Rejected" })" class="btn btn-light btn-sm" onclick="filterBooks('Rejected'); return false;">View</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-header">Published</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.PublishedCount</h3>
+                <a href="@Url.Action("FilterBooks", new { status = "Published" })" class="btn btn-light btn-sm" onclick="filterBooks('Published'); return false;">View</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <h3>Books Under Review</h3>
+    <div class="mb-3">
+        <label for="bookFilter" class="form-label">Filter by Status:</label>
+        <select id="bookFilter" class="form-select" style="width:200px; display:inline-block;">
+            <option value="All">All</option>
+            <option value="UnderReview" selected>Under Review</option>
+            <option value="ResubmittedForReview">Resubmitted</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Published">Published</option>
+        </select>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>PDF</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <partial name="_BookReviewTable" model="Model" />
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#bookFilter').on('change', function() {
+                var status = $(this).val();
+                filterBooks(status);
+            });
+        });
+
+        function filterBooks(status) {
+            // Update the dropdown to reflect the current filter
+            $('#bookFilter').val(status);
+            
+            $.ajax({
+                url: '@Url.Action("FilterBooks", "BookReviewAdmin")',
+                type: 'GET',
+                data: { status: status },
+                success: function (result) {
+                    $('table.table-bordered tbody').replaceWith(result);
+                },
+                error: function () {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to filter books.' });
+                }
+            });
+        }
+
+        function showReviewComments(comments) {
+            if (comments) {
+                Swal.fire({
+                    title: 'Review Comments',
+                    text: comments,
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                Swal.fire({
+                    title: 'No review comments available.',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+    </script>
+}

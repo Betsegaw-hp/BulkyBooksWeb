@@ -131,6 +131,15 @@
                                         <span asp-validation-for="CreateBookDto.IsFeatured" class="text-danger"></span>
                                     </div>
                                 }
+                                
+                                <div class="mb-3">
+                                    <label asp-for="CreateBookDto.PdfFile" class="form-label">
+                                        <i class="fas fa-file-pdf text-danger me-1"></i> Book PDF File
+                                    </label>
+                                    <input asp-for="CreateBookDto.PdfFile" type="file" class="form-control" accept=".pdf" />
+                                    <small class="form-text text-muted">Upload the PDF version of your book (optional)</small>
+                                    <span asp-validation-for="CreateBookDto.PdfFile" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
                     </div>

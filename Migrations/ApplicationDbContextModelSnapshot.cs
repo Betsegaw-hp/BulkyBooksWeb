@@ -139,6 +139,9 @@ namespace BulkyBooksWeb.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AdminReviewComments")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("AuthorId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -158,6 +161,9 @@ namespace BulkyBooksWeb.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool>("HasSignificantChanges")
+                        .HasColumnType("bit");
+
                     b.Property<string>("ISBN")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -165,10 +171,28 @@ namespace BulkyBooksWeb.Migrations
                     b.Property<bool>("IsFeatured")
                         .HasColumnType("bit");
 
+                    b.Property<string>("PdfFilePath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18, 2)");
 
                     b.Property<DateTime>("PublishedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ReviewSubmissionCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Title")

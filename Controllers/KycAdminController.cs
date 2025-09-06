@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using BulkyBooksWeb.Models;
-
 namespace BulkyBooksWeb.Controllers
 {
     [Authorize(Roles = "Admin")]
@@ -16,12 +15,29 @@ namespace BulkyBooksWeb.Controllers
         }
 
         [HttpGet]
-        public IActionResult Pending()
+        public IActionResult Index()
         {
-            var pendingUsers = _userManager.Users.Where(u => u.KycStatus == KycStatus.Pending).ToList();
-            return View(pendingUsers);
+            var users = _userManager.Users.ToList();
+            var pending = users.Count(u => u.KycStatus == KycStatus.Pending);
+            var verified = users.Count(u => u.KycStatus == KycStatus.Verified);
+            var rejected = users.Count(u => u.KycStatus == KycStatus.Rejected);
+            ViewBag.Pending = pending;
+            ViewBag.Verified = verified;
+            ViewBag.Rejected = rejected;
+            return View(users);
         }
 
+        [HttpGet]
+        public IActionResult FilterKyc(KycStatus? status)
+        {
+            Console.WriteLine($"Filtering KYC with status: {status}");
+            var users = _userManager.Users.AsQueryable();
+            if (status.HasValue)
+            {
+                users = users.Where(u => u.KycStatus == status.Value);
+            }
+            return View("Index", users.ToList());
+        }
         [HttpGet]
         public async Task<IActionResult> Review(string userId)
         {
@@ -41,7 +57,7 @@ namespace BulkyBooksWeb.Controllers
             user.KycAdminNotes = notes;
             await _userManager.UpdateAsync(user);
             TempData["Message"] = $"KYC for {user.UserName} approved.";
-            return RedirectToAction("Pending");
+            return RedirectToAction("Index");
         }
 
         [HttpPost]
@@ -54,7 +70,7 @@ namespace BulkyBooksWeb.Controllers
             user.KycAdminNotes = notes;
             await _userManager.UpdateAsync(user);
             TempData["Message"] = $"KYC for {user.UserName} rejected.";
-            return RedirectToAction("Pending");
+            return RedirectToAction("Index");
         }
     }
 }

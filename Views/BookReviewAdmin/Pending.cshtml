@@ -1,0 +1,57 @@
+@model IEnumerable<BulkyBooksWeb.Models.Book>
+@{
+    ViewData["Title"] = "Books Pending Review";
+}
+
+<h2>Books Pending Review</h2>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Category</th>
+            <th>Submitted</th>
+            <th>PDF</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var book in Model)
+    {
+        <tr>
+            <td>@book.Title</td>
+            <td>@book.Author.FullName</td>
+            <td>@book.Category.Name</td>
+            <td>@book.UpdatedDateTime.ToString("g")</td>
+            <td>
+                @if (!string.IsNullOrEmpty(book.PdfFilePath))
+                {
+                    <a href="@book.PdfFilePath" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-pdf"></i> View PDF
+                    </a>
+                }
+                else
+                {
+                    <span class="text-muted">No PDF</span>
+                }
+            </td>
+            <td>
+                <a class="btn btn-primary btn-sm" href="@Url.Action("Review", new { id = book.Id })">Review</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No books pending review.</div>
+}
+
+<a href="@Url.Action("Dashboard")" class="btn btn-secondary">Back to Dashboard</a>

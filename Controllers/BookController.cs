@@ -94,7 +94,7 @@ namespace BulkyBooksWeb.Controllers
 				if (user == null || user.KycStatus != KycStatus.Verified)
 				{
 					TempData["Error"] = "You must complete and verify your KYC before uploading books.";
-					return RedirectToAction("Index", "Kyc");
+					return RedirectToAction("Submit", "Kyc");
 				}
 			}
 			IEnumerable<Category> categories = await _categoryService.GetAllCategories();
@@ -119,7 +119,8 @@ namespace BulkyBooksWeb.Controllers
 				if (user == null || user.KycStatus != KycStatus.Verified)
 				{
 					TempData["Error"] = "You must complete and verify your KYC before uploading books.";
-					return RedirectToAction("Index", "Kyc");
+					return RedirectToAction("Submit", "Kyc");
+					// return Forbid();
 				}
 			}
 			if (ModelState.IsValid)
@@ -149,6 +150,7 @@ namespace BulkyBooksWeb.Controllers
 			BookUpdateViewModel bookViewModel = new BookUpdateViewModel()
 			{
 				Categories = await _categoryService.GetAllCategories(),
+				CurrentPdfFilePath = book.PdfFilePath,
 				UpdateBookDto = new UpdateBookDto()
 				{
 					Id = book.Id,
@@ -168,7 +170,7 @@ namespace BulkyBooksWeb.Controllers
 		[Authorize(Roles = "Admin, Author")]
 		[HttpPost("Edit/{id:int}")]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto)
+		public async Task<IActionResult> Edit(int id, [FromForm] UpdateBookDto updateBookDto, IFormFile? PdfFile)
 		{
 			if (id != updateBookDto.Id || id <= 0) return NotFound();
 
@@ -182,7 +184,25 @@ namespace BulkyBooksWeb.Controllers
 			Console.WriteLine(updateBookDto.CategoryId);
 			if (ModelState.IsValid)
 			{
-				await _bookService.UpdateBook(id, updateBookDto);
+				// Check for significant changes before updating
+				bool pdfChanged = PdfFile != null;
+				bool hasSignificantChanges = await _bookService.CheckAndMarkSignificantChanges(id, updateBookDto, pdfChanged);
+				
+				await _bookService.UpdateBook(id, updateBookDto, PdfFile);
+				
+				if (hasSignificantChanges && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published))
+				{
+					TempData["Message"] = "Book updated successfully. Due to significant changes, it has been automatically resubmitted for review.";
+				}
+				else if (hasSignificantChanges)
+				{
+					TempData["Message"] = "Book updated successfully. Significant changes detected - please review before submission.";
+				}
+				else
+				{
+					TempData["Message"] = "Book updated successfully.";
+				}
+				
 				return RedirectToAction(nameof(Index));
 			}
 			else
@@ -238,6 +258,59 @@ namespace BulkyBooksWeb.Controllers
 			}
 
 			return Json(new { success = false, message = "Failed to update featured status" });
+		}
+
+		[Authorize(Roles = "Author")]
+		[HttpPost("SubmitForReview/{id:int}")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> SubmitForReview(int id)
+		{
+			var book = await _bookService.GetBookById(id);
+			if (book == null) return NotFound();
+
+			var authorId = _userContext.GetCurrentUserId();
+			if (book.AuthorId != authorId && !User.IsInRole("Admin"))
+			{
+				return Forbid();
+			}
+
+			await _bookService.SubmitBookForReview(id);
+			TempData["Message"] = "Book submitted for review successfully.";
+			return RedirectToAction("Index");
+		}
+
+		[Authorize(Roles = "Author")]
+		[HttpPost("ResubmitForReview/{id:int}")]
+		[ValidateAntiForgeryToken]
+		public async Task<IActionResult> ResubmitForReview(int id)
+		{
+			var book = await _bookService.GetBookById(id);
+			if (book == null) return NotFound();
+
+			var authorId = _userContext.GetCurrentUserId();
+			if (book.AuthorId != authorId && !User.IsInRole("Admin"))
+			{
+				return Forbid();
+			}
+
+			await _bookService.ResubmitBookForReview(id);
+			TempData["Message"] = "Book resubmitted for review successfully.";
+			return RedirectToAction("Index");
+		}
+
+		[HttpGet("ReviewStatus")]
+		[Authorize(Roles = "Author")]
+		public async Task<IActionResult> ReviewStatus()
+		{
+			var userId = _userContext.GetCurrentUserId();
+			if (string.IsNullOrEmpty(userId))
+			{
+				return Unauthorized();
+			}
+			
+			var books = await _bookService.GetBooksByAuthor(userId);
+			
+			return View(books);
 		}
 	}
 }

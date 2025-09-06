@@ -51,6 +51,9 @@ namespace BulkyBooksWeb.Dtos
 	{
 		[Remote("IsISBNUnique", "Book", ErrorMessage = "ISBN already exists.")]
 		public override string ISBN { get; set; } = string.Empty;
+
+		[Display(Name = "PDF File")]
+		public IFormFile? PdfFile { get; set; }
 	}
 
 	public class UpdateBookDto : BaseBookDto

@@ -19,6 +19,12 @@ namespace BulkyBooksWeb.Controllers
         }
 
         [HttpGet]
+        public IActionResult Index()
+        {
+            return RedirectToAction("Submit");
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Submit()
         {
             var user = await _userManager.GetUserAsync(User);

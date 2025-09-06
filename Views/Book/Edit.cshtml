@@ -124,6 +124,41 @@
                                     </div>
                                 </div>
                                 
+                                <div class="mb-3">
+                                    <label class="form-label">Book PDF File</label>
+                                    @if (!string.IsNullOrEmpty(Model.CurrentPdfFilePath))
+                                    {
+                                        <div class="mb-2">
+                                            <div class="alert alert-info d-flex align-items-center">
+                                                <i class="fas fa-file-pdf me-2"></i>
+                                                <div class="flex-grow-1">
+                                                    <strong>Current PDF:</strong> 
+                                                    <a href="@Model.CurrentPdfFilePath" target="_blank" class="text-decoration-none">
+                                                        @System.IO.Path.GetFileName(Model.CurrentPdfFilePath)
+                                                    </a>
+                                                </div>
+                                                <a href="@Model.CurrentPdfFilePath" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </a>
+                                            </div>
+                                        </div>
+                                    }
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-file-pdf"></i></span>
+                                        <input type="file" class="form-control" name="PdfFile" accept=".pdf" />
+                                    </div>
+                                    <div class="form-text">
+                                        @if (!string.IsNullOrEmpty(Model.CurrentPdfFilePath))
+                                        {
+                                            <text>Upload a new PDF file to replace the current one. Max file size: 10MB. Leave empty to keep current file.</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Upload a PDF file. Max file size: 10MB.</text>
+                                        }
+                                    </div>
+                                </div>
+                                
                                 @if (User.IsInRole("Admin"))
                                 {
                                     <div class="mb-3">

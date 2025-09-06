@@ -4,6 +4,6 @@ namespace BulkyBooksWeb.Models
     {
         Pending,
         Verified,
-        Rejected
+        Rejected,
     }
 }
