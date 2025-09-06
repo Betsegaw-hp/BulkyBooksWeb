@@ -7,6 +7,12 @@
 .env
 *.sql
 appsettings.*.json
+
+# Azurite development storage files
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+
 # User-specific files
 *.rsuser
 *.suo

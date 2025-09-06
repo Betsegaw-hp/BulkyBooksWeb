@@ -2,28 +2,33 @@ using System.Security.Claims;
 using BulkyBooksWeb.Data;
 using BulkyBooksWeb.Dtos;
 using BulkyBooksWeb.Models;
+using BulkyBooksWeb.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace BulkyBooksWeb.Services
 {
 	public class BookService
 	{
 		private readonly ApplicationDbContext _db;
-		private readonly IWebHostEnvironment _env;
+		private readonly IBlobStorageService _blobStorageService;
+		private readonly AzureConfiguration _azureConfig;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="BookService"/> class.
 		/// </summary>
 		/// <param name="db">The application's database context.</param>
-		/// <param name="env">
-		/// The web host environment, used for accessing the web root path when saving PDF files uploaded for books.
-		/// This dependency is required to correctly store PDF files in the appropriate directory within the application's file system.
-		/// </param>
-		public BookService(ApplicationDbContext db, IWebHostEnvironment env)
+		/// <param name="blobStorageService">Azure Blob Storage service for file uploads.</param>
+		/// <param name="azureConfig">Azure configuration settings.</param>
+		public BookService(
+			ApplicationDbContext db, 
+			IBlobStorageService blobStorageService, 
+			IOptions<AzureConfiguration> azureConfig)
 		{
 			_db = db;
-			_env = env;
+			_blobStorageService = blobStorageService;
+			_azureConfig = azureConfig.Value;
 		}
 
 		public async Task<IEnumerable<Book>> GetAllBooks()
@@ -145,28 +150,36 @@ namespace BulkyBooksWeb.Services
 
 	private async Task<string> SavePdfFile(IFormFile pdfFile)
 	{
-		var uploads = Path.Combine(_env.WebRootPath, "uploads", "books");
-		Directory.CreateDirectory(uploads);
-		var fileName = Guid.NewGuid() + Path.GetExtension(pdfFile.FileName);
-		var filePath = Path.Combine(uploads, fileName);
-		using (var stream = new FileStream(filePath, FileMode.Create))
+		try
 		{
-			await pdfFile.CopyToAsync(stream);
+			var fileName = $"{Guid.NewGuid()}{Path.GetExtension(pdfFile.FileName)}";
+			var fileUrl = await _blobStorageService.UploadFileAsync(
+				pdfFile, 
+				_azureConfig.BlobStorage.Containers.BookPdfs,
+				fileName);
+			return fileUrl;
 		}
-		return $"/uploads/books/{fileName}";
+		catch (Exception ex)
+		{
+			throw new InvalidOperationException($"Failed to upload PDF file: {ex.Message}", ex);
+		}
 	}
 
 	private async Task<string> SaveCoverImageFile(IFormFile imageFile)
 	{
-		var uploads = Path.Combine(_env.WebRootPath, "uploads", "covers");
-		Directory.CreateDirectory(uploads);
-		var fileName = Guid.NewGuid() + Path.GetExtension(imageFile.FileName);
-		var filePath = Path.Combine(uploads, fileName);
-		using (var stream = new FileStream(filePath, FileMode.Create))
+		try
 		{
-			await imageFile.CopyToAsync(stream);
+			var fileName = $"{Guid.NewGuid()}{Path.GetExtension(imageFile.FileName)}";
+			var fileUrl = await _blobStorageService.UploadFileAsync(
+				imageFile, 
+				_azureConfig.BlobStorage.Containers.BookCovers,
+				fileName);
+			return fileUrl;
 		}
-		return $"/uploads/covers/{fileName}";
+		catch (Exception ex)
+		{
+			throw new InvalidOperationException($"Failed to upload cover image: {ex.Message}", ex);
+		}
 	}
 
 	public async Task UpdateBook(int id, UpdateBookDto updateBookDto, IFormFile? pdfFile = null, IFormFile? coverImageFile = null)
@@ -200,11 +213,36 @@ namespace BulkyBooksWeb.Services
 			_db.Books.Update(book);
 			await _db.SaveChangesAsync();
 		}
-	}		public async Task DeleteBook(int id)
+	}
+		public async Task DeleteBook(int id)
 		{
 			var book = await _db.Books.FindAsync(id);
 			if (book != null)
 			{
+				// Delete associated files from Azure Blob Storage
+				try
+				{
+					if (!string.IsNullOrEmpty(book.CoverImagePath))
+					{
+						await _blobStorageService.DeleteFileAsync(
+							book.CoverImagePath, 
+							_azureConfig.BlobStorage.Containers.BookCovers);
+					}
+
+					if (!string.IsNullOrEmpty(book.PdfFilePath))
+					{
+						await _blobStorageService.DeleteFileAsync(
+							book.PdfFilePath, 
+							_azureConfig.BlobStorage.Containers.BookPdfs);
+					}
+				}
+				catch (Exception ex)
+				{
+					// Log the error but continue with book deletion
+					// Consider using ILogger here
+					Console.WriteLine($"Warning: Failed to delete files for book {id}: {ex.Message}");
+				}
+
 				_db.Books.Remove(book);
 				await _db.SaveChangesAsync();
 			}

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using BulkyBooksWeb.Models;
 using BulkyBooksWeb.Models.ViewModels;
+using BulkyBooksWeb.Services;
+using BulkyBooksWeb.Configuration;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -10,12 +12,17 @@ namespace BulkyBooksWeb.Controllers
     public class KycController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IWebHostEnvironment _env;
+        private readonly IFileUploadService _fileUploadService;
+        private readonly AzureConfiguration _azureConfig;
 
-        public KycController(UserManager<ApplicationUser> userManager, IWebHostEnvironment env)
+        public KycController(
+            UserManager<ApplicationUser> userManager, 
+            IFileUploadService fileUploadService,
+            AzureConfiguration azureConfig)
         {
             _userManager = userManager;
-            _env = env;
+            _fileUploadService = fileUploadService;
+            _azureConfig = azureConfig;
         }
 
         [HttpGet]
@@ -64,15 +71,15 @@ namespace BulkyBooksWeb.Controllers
 
         private async Task<string> SaveFile(IFormFile file, string folder)
         {
-            var uploads = Path.Combine(_env.WebRootPath, "uploads", folder);
-            Directory.CreateDirectory(uploads);
-            var fileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-            var filePath = Path.Combine(uploads, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            string containerName = folder switch
             {
-                await file.CopyToAsync(stream);
-            }
-            return $"/uploads/{folder}/{fileName}";
+                "idproofs" => _azureConfig.BlobStorage.Containers.IdProofs,
+                "addressproofs" => _azureConfig.BlobStorage.Containers.AddressProofs,
+                "authorphotos" => _azureConfig.BlobStorage.Containers.AuthorPhotos,
+                _ => throw new ArgumentException($"Unknown folder type: {folder}")
+            };
+
+            return await _fileUploadService.SaveFileAsync(file, containerName);
         }
     }
 }

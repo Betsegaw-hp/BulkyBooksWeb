@@ -1,6 +1,7 @@
 using BulkyBooksWeb.Data;
 using BulkyBooksWeb.Policies;
 using BulkyBooksWeb.Services;
+using BulkyBooksWeb.Configuration;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using ChapaNET;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using BulkyBooksWeb.Models;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,27 @@ builder.Services.AddScoped<IUserContext, UserContext>();
 builder.Services.AddScoped<UserMigrationService>();
 builder.Services.AddScoped<DataSeedService>();
 builder.Services.AddScoped<ICartService, CartService>();
+
+// Configure Azure Blob Storage
+builder.Services.Configure<AzureConfiguration>(
+    builder.Configuration.GetSection(AzureConfiguration.SectionName));
+
+// Register AzureConfiguration as singleton
+builder.Services.AddSingleton<AzureConfiguration>(serviceProvider =>
+{
+    var azureConfig = builder.Configuration.GetSection(AzureConfiguration.SectionName).Get<AzureConfiguration>();
+    return azureConfig ?? new AzureConfiguration();
+});
+
+builder.Services.AddSingleton(x =>
+{
+    var azureConfig = builder.Configuration.GetSection(AzureConfiguration.SectionName).Get<AzureConfiguration>();
+    return new BlobServiceClient(azureConfig?.BlobStorage?.ConnectionString);
+});
+
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
 
 // Register Mailgun email service

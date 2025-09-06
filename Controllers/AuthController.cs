@@ -15,6 +15,7 @@ using System.Text;
 using System.Linq;
 using QRCoder;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using BulkyBooksWeb.Configuration;
 
 namespace BulkyBooksWeb.Controllers
 {
@@ -28,7 +29,8 @@ namespace BulkyBooksWeb.Controllers
 		private readonly UserManager<ApplicationUser> _userManager;
 		private readonly SignInManager<ApplicationUser> _signInManager;
 		private readonly RoleManager<IdentityRole> _roleManager;
-		private readonly IWebHostEnvironment _environment;
+		private readonly IFileUploadService _fileUploadService;
+		private readonly AzureConfiguration _azureConfig;
 		private readonly IEmailSender _emailSender;
 
 		public AuthController(
@@ -39,7 +41,8 @@ namespace BulkyBooksWeb.Controllers
 			UserManager<ApplicationUser> userManager,
 			SignInManager<ApplicationUser> signInManager,
 			RoleManager<IdentityRole> roleManager,
-			IWebHostEnvironment environment,
+			IFileUploadService fileUploadService,
+			AzureConfiguration azureConfig,
 			IEmailSender emailSender)
 		{
 			_context = context;
@@ -50,7 +53,8 @@ namespace BulkyBooksWeb.Controllers
 			_userManager = userManager;
 			_signInManager = signInManager;
 			_roleManager = roleManager;
-			_environment = environment;
+			_fileUploadService = fileUploadService;
+			_azureConfig = azureConfig;
 			_emailSender = emailSender;
 		}
 
@@ -1283,36 +1287,14 @@ namespace BulkyBooksWeb.Controllers
 							return RedirectToAction("ManageProfile", new { tab = "personal" });
 						}
 
-						// Create uploads directory if it doesn't exist
-						var uploadsDir = Path.Combine(_environment.WebRootPath, "uploads", "avatars");
-						if (!Directory.Exists(uploadsDir))
-						{
-							Directory.CreateDirectory(uploadsDir);
-						}
-
-						// Generate unique filename
-						var fileName = $"{user.Id}_{Guid.NewGuid()}{fileExtension}";
-						var filePath = Path.Combine(uploadsDir, fileName);
-
 						// Delete old avatar if exists
 						if (!string.IsNullOrEmpty(user.AvatarUrl))
 						{
-							var oldFileName = Path.GetFileName(user.AvatarUrl);
-							var oldFilePath = Path.Combine(uploadsDir, oldFileName);
-							if (System.IO.File.Exists(oldFilePath))
-							{
-								System.IO.File.Delete(oldFilePath);
-							}
+							await _fileUploadService.DeleteFileAsync(user.AvatarUrl, _azureConfig.BlobStorage.Containers.Avatars);
 						}
 
-						// Save new avatar
-						using (var fileStream = new FileStream(filePath, FileMode.Create))
-						{
-							await personalInfo.NewAvatar.CopyToAsync(fileStream);
-						}
-
-						// Update user avatar URL
-						user.AvatarUrl = $"/uploads/avatars/{fileName}";
+						// Save new avatar to Azure Blob Storage
+						user.AvatarUrl = await _fileUploadService.SaveFileAsync(personalInfo.NewAvatar, _azureConfig.BlobStorage.Containers.Avatars);
 						
 						_logger.LogInformation("Avatar uploaded successfully for user {UserId}: {AvatarUrl}", user.Id, user.AvatarUrl);
 					}
