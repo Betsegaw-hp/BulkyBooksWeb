@@ -1,0 +1,154 @@
+@{
+    ViewData["Title"] = "Email Verified Successfully";
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card border-success shadow-lg">
+                <div class="card-header bg-success text-white text-center">
+                    <h2 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Email Verified!
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <!-- Success Message -->
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            @TempData["SuccessMessage"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <!-- Main Content -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-block p-4 rounded-circle mb-3" style="background-color: #d4edda; border: 2px dashed #28a745;">
+                            <i class="fas fa-shield-check fa-4x text-success"></i>
+                        </div>
+                        <h4 class="mb-3 text-success">Welcome to BulkyBooks!</h4>
+                        <p class="text-muted mb-1">Your email address has been successfully verified:</p>
+                        @if (!string.IsNullOrEmpty(ViewBag.Email))
+                        {
+                            <p class="fw-bold text-success mb-3">@ViewBag.Email</p>
+                        }
+                        <p class="text-muted">
+                            Your account is now fully activated and ready to use. You can sign in and start exploring our book collection!
+                        </p>
+                    </div>
+
+                    <!-- Features Preview -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <h6 class="fw-bold mb-3">
+                                <i class="fas fa-star me-2 text-warning"></i>
+                                What you can do now:
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2">
+                                            <i class="fas fa-book text-primary me-2"></i>
+                                            Browse our book collection
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-shopping-cart text-primary me-2"></i>
+                                            Add books to your cart
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2">
+                                            <i class="fas fa-user-cog text-primary me-2"></i>
+                                            Manage your profile
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-bell text-primary me-2"></i>
+                                            Receive notifications
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Note -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <strong>Security Tip:</strong> Your account is now secured with email verification. 
+                        Consider enabling two-factor authentication from your profile settings for additional security.
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2">
+                        <a asp-action="Login" class="btn btn-success btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Sign In to Your Account
+                        </a>
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-home me-2"></i>
+                            Explore BulkyBooks
+                        </a>
+                    </div>
+
+                    <!-- Additional Options -->
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <h6 class="mb-3">Get Started</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-light h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="fas fa-book-open fa-2x text-primary mb-2"></i>
+                                        <h6 class="card-title">Browse Books</h6>
+                                        <a asp-controller="Home" asp-action="Index" class="btn btn-sm btn-outline-primary">
+                                            View Collection
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-light h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="fas fa-user-circle fa-2x text-primary mb-2"></i>
+                                        <h6 class="card-title">Your Profile</h6>
+                                        <a asp-controller="UserManagement" asp-action="Profile" class="btn btn-sm btn-outline-primary">
+                                            Update Profile
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-light h-100">
+                                    <div class="card-body text-center p-3">
+                                        <i class="fas fa-question-circle fa-2x text-primary mb-2"></i>
+                                        <h6 class="card-title">Need Help?</h6>
+                                        <a href="mailto:support@bulkybooks.com" class="btn btn-sm btn-outline-primary">
+                                            Contact Support
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-redirect to login after 10 seconds if user doesn't click anything
+            setTimeout(function() {
+                if (confirm('Would you like to sign in now?')) {
+                    window.location.href = '@Url.Action("Login", "Auth")';
+                }
+            }, 10000);
+        });
+    </script>
+}

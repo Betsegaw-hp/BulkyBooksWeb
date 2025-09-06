@@ -1,0 +1,82 @@
+@model IEnumerable<BulkyBooksWeb.Models.Book>
+<tbody>
+@foreach (var book in Model)
+{
+    <tr>
+        <td>@book.Title</td>
+        <td>@book.Author.FullName</td>
+        <td>@book.Category.Name</td>
+        <td>
+            <span class="badge bg-@(book.Status switch 
+            {
+                BookStatus.Draft => "secondary",
+                BookStatus.UnderReview => "warning",
+                BookStatus.Approved => "success",
+                BookStatus.Rejected => "danger",
+                BookStatus.Published => "info",
+                BookStatus.ResubmittedForReview => "warning",
+                _ => "secondary"
+            })">@(book.Status switch 
+            {
+                BookStatus.ResubmittedForReview => "Resubmitted",
+                _ => book.Status.ToString()
+            })</span>
+            @if (book.ReviewSubmissionCount > 1)
+            {
+                <br><small class="text-muted">Submission #@book.ReviewSubmissionCount</small>
+            }
+        </td>
+        <td>
+            @if (book.SubmittedAt.HasValue)
+            {
+                @book.SubmittedAt.Value.ToString("g")
+            }
+            else
+            {
+                @book.UpdatedDateTime.ToString("g")
+            }
+        </td>
+        <td>
+            @if (!string.IsNullOrEmpty(book.PdfFilePath))
+            {
+                <a href="@book.PdfFilePath" target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-file-pdf"></i> View PDF
+                </a>
+            }
+            else
+            {
+                <span class="text-muted">No PDF</span>
+            }
+        </td>
+        <td>
+            @if (book.Status == BookStatus.UnderReview || book.Status == BookStatus.ResubmittedForReview)
+            {
+                <a class="btn btn-primary btn-sm" href="@Url.Action("Review", new { id = book.Id })">
+                    <i class="fas fa-eye me-1"></i>Review
+                </a>
+            }
+            else if (book.Status == BookStatus.Approved)
+            {
+                <form asp-action="Publish" method="post" style="display: inline;">
+                    <input type="hidden" name="id" value="@book.Id" />
+                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Publish this book?')">
+                        <i class="fas fa-upload me-1"></i>Publish
+                    </button>
+                </form>
+            }
+            else if (book.Status == BookStatus.Rejected)
+            {
+                <button type="button" class="btn btn-info btn-sm" onclick="showReviewComments('@book.AdminReviewComments')">
+                    <i class="fas fa-comment-dots me-1"></i>View Comments
+                </button>
+            }
+            else if (book.Status == BookStatus.Published)
+            {
+                <a href="@Url.Action("Detail", "Book", new { id = book.Id })" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-book me-1"></i>View
+                </a>
+            }
+        </td>
+    </tr>
+}
+</tbody>

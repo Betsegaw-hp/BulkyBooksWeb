@@ -16,7 +16,7 @@ namespace BulkyBooksWeb.Models
 		[Required]
 		public int BookId { get; set; }
 		public string BookTitle { get; set; } = string.Empty;
-		public int BookAuthorId { get; set; }
+		public string BookAuthorId { get; set; } = string.Empty;
 
 		[Column(TypeName = "decimal(18, 2)")]
 		[Range(0.01, 1000000.00)]

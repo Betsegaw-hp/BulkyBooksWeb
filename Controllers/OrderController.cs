@@ -8,7 +8,7 @@ using BulkyBooksWeb.Policies;
 
 namespace BulkyBooksWeb.Controllers
 {
-	[Authorize(Roles = "admin, author, user")]
+	[Authorize(Roles = "Admin, Author, User")]
 	public class OrderController : Controller
 	{
 		private readonly ILogger<OrderController> _logger;
@@ -28,7 +28,7 @@ namespace BulkyBooksWeb.Controllers
 			_authorizationService = authorizationService;
 		}
 
-		[Authorize(Roles = "admin")]
+		[Authorize(Roles = "Admin")]
 		public async Task<IActionResult> Index([FromQuery] OrderFilterViewModel orderFilter)
 		{
 			var userId = _userContext.GetCurrentUserId();
@@ -40,7 +40,7 @@ namespace BulkyBooksWeb.Controllers
 			if (orderFilter.OrderId > 0)
 				orders = [.. orders.Where(o => o.Id == orderFilter.OrderId)];
 			if (!string.IsNullOrEmpty(orderFilter.CustomerName))
-				orders = [.. orders.Where(o => o.User.Username.Contains(orderFilter.CustomerName, StringComparison.CurrentCultureIgnoreCase))];
+				orders = [.. orders.Where(o => o.User?.UserName?.Contains(orderFilter.CustomerName, StringComparison.CurrentCultureIgnoreCase) == true)];
 			if (orderFilter.DateFrom != DateOnly.FromDateTime(DateTime.MinValue) && orderFilter.DateTo != DateOnly.FromDateTime(DateTime.MinValue))
 				orders = [.. orders.Where(o => o.OrderDate >= orderFilter.DateFrom.ToDateTime(new TimeOnly(0, 0))
 											&& o.OrderDate <= orderFilter.DateTo.ToDateTime(new TimeOnly(23, 59)))];
@@ -90,7 +90,7 @@ namespace BulkyBooksWeb.Controllers
 			var userId = _userContext.GetCurrentUserId();
 			if (userId == null) return RedirectToAction("Login", "Auth");
 
-			var orders = await _orderService.GetOrdersByUserIdAsync((int)userId);
+			var orders = await _orderService.GetOrdersByUserIdAsync(userId);
 
 			// filtering teh orders
 			if (int.TryParse(dateRange, out int dateRangeInt) && dateRangeInt > 0)
@@ -135,7 +135,7 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[Authorize(Roles = "admin")]
+		[Authorize(Roles = "Admin")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> RefundOrder(int id)
 		{
@@ -165,7 +165,7 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[Authorize(Roles = "admin")]
+		[Authorize(Roles = "Admin")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> CompleteOrder(int id)
 		{
@@ -195,7 +195,7 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[Authorize(Roles = "admin")]
+		[Authorize(Roles = "Admin")]
 		public async Task<IActionResult> UpdateOrderNotes([FromForm] int Id, [FromForm] string Note)
 		{
 			var userId = _userContext.GetCurrentUserId();
@@ -221,7 +221,7 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpPost]
-		[Authorize(Roles = "admin")]
+		[Authorize(Roles = "Admin")]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> BulkAction([FromForm] string action, [FromForm] int[] orderIds)
 		{
@@ -272,7 +272,7 @@ namespace BulkyBooksWeb.Controllers
 		}
 
 		[HttpGet]
-		[Authorize(Roles = "admin, author, user")]
+		[Authorize(Roles = "Admin, Author, User")]
 		public async Task<IActionResult> Print(int id)
 		{
 			var order = await _orderService.GetOrderByIdAsync(id);

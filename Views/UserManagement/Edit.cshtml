@@ -1,0 +1,267 @@
+@model EditUserViewModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-edit me-2"></i>Edit User: @Model.UserName
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+                        <input asp-for="Id" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <!-- Current Avatar Display -->
+                        @if (!string.IsNullOrEmpty(Model.CurrentAvatarUrl))
+                        {
+                            <div class="row mb-4">
+                                <div class="col-12 text-center">
+                                    <div class="mb-3">
+                                        <img src="@Model.CurrentAvatarUrl" alt="Current Avatar" 
+                                             class="rounded-circle shadow" style="width: 100px; height: 100px; object-fit: cover;">
+                                        <p class="text-muted mt-2">Current Profile Picture</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Personal Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-warning border-bottom pb-2 mb-3">
+                                    <i class="fas fa-user me-2"></i>Personal Information
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="FirstName" class="form-label fw-bold">First Name</label>
+                                    <input asp-for="FirstName" class="form-control" placeholder="Enter first name" />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="LastName" class="form-label fw-bold">Last Name</label>
+                                    <input asp-for="LastName" class="form-control" placeholder="Enter last name" />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="PhoneNumber" class="form-label fw-bold">Phone Number</label>
+                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Enter phone number" />
+                                    <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                                </div>
+                            </div>
+                            @* <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label asp-for="Avatar" class="form-label fw-bold">Update Profile Picture</label>
+                                    <input asp-for="Avatar" type="file" class="form-control" accept="image/*" />
+                                    <span asp-validation-for="Avatar" class="text-danger"></span>
+                                    <div class="form-text">Upload a new profile picture (optional)</div>
+                                </div>
+                            </div> *@
+                        </div>
+
+                        <!-- Account Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-warning border-bottom pb-2 mb-3">
+                                    <i class="fas fa-key me-2"></i>Account Information
+                                </h5>
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Username and email address cannot be changed by administrators for security reasons.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Username</label>
+                                    <input type="text" class="form-control" value="@Model.UserName" readonly />
+                                    <div class="form-text">Username cannot be changed</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Email Address</label>
+                                    <input type="email" class="form-control" value="@Model.Email" readonly />
+                                    <div class="form-text">Email address cannot be changed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Roles and Permissions -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-warning border-bottom pb-2 mb-3">
+                                    <i class="fas fa-shield-alt me-2"></i>Roles and Permissions
+                                </h5>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Current Roles</label>
+                                    <div class="mb-3">
+                                        @foreach (var role in Model.CurrentRoles)
+                                        {
+                                            <span class="badge bg-@(role == "Admin" ? "danger" : role == "Author" ? "primary" : "secondary") me-2">
+                                                @role
+                                            </span>
+                                        }
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>Manage user roles separately</span>
+                                        <a asp-action="ManageRoles" asp-route-id="@Model.Id" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-user-tag me-2"></i>Manage Roles
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Settings -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-warning border-bottom pb-2 mb-3">
+                                    <i class="fas fa-shield-alt me-2"></i>Security Settings
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input asp-for="EmailConfirmed" class="form-check-input" type="checkbox" />
+                                    <label asp-for="EmailConfirmed" class="form-check-label fw-bold">
+                                        Email Confirmed
+                                    </label>
+                                    <div class="form-text">Mark email as confirmed</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input asp-for="TwoFactorEnabled" class="form-check-input" type="checkbox" />
+                                    <label asp-for="TwoFactorEnabled" class="form-check-label fw-bold">
+                                        Two-Factor Authentication
+                                    </label>
+                                    <div class="form-text">Enable/disable 2FA</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input asp-for="LockoutEnabled" class="form-check-input" type="checkbox" />
+                                    <label asp-for="LockoutEnabled" class="form-check-label fw-bold">
+                                        Lockout Enabled
+                                    </label>
+                                    <div class="form-text">Allow account lockout</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input asp-for="PhoneNumberConfirmed" class="form-check-input" type="checkbox" />
+                                    <label asp-for="PhoneNumberConfirmed" class="form-check-label fw-bold">
+                                        Phone Number Confirmed
+                                    </label>
+                                    <div class="form-text">Mark phone number as confirmed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-warning border-bottom pb-2 mb-3">
+                                    <i class="fas fa-user-clock me-2"></i>Account Status
+                                </h5>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Account Created</label>
+                                    <p class="form-control-plaintext">@Model.CreatedAt.ToString("F")</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">Last Login</label>
+                                    <p class="form-control-plaintext">
+                                        @(Model.LastLoginAt?.ToString("F") ?? "Never")
+                                    </p>
+                                </div>
+                            </div>
+                            @if (Model.LockoutEnd.HasValue)
+                            {
+                                <div class="col-12">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Account Locked Until:</strong> @Model.LockoutEnd.Value.ToString("F")
+                                        <div class="mt-2">
+                                            <form asp-action="UnlockUser" asp-route-id="@Model.Id" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-warning btn-sm" onclick="return confirm('Are you sure you want to unlock @Model.UserName? This will immediately restore access to their account and reset any failed login attempts.')">
+                                                    <i class="fas fa-unlock me-2"></i>Unlock Account
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                                    <div>
+                                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info me-2">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a>
+                                        <a asp-action="Index" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to List
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-warning">
+                                            <i class="fas fa-save me-2"></i>Update User
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        // Form validation enhancements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Phone number format validation
+            const phoneInput = document.querySelector('input[name="PhoneNumber"]');
+            if (phoneInput) {
+                phoneInput.addEventListener('blur', function() {
+                    const phone = this.value;
+                    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+                    
+                    if (phone && !phoneRegex.test(phone.replace(/\s/g, ''))) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+        });
+    </script>
+}

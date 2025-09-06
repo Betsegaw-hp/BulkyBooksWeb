@@ -1,11 +1,15 @@
 using BulkyBooksWeb.Data;
 using BulkyBooksWeb.Policies;
 using BulkyBooksWeb.Services;
+using BulkyBooksWeb.Configuration;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using ChapaNET;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
+using BulkyBooksWeb.Models;
+using Azure.Storage.Blobs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +27,56 @@ builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddScoped<UserMigrationService>();
+builder.Services.AddScoped<DataSeedService>();
+builder.Services.AddScoped<ICartService, CartService>();
+
+// Configure Azure Blob Storage
+builder.Services.Configure<AzureConfiguration>(options =>
+{
+    builder.Configuration.GetSection(AzureConfiguration.SectionName).Bind(options);
+    
+    // Override with environment variable if available (more secure for production)
+    var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        options.BlobStorage.ConnectionString = connectionString;
+    }
+});
+
+// Register AzureConfiguration as singleton
+builder.Services.AddSingleton<AzureConfiguration>(serviceProvider =>
+{
+    var azureConfig = builder.Configuration.GetSection(AzureConfiguration.SectionName).Get<AzureConfiguration>();
+    if (azureConfig == null)
+    {
+        azureConfig = new AzureConfiguration();
+    }
+    
+    // Override with environment variable if available
+    var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        azureConfig.BlobStorage.ConnectionString = connectionString;
+    }
+    
+    return azureConfig;
+});
+
+builder.Services.AddSingleton(x =>
+{
+    var azureConfig = x.GetRequiredService<AzureConfiguration>();
+    return new BlobServiceClient(azureConfig.BlobStorage.ConnectionString);
+});
+
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+
 builder.Services.AddHttpContextAccessor(); // Required for IHttpContextAccessor
+
+// Register Mailgun email service
+builder.Services.AddHttpClient<IMailgunEmailService, MailgunEmailService>();
+builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, MailgunEmailService>();
 
 builder.Services.AddSession(options =>
 {
@@ -50,19 +103,104 @@ if (string.IsNullOrEmpty(chapaSecretKey))
 }
 builder.Services.AddSingleton(new Chapa(chapaSecretKey));
 
+// Configure ASP.NET Core Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireLowercase = true;
+    
+    // Lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    
+    // User settings
+    options.User.RequireUniqueEmail = true;
+    
+    // Sign-in settings - REQUIRE EMAIL CONFIRMATION
+    options.SignIn.RequireConfirmedEmail = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+// Add external authentication providers
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
     {
-        options.LoginPath = "/Auth/Login";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+        options.SaveTokens = true;
+        
+        // Handle OAuth cancellation and other errors gracefully
+        options.Events.OnRemoteFailure = context =>
+        {
+            // Log the specific error for debugging
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Google OAuth failed: {Error} - {ErrorDescription}", 
+                context.Failure?.Message, context.Properties?.Items.ContainsKey("error_description") == true ? 
+                context.Properties.Items["error_description"] : "No description");
+            
+            // Redirect to login page with user-friendly error message
+            var errorMessage = "Login was cancelled or failed. Please try again.";
+            
+            // Check if it's a user cancellation
+            if (context.Failure?.Message?.Contains("Access was denied") == true ||
+                context.Request.Query.ContainsKey("error") && context.Request.Query["error"] == "access_denied")
+            {
+                errorMessage = "Login was cancelled. You can try again or sign in with a different method.";
+            }
+            
+            context.Response.Redirect($"/Auth/Login?error={Uri.EscapeDataString(errorMessage)}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+    })
+    .AddMicrosoftAccount(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Microsoft:ClientId"] ?? "";
+        options.ClientSecret = builder.Configuration["Authentication:Microsoft:ClientSecret"] ?? "";
+        options.SaveTokens = true;
+        
+        // Handle OAuth cancellation and other errors gracefully
+        options.Events.OnRemoteFailure = context =>
+        {
+            // Log the specific error for debugging
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning("Microsoft OAuth failed: {Error} - {ErrorDescription}", 
+                context.Failure?.Message, context.Properties?.Items.ContainsKey("error_description") == true ? 
+                context.Properties.Items["error_description"] : "No description");
+            
+            // Redirect to login page with user-friendly error message
+            var errorMessage = "Login was cancelled or failed. Please try again.";
+            
+            // Check if it's a user cancellation
+            if (context.Failure?.Message?.Contains("Access was denied") == true ||
+                context.Request.Query.ContainsKey("error") && context.Request.Query["error"] == "access_denied")
+            {
+                errorMessage = "Login was cancelled. You can try again or sign in with a different method.";
+            }
+            
+            context.Response.Redirect($"/Auth/Login?error={Uri.EscapeDataString(errorMessage)}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
     });
+
+// Configure Identity cookies
+builder.Services.ConfigureApplicationCookie(options => {
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+    options.AccessDeniedPath = "/Auth/AccessDenied";
+    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+});
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("admin"));
-    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("author"));
-    options.AddPolicy("UserOnly", policy => policy.RequireRole("user"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("AuthorOnly", policy => policy.RequireRole("Author"));
+    options.AddPolicy("UserOnly", policy => policy.RequireRole("User"));
     options.AddPolicy("BookOwnerOrAdmin", policy =>
         policy.Requirements.Add(new BookOwnerOrAdminRequirement()));
     options.AddPolicy("OrderOwnerOrAdmin", policy =>
@@ -99,5 +237,12 @@ app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Seed the database
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeedService>();
+    await seeder.SeedAsync();
+}
 
 app.Run();

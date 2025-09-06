@@ -4,28 +4,25 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBooksWeb.Policies
 {
-    public class BookOwnerOrAdminHandler : AuthorizationHandler<BookOwnerOrAdminRequirement, int>
+    public class BookOwnerOrAdminHandler : AuthorizationHandler<BookOwnerOrAdminRequirement, string>
     {
         protected override Task HandleRequirementAsync(
             AuthorizationHandlerContext context,
             BookOwnerOrAdminRequirement requirement,
-            int authorId)
+            string authorId)
         {
             // Check if the user is an admin
-            if (context.User.IsInRole("admin"))
+            if (context.User.IsInRole("Admin"))
             {
                 context.Succeed(requirement);
                 return Task.CompletedTask;
             }
 
             // Otherwise, check if the user ID matches the book's owner ID
-            var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out int userId))
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId) && userId == authorId)
             {
-                if (userId == authorId)
-                {
-                    context.Succeed(requirement);
-                }
+                context.Succeed(requirement);
             }
 
             return Task.CompletedTask;

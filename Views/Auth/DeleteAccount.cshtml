@@ -1,0 +1,284 @@
+@using BulkyBooksWeb.Models.ViewModels
+@model DeleteAccountViewModel
+@{
+    ViewData["Title"] = "Delete Account";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Delete Account
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5><i class="fas fa-warning me-2"></i>Warning: This Action Cannot Be Undone</h5>
+                        <p class="mb-0">
+                            Deleting your account will permanently remove all your data from our systems. 
+                            This includes your profile information, order history, reviews, and any books you may have authored.
+                        </p>
+                    </div>
+
+                    <!-- Account Summary -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Account Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong>Name:</strong> @Model.FullName
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Email:</strong> @Model.Email
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Username:</strong> @Model.UserName
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <strong>Member Since:</strong> @Model.CreatedAt.ToString("MMMM dd, yyyy")
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Total Orders:</strong> @Model.TotalOrders
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong>Books Authored:</strong> @Model.BooksAuthored
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What Will Be Deleted -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">What Will Be Deleted</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-times text-danger me-2"></i>Profile information</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>Order history (@Model.TotalOrders orders)</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>Account preferences</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>Notification settings</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-times text-danger me-2"></i>Security settings</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>Connected accounts</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>Books authored (@Model.BooksAuthored books)</li>
+                                        <li><i class="fas fa-times text-danger me-2"></i>All associated data</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alternative Options -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Consider These Alternatives</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="text-center p-3 border rounded">
+                                        <i class="fas fa-download fa-2x text-info mb-2"></i>
+                                        <h6>Download Your Data</h6>
+                                        <p class="text-muted small">Get a copy of your data before deleting</p>
+                                        <a asp-action="DownloadPersonalData" class="btn btn-info btn-sm">
+                                            Download Data
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="text-center p-3 border rounded">
+                                        <i class="fas fa-pause fa-2x text-warning mb-2"></i>
+                                        <h6>Deactivate Instead</h6>
+                                        <p class="text-muted small">Temporarily disable your account</p>
+                                        <button type="button" class="btn btn-warning btn-sm" onclick="deactivateAccount()">
+                                            Deactivate Account
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deletion Form -->
+                    <form asp-action="ConfirmDeleteAccount" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <div class="card border-danger">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0 text-danger">Final Confirmation Required</h5>
+                            </div>
+                            <div class="card-body">
+                                @if(Model.HasPassword)
+                                {
+                                    <div class="form-group mb-3">
+                                        <label asp-for="Password" class="form-label fw-bold">
+                                            <i class="fas fa-lock me-2"></i>Enter Your Password to Confirm
+                                        </label>
+                                        <input asp-for="Password" type="password" class="form-control" 
+                                               placeholder="Enter your current password" required />
+                                        <span asp-validation-for="Password" class="text-danger"></span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="alert alert-info mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>External Account Authentication:</strong> Since you sign in using an external provider (Google, Microsoft, etc.), 
+                                        no password verification is required for account deletion.
+                                    </div>
+                                }
+
+                                <div class="form-group mb-3">
+                                    <label asp-for="ConfirmationText" class="form-label fw-bold">
+                                        Type "DELETE MY ACCOUNT" to confirm (case sensitive)
+                                    </label>
+                                    <input asp-for="ConfirmationText" type="text" class="form-control" 
+                                           placeholder="DELETE MY ACCOUNT" required />
+                                    <span asp-validation-for="ConfirmationText" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-check mb-4">
+                                    <input asp-for="UnderstandConsequences" type="checkbox" class="form-check-input" required />
+                                    <label asp-for="UnderstandConsequences" class="form-check-label">
+                                        I understand that this action cannot be undone and will permanently delete all my data
+                                    </label>
+                                    <span asp-validation-for="UnderstandConsequences" class="text-danger d-block"></span>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a asp-action="ManageProfile" class="btn btn-outline-secondary me-md-2">
+                                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                        <i class="fas fa-trash me-2"></i>Delete My Account Forever
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Contact Support -->
+            <div class="card mt-4">
+                <div class="card-body text-center">
+                    <h5>Need Help?</h5>
+                    <p class="text-muted">
+                        If you're experiencing issues with your account, our support team is here to help.
+                    </p>
+                    <a href="mailto:support@bulkybooks.com" class="btn btn-outline-primary">
+                        <i class="fas fa-envelope me-2"></i>Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordField = document.getElementById('Password');
+            const confirmationField = document.getElementById('ConfirmationText');
+            const checkboxField = document.getElementById('UnderstandConsequences');
+            const deleteButton = document.getElementById('deleteButton');
+
+            function validateForm() {
+                // Check if password field exists (for accounts with passwords)
+                const passwordValid = passwordField ? passwordField.value.length > 0 : true;
+                const confirmationValid = confirmationField.value === 'DELETE MY ACCOUNT';
+                const checkboxValid = checkboxField.checked;
+
+                // For accounts without passwords, only require confirmation text and checkbox
+                const allValid = passwordField ? 
+                    (passwordValid && confirmationValid && checkboxValid) : 
+                    (confirmationValid && checkboxValid);
+                
+                deleteButton.disabled = !allValid;
+
+                // Update button appearance based on validation
+                if (!deleteButton.disabled) {
+                    deleteButton.classList.add('btn-danger');
+                    deleteButton.classList.remove('btn-secondary');
+                } else {
+                    deleteButton.classList.add('btn-secondary');
+                    deleteButton.classList.remove('btn-danger');
+                }
+            }
+
+            // Validate form on input changes
+            if (passwordField) {
+                passwordField.addEventListener('input', validateForm);
+            }
+            confirmationField.addEventListener('input', function() {
+                validateForm();
+                
+                // Visual feedback for confirmation text
+                if (this.value.length > 0) {
+                    if (this.value === 'DELETE MY ACCOUNT') {
+                        this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
+                    } else {
+                        this.classList.remove('is-valid');
+                        this.classList.add('is-invalid');
+                    }
+                } else {
+                    this.classList.remove('is-valid', 'is-invalid');
+                }
+            });
+            checkboxField.addEventListener('change', validateForm);
+
+            // Confirm before submission
+            deleteButton.closest('form').addEventListener('submit', function(e) {
+                if (!confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
+                    e.preventDefault();
+                }
+            });
+
+            // Initial validation
+            validateForm();
+        });
+
+        // Account Deactivation function
+        function deactivateAccount() {
+            const confirmed = confirm(
+                'Are you sure you want to deactivate your account?\n\n' +
+                'Your account will be temporarily disabled, but you can reactivate it by signing in again.\n' +
+                'Your data will be preserved during deactivation.'
+            );
+            
+            if (confirmed) {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '@Url.Action("DeactivateAccount", "Auth")';
+                
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}

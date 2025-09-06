@@ -17,7 +17,7 @@ using System.IdentityModel.Tokens.Jwt;
 namespace BulkyBooksWeb.Controllers
 {
 
-	[Authorize(Roles = "admin, author, user")]
+	[Authorize(Roles = "Admin, Author, User")]
 	[Route("[controller]")]
 	public class CheckoutController : Controller
 	{
@@ -28,13 +28,14 @@ namespace BulkyBooksWeb.Controllers
 		private readonly ILogger<CheckoutController> _logger;
 		private readonly IConfiguration _configuration;
 		private readonly IUserContext _userContext;
+		private readonly ICartService _cartService;
 
 
 		public CheckoutController(
 			Chapa chapa, ApplicationDbContext context,
 			OrderService orderService, ILogger<CheckoutController> logger,
 			IAuthorizationService authorizationService, IConfiguration configuration,
-			IUserContext userContext)
+			IUserContext userContext, ICartService cartService)
 		{
 			_chapa = chapa;
 			_context = context;
@@ -43,12 +44,27 @@ namespace BulkyBooksWeb.Controllers
 			_configuration = configuration;
 			_authorizationService = authorizationService;
 			_userContext = userContext;
+			_cartService = cartService;
 		}
 
 		[HttpGet]
-		public IActionResult Index()
+		public async Task<IActionResult> Index()
 		{
-			var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId))
+			{
+				return Unauthorized();
+			}
+
+			// Migrate session cart to user cart if exists
+			var sessionCart = HttpContext.Session.Get<List<CartItemDTO>>("Cart");
+			if (sessionCart != null && sessionCart.Any())
+			{
+				await _cartService.MigrateSessionCartToUserAsync(sessionCart, userId);
+				HttpContext.Session.Remove("Cart");
+			}
+
+			var cart = await _cartService.GetCartItemDTOsAsync(userId);
 			var model = new CheckoutViewModel
 			{
 				CartItems = GetCartItemDTOs(cart),
@@ -84,7 +100,7 @@ namespace BulkyBooksWeb.Controllers
 						return RedirectToAction("Index");
 					}
 
-					if (!ValidateToken(token, out int parsedOrderId, out int? userId))
+					if (!ValidateToken(token, out int parsedOrderId, out string? userId))
 					{
 						_logger.LogError("Invalid token after login attempt.");
 						return RedirectToAction("PaymentFailed");
@@ -104,7 +120,12 @@ namespace BulkyBooksWeb.Controllers
 				}
 
 				// Clear the cart after successful order creation
-				HttpContext.Session.Remove("Cart");
+				var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+				if (!string.IsNullOrEmpty(currentUserId))
+				{
+					await _cartService.ClearCartAsync(currentUserId);
+				}
+				HttpContext.Session.Remove("Cart"); // Clear any remaining session cart
 
 				return View(orderDto);
 			}
@@ -147,8 +168,14 @@ namespace BulkyBooksWeb.Controllers
 		{
 			Console.WriteLine("Processing checkout...");
 
-			var cart = GetCartItemDTOs(HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? []);
-			model.CartItems = cart;
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId))
+			{
+				return Unauthorized();
+			}
+
+			var cart = await _cartService.GetCartItemDTOsAsync(userId);
+			model.CartItems = GetCartItemDTOs(cart);
 			model.Subtotal = model.CartItems.Sum(i => i.Price * i.Quantity);
 			model.TaxAmount = CalculateTax(cart);
 			model.OrderTotal = model.Subtotal + model.TaxAmount;
@@ -167,8 +194,8 @@ namespace BulkyBooksWeb.Controllers
 			try
 			{
 				var txRef = Chapa.GetUniqueRef();
-				var userId = _userContext.GetCurrentUserId();
-				if (userId == null)
+				var currentUserId = _userContext.GetCurrentUserId();
+				if (currentUserId == null)
 				{
 					_logger.LogWarning("User not found while creating order.");
 					return RedirectToAction("Login", "Auth");
@@ -180,7 +207,7 @@ namespace BulkyBooksWeb.Controllers
 							model.OrderTotal);
 
 				var callbackUrl = _configuration["Chapa:CallbackUrl"];
-				var token = GenerateToken(order.Id, userId.Value);
+				var token = GenerateToken(order.Id, currentUserId);
 				var returnUrl = $"{_configuration["Chapa:ReturnRootUrl"]}?token={token}";
 				// Create Chapa transaction request
 				var request = new ChapaRequest(
@@ -260,7 +287,12 @@ namespace BulkyBooksWeb.Controllers
 					var order = await _orderService.UpdateOrderPaymentStatusAsync(trx_ref, OrderStatus.Completed);
 
 					// Clear the cart after successful order creation
-					HttpContext.Session.Remove("Cart");
+					var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+					if (!string.IsNullOrEmpty(currentUserId))
+					{
+						await _cartService.ClearCartAsync(currentUserId);
+					}
+					HttpContext.Session.Remove("Cart"); // Clear any remaining session cart
 
 					return Ok("Payment verified successfully.");
 				}
@@ -293,7 +325,7 @@ namespace BulkyBooksWeb.Controllers
 			return cart.Sum(i => i.Price * i.Quantity) * 0.15m; // 15% tax
 		}
 
-		private string GenerateToken(int orderId, int userId)
+		private string GenerateToken(int orderId, string userId)
 		{
 			var jwtConfig = _configuration.GetSection("JwtConfig");
 			if (string.IsNullOrEmpty(jwtConfig["Key"]) || string.IsNullOrEmpty(jwtConfig["Issuer"]) || string.IsNullOrEmpty(jwtConfig["Audience"]))
@@ -323,7 +355,7 @@ namespace BulkyBooksWeb.Controllers
 			return new JwtSecurityTokenHandler().WriteToken(token);
 		}
 
-		private bool ValidateToken(string? token, out int orderId, out int? userId)
+		private bool ValidateToken(string? token, out int orderId, out string? userId)
 		{
 			if (string.IsNullOrEmpty(token))
 			{
@@ -361,7 +393,7 @@ namespace BulkyBooksWeb.Controllers
 					return false;
 				}
 				orderId = int.Parse(orderClaim);
-				userId = int.Parse(userClaim);
+				userId = userClaim;
 				return true;
 			}
 			catch

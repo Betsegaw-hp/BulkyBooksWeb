@@ -19,8 +19,8 @@ namespace BulkyBooksWeb.Dtos
 			ErrorMessage = "Invalid ISBN format (e.g., 123-45-67890-12-3 or 1234567890123)")]
 		public virtual string ISBN { get; set; } = string.Empty;
 
-		[Url(ErrorMessage = "Invalid URL format.")]
-		public string CoverImageUrl { get; set; } = string.Empty;
+		[Display(Name = "Cover Image")]
+		public IFormFile? CoverImageFile { get; set; }
 
 		public DateTime PublishedDate { get; set; }
 
@@ -31,6 +31,9 @@ namespace BulkyBooksWeb.Dtos
 		[Column(TypeName = "decimal(18, 2)")]
 		[Range(0.01, 1000.00)]
 		public decimal Price { get; set; }
+
+		[Display(Name = "Featured Book")]
+		public bool IsFeatured { get; set; } = false;
 	}
 
 	public class BookDto : BaseBookDto
@@ -48,6 +51,9 @@ namespace BulkyBooksWeb.Dtos
 	{
 		[Remote("IsISBNUnique", "Book", ErrorMessage = "ISBN already exists.")]
 		public override string ISBN { get; set; } = string.Empty;
+
+		[Display(Name = "PDF File")]
+		public IFormFile? PdfFile { get; set; }
 	}
 
 	public class UpdateBookDto : BaseBookDto
@@ -59,5 +65,8 @@ namespace BulkyBooksWeb.Dtos
 		public override string ISBN { get; set; } = string.Empty;
 
 		public DateTime UpdatedDateTime { get; set; } = DateTime.Now;
+
+		[Display(Name = "PDF File")]
+		public IFormFile? PdfFile { get; set; }
 	}
 }

@@ -3,6 +3,8 @@
     ViewData["Title"] = "Book List";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="text-center">
     <h1 class="display-4">Book List</h1>
     <p>Welcome to the Book List page. Here you can view all the books available in our system.</p>
@@ -17,6 +19,11 @@
                 <th>Author</th>
                 <th>Category</th>
                 <th>Price</th>
+                <th>Status</th>
+                @if (User.IsInRole("Admin"))
+                {
+                    <th>Featured</th>
+                }
                 <th>Actions</th>
             </tr>
         </thead>
@@ -25,13 +32,9 @@
             {
                 <tr>
                     <td width="10%">@book.ISBN</td>
+                    <td width="25%">@book.Title</td>
                     <td width="25%">
-                        <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm">
-                            @book.Title
-                        </a>
-                    </td>
-                    <td width="20%">
-                        @book.Author?.FullName - (@book.Author?.Username)
+                        @book.Author?.FullName - (@book.Author?.UserName)
                     </td>
                     <td width="15%">
                         <a asp-controller="Category" asp-action="Detail" asp-route-id="@book.CategoryId" class="btn btn-primary btn-sm">
@@ -39,11 +42,91 @@
                         </a>
                     </td>
                     <td width="10%">$@book.Price.ToString("0.00")</td>
-                    <td width="20%">
-                        <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm edit-button">Edit</a>
-                        <form asp-controller="Book" asp-action="Delete" asp-route-id="@book.Id" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
+                    <td width="10%">
+                        <span class="badge bg-@(book.Status switch 
+                        {
+                            BookStatus.Draft => "secondary",
+                            BookStatus.UnderReview => "warning",
+                            BookStatus.Approved => "success",
+                            BookStatus.Rejected => "danger",
+                            BookStatus.Published => "info",
+                            BookStatus.ResubmittedForReview => "warning",
+                            _ => "secondary"
+                        })">@(book.Status switch 
+                        {
+                            BookStatus.ResubmittedForReview => "Resubmitted",
+                            _ => book.Status.ToString()
+                        })</span>
+                        @if (book.ReviewSubmissionCount > 1)
+                        {
+                            <small class="text-muted d-block">Submission #@book.ReviewSubmissionCount</small>
+                        }
+                        @if (book.HasSignificantChanges && book.Status != BookStatus.ResubmittedForReview)
+                        {
+                            <small class="badge bg-warning text-dark d-block mt-1">Needs Review</small>
+                        }
+                    </td>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <td width="10%">
+                            <button type="button" 
+                                    class="btn btn-sm @(book.IsFeatured ? "btn-warning" : "btn-outline-warning") toggle-featured-btn" 
+                                    data-book-id="@book.Id" 
+                                    data-is-featured="@book.IsFeatured.ToString().ToLower()">
+                                @if (book.IsFeatured)
+                                {
+                                    <i class="fas fa-star"></i> @:Featured
+                                }
+                                else
+                                {
+                                    <i class="far fa-star"></i> @:Feature
+                                }
+                            </button>
+                        </td>
+                    }
+                    <td width="20%" style="white-space: nowrap;">
+                        <div class="btn-group" role="group" aria-label="Book actions">
+                            <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-info btn-sm" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-primary btn-sm edit-button" title="Edit Book">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            
+                            @if (User.IsInRole("Author") && book.Status == BookStatus.Draft)
+                            {
+                                <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Submit for Review">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            @if (User.IsInRole("Author") && book.Status == BookStatus.Rejected)
+                            {
+                                <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Resubmit for Review">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            @if (User.IsInRole("Author") && (book.Status == BookStatus.Approved || book.Status == BookStatus.Published || book.HasSignificantChanges))
+                            {
+                                <form asp-controller="Book" asp-action="ResubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-warning btn-sm" title="Resubmit for Review" 
+                                            onclick="return confirm('This will resubmit your book for review. Are you sure?')">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </form>
+                            }
+                            
+                            <form asp-controller="Book" asp-action="Delete" asp-route-id="@book.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm delete-button" data-book-title="@book.Title" title="Delete Book">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             }
@@ -53,10 +136,10 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-     <script>
-        document.getElementById("bookISBN").addEventListener("blur", async function(e) {
+    <script>
+        document.getElementById("bookISBN")?.addEventListener("blur", async function(e) {
             try {
-                const id: number = document.querySelector("form").getAttribute("data-book-id");
+                const id = document.querySelector("form")?.getAttribute("data-book-id");
 
                 const res = await fetch(`/Book/IsISBNUnique?ISBN=${this.value}&id=${id}`, {
                     method: "GET",
@@ -69,10 +152,125 @@
                     throw new Error("Network response was not ok");
                 }
                 const isUnique = await res.json();
-                if (!isUnique) alert("Book ISBN already exists.");
+                if (!isUnique) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Duplicate ISBN',
+                        text: 'Book ISBN already exists.',
+                        confirmButtonText: 'OK'
+                    });
+                }
             } catch (error) {
                 console.error("An error occurred while checking the book title uniqueness:", error);
             }
         });
+
+        // SweetAlert confirmation for delete buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const deleteButtons = document.querySelectorAll('.delete-button');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const bookTitle = this.getAttribute('data-book-title');
+                    const form = this.closest('form');
+                    
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: `You want to delete "${bookTitle}"? This action cannot be undone!`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc3545',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, delete it!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit();
+                        }
+                    });
+                });
+            });
+
+            // Featured toggle functionality
+            const featuredButtons = document.querySelectorAll('.toggle-featured-btn');
+            featuredButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const bookId = this.getAttribute('data-book-id');
+                    const isFeatured = this.getAttribute('data-is-featured') === 'true';
+                    const action = isFeatured ? 'remove from featured' : 'mark as featured';
+                    
+                    Swal.fire({
+                        title: 'Confirm Action',
+                        text: `Do you want to ${action} this book?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ffc107',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Yes, proceed!',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            toggleFeaturedStatus(bookId, this);
+                        }
+                    });
+                });
+            });
+        });
+
+        async function toggleFeaturedStatus(bookId, button) {
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                const formData = new FormData();
+                formData.append('__RequestVerificationToken', token);
+
+                const response = await fetch(`/Book/ToggleFeatured/${bookId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update button appearance
+                    if (result.isFeatured) {
+                        button.className = 'btn btn-sm btn-warning toggle-featured-btn';
+                        button.innerHTML = '<i class="fas fa-star"></i> Featured';
+                        button.setAttribute('data-is-featured', 'true');
+                    } else {
+                        button.className = 'btn btn-sm btn-outline-warning toggle-featured-btn';
+                        button.innerHTML = '<i class="far fa-star"></i> Feature';
+                        button.setAttribute('data-is-featured', 'false');
+                    }
+
+                    Swal.fire({
+                        title: 'Success!',
+                        text: result.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: result.message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            } catch (error) {
+                console.error('Error toggling featured status:', error);
+                Swal.fire({
+                    title: 'Error!',
+                    text: `An error occurred while updating the book status: ${error.message}`,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
     </script>
 }

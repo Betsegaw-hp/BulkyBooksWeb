@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using BulkyBooksWeb.Models;
 
 namespace BulkyBooksWeb.Models.ViewModels
 {
 	public class UserProfileViewModel
 	{
-		public User User { get; set; } = new();
+		public ApplicationUser User { get; set; } = new();
 		public UpdateProfileViewModel UpdateProfile { get; set; } = new();
 		public ChangePasswordViewModel ChangePassword { get; set; } = new();
 		public UpdatePreferencesViewModel UpdatePreferences { get; set; } = new();

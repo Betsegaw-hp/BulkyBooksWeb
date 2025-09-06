@@ -1,0 +1,249 @@
+@{
+    ViewData["Title"] = "Recovery Codes";
+    var recoveryCodes = ViewBag.RecoveryCodes as List<string> ?? new List<string>();
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-key me-2"></i>Two-Factor Authentication Recovery Codes
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> Save these recovery codes in a safe place. Each code can only be used once and they are your only way to access your account if you lose your authenticator device.
+                    </div>
+
+                    @if (recoveryCodes.Any())
+                    {
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3">
+                                <i class="fas fa-shield-alt me-2"></i>Your Recovery Codes:
+                            </h5>
+                            <div class="row">
+                                @for (int i = 0; i < recoveryCodes.Count; i++)
+                                {
+                                    <div class="col-md-6 mb-2">
+                                        <div class="card bg-light">
+                                            <div class="card-body py-2 px-3">
+                                                <code class="fs-6 fw-bold text-dark">@recoveryCodes[i]</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-info-circle me-2"></i>How to use recovery codes:
+                            </h6>
+                            <ul class="mb-0">
+                                <li>Use these codes to sign in if you can't access your authenticator device</li>
+                                <li>Each code can only be used once</li>
+                                <li>Keep them in a secure location, separate from your device</li>
+                                <li>Generate new codes if you use all of them or if you suspect they've been compromised</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary" onclick="printRecoveryCodes()">
+                                    <i class="fas fa-print me-2"></i>Print Codes
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="downloadRecoveryCodes()">
+                                    <i class="fas fa-download me-2"></i>Download as Text
+                                </button>
+                                <button type="button" class="btn btn-outline-info" onclick="copyAllCodes()">
+                                    <i class="fas fa-copy me-2"></i>Copy All
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a asp-action="ManageProfile" asp-route-tab="security" class="btn btn-success">
+                                    <i class="fas fa-check me-2"></i>I've Saved These Codes
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            No recovery codes available. Please generate new ones.
+                        </div>
+                        <a asp-action="ManageProfile" asp-route-tab="security" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Security Settings
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Instructions Card -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Security Tips
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-success">
+                                <i class="fas fa-check-circle me-2"></i>Do:
+                            </h6>
+                            <ul class="text-muted">
+                                <li>Store codes in a password manager</li>
+                                <li>Print and store in a safe place</li>
+                                <li>Keep separate from your devices</li>
+                                <li>Generate new codes periodically</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-danger">
+                                <i class="fas fa-times-circle me-2"></i>Don't:
+                            </h6>
+                            <ul class="text-muted">
+                                <li>Store in unsecured locations</li>
+                                <li>Share with anyone</li>
+                                <li>Take screenshots on devices</li>
+                                <li>Email to yourself</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function printRecoveryCodes() {
+            const printContent = document.createElement('div');
+            printContent.innerHTML = `
+                <div style="padding: 20px; font-family: Arial, sans-serif;">
+                    <h2 style="text-align: center; margin-bottom: 20px;">Two-Factor Authentication Recovery Codes</h2>
+                    <p style="background: #fff3cd; padding: 10px; border: 1px solid #ffeaa7; border-radius: 4px;">
+                        <strong>Important:</strong> Keep these codes secure and accessible. Each code can only be used once.
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0;">
+                        @foreach (var code in recoveryCodes)
+                        {
+                            <div style="padding: 10px; background: #f8f9fa; border: 1px solid #dee2e6; font-family: monospace; font-weight: bold;">@code</div>
+                        }
+                    </div>
+                    <p style="margin-top: 20px; font-size: 12px; color: #666;">
+                        Generated on: ${new Date().toLocaleString()}<br>
+                        Account: @(User.Identity?.Name ?? "Unknown")
+                    </p>
+                </div>
+            `;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function downloadRecoveryCodes() {
+            const codes = @Html.Raw(Json.Serialize(recoveryCodes));
+            let content = 'Two-Factor Authentication Recovery Codes\n';
+            content += '==========================================\n\n';
+            content += 'IMPORTANT: Keep these codes secure and accessible.\n';
+            content += 'Each code can only be used once.\n\n';
+            content += 'Recovery Codes:\n';
+            codes.forEach((code, index) => {
+                content += `${index + 1}. ${code}\n`;
+            });
+            content += `\nGenerated on: ${new Date().toLocaleString()}\n`;
+            content += `Account: @(User.Identity?.Name ?? "Unknown")\n`;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'recovery-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function copyAllCodes() {
+            const codes = @Html.Raw(Json.Serialize(recoveryCodes));
+            const text = codes.join('\n');
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showAlert('success', 'Recovery codes copied to clipboard!');
+                }).catch(() => {
+                    fallbackCopy(text);
+                });
+            } else {
+                fallbackCopy(text);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.width = '2em';
+            textArea.style.height = '2em';
+            textArea.style.padding = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.boxShadow = 'none';
+            textArea.style.background = 'transparent';
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showAlert('success', 'Recovery codes copied to clipboard!');
+            } catch (err) {
+                showAlert('danger', 'Failed to copy recovery codes. Please copy them manually.');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showAlert(type, message) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Warn user when leaving the page
+        window.addEventListener('beforeunload', function(e) {
+            if (!sessionStorage.getItem('recoveryCodesSaved')) {
+                e.preventDefault();
+                e.returnValue = 'Have you saved your recovery codes? You won\'t be able to see them again.';
+            }
+        });
+
+        // Mark as saved when user clicks "I've Saved These Codes"
+        document.querySelector('a[href*="ManageProfile"]')?.addEventListener('click', function() {
+            sessionStorage.setItem('recoveryCodesSaved', 'true');
+        });
+    </script>
+}

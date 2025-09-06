@@ -1,0 +1,299 @@
+@model ManageRolesViewModel
+@{
+    ViewData["Title"] = "Manage User Roles";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-user-tag me-2"></i>Manage Roles for @Model.UserName
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- User Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="bg-light p-3 rounded">
+                                <div class="d-flex align-items-center">
+                                    @if (!string.IsNullOrEmpty(Model.AvatarUrl))
+                                    {
+                                        <img src="@Model.AvatarUrl" alt="User Avatar" 
+                                             class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                    }
+                                    else
+                                    {
+                                        <div class="bg-info rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                             style="width: 60px; height: 60px;">
+                                            <span class="text-white fw-bold" style="font-size: 1.5rem;">@Model.FullName.FirstOrDefault()</span>
+                                        </div>
+                                    }
+                                    <div>
+                                        <h5 class="mb-1">@Model.FullName</h5>
+                                        <p class="text-muted mb-0">@Model.Email</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form asp-action="ManageRoles" method="post">
+                        <input asp-for="UserId" type="hidden" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                        <!-- Current Roles Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-info border-bottom pb-2 mb-3">
+                                    <i class="fas fa-check-circle me-2"></i>Current Roles
+                                </h5>
+                                @if (Model.CurrentRoles.Any())
+                                {
+                                    <div class="mb-3">
+                                        @foreach (var role in Model.CurrentRoles)
+                                        {
+                                            <span class="badge bg-@(role == "Admin" ? "danger" : role == "Author" ? "primary" : "secondary") me-2 mb-2 fs-6">
+                                                <i class="fas fa-shield-alt me-1"></i>@role
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No roles assigned to this user.</p>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Available Roles Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-info border-bottom pb-2 mb-3">
+                                    <i class="fas fa-plus-circle me-2"></i>Assign/Remove Roles
+                                </h5>
+                                <div class="row">
+                                    @for (int i = 0; i < Model.AllRoles.Count; i++)
+                                    {
+                                        var role = Model.AllRoles[i];
+                                        var isAssigned = Model.CurrentRoles.Contains(role);
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card @(isAssigned ? "border-success" : "border-light") h-100">
+                                                <div class="card-body">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" 
+                                                               class="form-check-input" 
+                                                               id="role_@i" 
+                                                               name="SelectedRoles" 
+                                                               value="@role" 
+                                                               @(isAssigned ? "checked" : "") />
+                                                        <label class="form-check-label w-100" for="role_@i">
+                                                            <div class="d-flex justify-content-between align-items-center">
+                                                                <div>
+                                                                    <h6 class="mb-1">
+                                                                        <span class="badge bg-@(role == "Admin" ? "danger" : role == "Author" ? "primary" : "secondary")">
+                                                                            @role
+                                                                        </span>
+                                                                    </h6>
+                                                                    <p class="text-muted mb-0 small">
+                                                                        @switch (role)
+                                                                        {
+                                                                            case "Admin":
+                                                                                @:Full system access and user management
+                                                                                break;
+                                                                            case "Author":
+                                                                                @:Can create and manage books
+                                                                                break;
+                                                                            case "Customer":
+                                                                                @:Standard user access for purchasing
+                                                                                break;
+                                                                            default:
+                                                                                @:Standard role permissions
+                                                                                break;
+                                                                        }
+                                                                    </p>
+                                                                </div>
+                                                                @if (isAssigned)
+                                                                {
+                                                                    <i class="fas fa-check-circle text-success"></i>
+                                                                }
+                                                            </div>
+                                                        </label>
+                                                        <input type="hidden" name="AllRoles" value="@role" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Role Permissions Info -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-info border-bottom pb-2 mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>Role Permissions
+                                </h5>
+                                <div class="accordion" id="permissionsAccordion">
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="adminHeading">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#adminCollapse">
+                                                <span class="badge bg-danger me-2">Admin</span>
+                                                Administrator Permissions
+                                            </button>
+                                        </h2>
+                                        <div id="adminCollapse" class="accordion-collapse collapse" 
+                                             data-bs-parent="#permissionsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>Full system access and configuration</li>
+                                                    <li>User management (create, edit, delete users)</li>
+                                                    <li>Role management and permissions</li>
+                                                    <li>Book management (all books)</li>
+                                                    <li>Order management and processing</li>
+                                                    <li>System statistics and reporting</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="authorHeading">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#authorCollapse">
+                                                <span class="badge bg-primary me-2">Author</span>
+                                                Author Permissions
+                                            </button>
+                                        </h2>
+                                        <div id="authorCollapse" class="accordion-collapse collapse" 
+                                             data-bs-parent="#permissionsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>Create and publish new books</li>
+                                                    <li>Edit and manage own books</li>
+                                                    <li>View sales statistics for own books</li>
+                                                    <li>Manage book categories</li>
+                                                    <li>Standard customer access</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="customerHeading">
+                                            <button class="accordion-button collapsed" type="button" 
+                                                    data-bs-toggle="collapse" data-bs-target="#customerCollapse">
+                                                <span class="badge bg-secondary me-2">Customer</span>
+                                                Customer Permissions
+                                            </button>
+                                        </h2>
+                                        <div id="customerCollapse" class="accordion-collapse collapse" 
+                                             data-bs-parent="#permissionsAccordion">
+                                            <div class="accordion-body">
+                                                <ul class="mb-0">
+                                                    <li>Browse and search books</li>
+                                                    <li>Purchase books and place orders</li>
+                                                    <li>View order history</li>
+                                                    <li>Manage personal profile</li>
+                                                    <li>Write book reviews</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Warning Section -->
+                        @if (Model.CurrentRoles.Contains("Admin"))
+                        {
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> This user currently has Administrator privileges. 
+                                Removing the Admin role will revoke all administrative access.
+                            </div>
+                        }
+
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                                    <div>
+                                        <a asp-action="Details" asp-route-id="@Model.UserId" class="btn btn-info me-2">
+                                            <i class="fas fa-eye me-2"></i>View Details
+                                        </a>
+                                        <a asp-action="Index" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to Users
+                                        </a>
+                                    </div>
+                                    <div>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-save me-2"></i>Update Roles
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle role checkbox changes
+            const roleCheckboxes = document.querySelectorAll('input[name="SelectedRoles"]');
+            
+            roleCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const card = this.closest('.card');
+                    
+                    if (this.checked) {
+                        card.classList.remove('border-light');
+                        card.classList.add('border-success');
+                    } else {
+                        card.classList.remove('border-success');
+                        card.classList.add('border-light');
+                    }
+                    
+                    // Update check icon
+                    const checkIcon = card.querySelector('.fa-check-circle');
+                    if (checkIcon) {
+                        checkIcon.style.display = this.checked ? 'block' : 'none';
+                    } else if (this.checked) {
+                        const iconContainer = card.querySelector('.d-flex .text-success');
+                        if (!iconContainer) {
+                            const newIcon = document.createElement('i');
+                            newIcon.className = 'fas fa-check-circle text-success';
+                            card.querySelector('.d-flex').appendChild(newIcon);
+                        }
+                    }
+                });
+            });
+            
+            // Admin role warning
+            const adminCheckbox = document.querySelector('input[value="Admin"]');
+            if (adminCheckbox) {
+                adminCheckbox.addEventListener('change', function() {
+                    if (!this.checked && this.dataset.originallyChecked === 'true') {
+                        if (!confirm('Are you sure you want to remove Administrator privileges from this user?')) {
+                            this.checked = true;
+                        }
+                    }
+                });
+                
+                // Store original state
+                if (adminCheckbox.checked) {
+                    adminCheckbox.dataset.originallyChecked = 'true';
+                }
+            }
+        });
+    </script>
+}

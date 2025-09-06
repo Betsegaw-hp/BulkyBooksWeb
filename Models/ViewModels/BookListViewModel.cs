@@ -19,7 +19,8 @@ namespace BulkyBooksWeb.Models.ViewModels
 				return !string.IsNullOrEmpty(CurrentFilter.SearchQuery) ||
 					   (CurrentFilter.CategoryIds != null && CurrentFilter.CategoryIds.Any()) ||
 					   CurrentFilter.MinPrice.HasValue ||
-					   CurrentFilter.MaxPrice.HasValue;
+					   CurrentFilter.MaxPrice.HasValue ||
+					   CurrentFilter.ShowFeaturedOnly;
 			}
 		}
 	}
@@ -31,6 +32,7 @@ namespace BulkyBooksWeb.Models.ViewModels
 		public decimal? MinPrice { get; set; }
 		public decimal? MaxPrice { get; set; }
 		public string SortOption { get; set; } = "newest";
+		public bool ShowFeaturedOnly { get; set; } = false;
 	}
 
 	public class CategoryViewModel

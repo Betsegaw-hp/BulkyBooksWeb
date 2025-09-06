@@ -1,0 +1,138 @@
+@model IEnumerable<BulkyBooksWeb.Models.ApplicationUser>
+@{
+    ViewData["Title"] = "KYC Admin Dashboard";
+}
+
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+<h2>KYC Admin Dashboard</h2>
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-header">Pending</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.Pending</h3>
+                <a href="@Url.Action("Pending")" class="btn btn-light">View Pending</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-header">Verified</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.Verified</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-header">Rejected</div>
+            <div class="card-body">
+                <h3 class="card-title">@ViewBag.Rejected</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h3>Recent KYC Submissions</h3>
+    <div class="mb-3">
+        <label for="kycFilter" class="form-label">Filter by Status:</label>
+        <select id="kycFilter" class="form-select" style="width:200px; display:inline-block;">
+            <option value="All">All</option>
+            <option value="Pending">Pending</option>
+            <option value="Verified">Verified</option>
+            <option value="Rejected">Rejected</option>
+        </select>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>UserName</th>
+                <th>Full Name</th>
+                <th>Email</th>
+                <th>Submitted At</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr>
+                    <td>@user.UserName</td>
+                    <td>@user.FullName</td>
+                    <td>@user.Email</td>
+                    <td>@user.UpdatedAt.ToString("g")</td>
+                    <td>@(user.IsKycSubmitted ? user.KycStatus.ToString() : "unavailable")</td>
+                    <td>
+                        @if (user.IsKycSubmitted && user.KycStatus == KycStatus.Pending)
+                        {
+                            <a class="btn btn-primary btn-sm" href="@Url.Action("Review", new { userId = user.Id })">Review</a>
+                        }
+                        else if(user.KycStatus != KycStatus.Pending)
+                        {
+                            <button type="button" class="btn btn-info btn-sm" onclick="showNote()" data-admin-note="@user.KycAdminNotes">View Note</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+@if (Model.Count() == 0)
+{
+    <div class="alert alert-info">No recent KYC submissions.</div>
+}
+else
+{
+    <div class="alert alert-info">Total KYC submissions: @Model.Count()</div>
+}
+
+@section Scripts {
+    <script>
+        function showNote() {
+            var note = event.target.getAttribute("data-admin-note");
+            if (note) {
+                Swal.fire({
+                    title: 'Admin Note',
+                    text: note,
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                Swal.fire({
+                    title: 'No admin notes available.',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+
+        $(document).ready(function() {
+            $('#kycFilter').on('change', function() {
+                var status = $(this).val();
+                $.ajax({
+                    url: '@Url.Action("FilterKyc", "KycAdmin")',
+                    type: 'GET',
+                    data: { status: status },
+                    success: function (result) {
+                        $('table.table-bordered tbody').replaceWith(result);
+                    },
+                    error: function () {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to filter KYC submissions.' });
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,54 @@
+@{
+    ViewData["Title"] = "Account Locked";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow border-danger">
+                <div class="card-header bg-danger text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-lock me-2"></i>Account Locked
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <h5>Your account has been temporarily locked</h5>
+                        <p class="mb-0">
+                            This happened because there were too many failed login attempts. 
+                            Please try again later or contact support if you need immediate assistance.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <h6>What can you do?</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-clock me-2 text-warning"></i>
+                                Wait for the lockout period to expire
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-envelope me-2 text-info"></i>
+                                Contact support for assistance
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-key me-2 text-success"></i>
+                                Try using a recovery code if you have 2FA enabled
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-4">
+                        <a asp-action="Login" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Login
+                        </a>
+                        <a href="mailto:support@bulkybooks.com" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-envelope me-2"></i>Contact Support
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

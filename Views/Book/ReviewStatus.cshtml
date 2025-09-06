@@ -1,0 +1,229 @@
+@model IEnumerable<Book>
+@{
+    ViewData["Title"] = "My Book Review Status";
+}
+
+<div class="container py-4">
+    <div class="card border-dark">
+        <div class="card-header bg-dark text-white">
+            <h2 class="mb-0"><i class="fas fa-clipboard-list me-2"></i> My Book Review Status</h2>
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-book fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Books Found</h4>
+                    <p class="text-muted">You haven't submitted any books for review yet.</p>
+                    <a asp-controller="Book" asp-action="Create" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Create Your First Book
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Submitted Date</th>
+                                <th>Reviewed Date</th>
+                                <th>Reviewer Comments</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var book in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            @if (!string.IsNullOrEmpty(book.CoverImagePath))
+                                            {
+                                                <img src="@book.CoverImagePath" 
+                                                     alt="@book.Title" class="me-2" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" />
+                                            }
+                                            <div>
+                                                <strong>@book.Title</strong>
+                                                <br>
+                                                <small class="text-muted">ISBN: @book.ISBN</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-@(book.Status switch 
+                                        {
+                                            BookStatus.Draft => "secondary",
+                                            BookStatus.UnderReview => "warning",
+                                            BookStatus.Approved => "success", 
+                                            BookStatus.Rejected => "danger",
+                                            BookStatus.Published => "primary",
+                                            BookStatus.ResubmittedForReview => "warning",
+                                            _ => "secondary"
+                                        })">
+                                            @(book.Status switch 
+                                            {
+                                                BookStatus.ResubmittedForReview => "Resubmitted",
+                                                _ => book.Status.ToString()
+                                            })
+                                        </span>
+                                        @if (book.ReviewSubmissionCount > 1)
+                                        {
+                                            <br><small class="text-muted">Submission #@book.ReviewSubmissionCount</small>
+                                        }
+                                        @if (book.HasSignificantChanges && book.Status != BookStatus.ResubmittedForReview)
+                                        {
+                                            <br><small class="badge bg-warning text-dark">Needs Review</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (book.SubmittedAt.HasValue)
+                                        {
+                                            <span>@book.SubmittedAt.Value.ToString("MMM dd, yyyy")</span>
+                                            <br>
+                                            <small class="text-muted">@book.SubmittedAt.Value.ToString("HH:mm")</small>
+                                        }
+                                        else if (book.Status != BookStatus.Draft)
+                                        {
+                                            <span>@book.UpdatedDateTime.ToString("MMM dd, yyyy")</span>
+                                            <br>
+                                            <small class="text-muted">@book.UpdatedDateTime.ToString("HH:mm")</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not submitted</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (book.ReviewedAt.HasValue)
+                                        {
+                                            <span>@book.ReviewedAt.Value.ToString("MMM dd, yyyy")</span>
+                                            <br>
+                                            <small class="text-muted">@book.ReviewedAt.Value.ToString("HH:mm")</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Pending</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(book.AdminReviewComments))
+                                        {
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="showReviewComments('@book.Id', '@book.Title', '@Html.Raw(Json.Serialize(book.AdminReviewComments.Replace("\n", "<br/>")))')">
+                                                <i class="fas fa-comment-dots"></i> View Comments
+                                            </button>
+                                            
+                                            <!-- Modal for Comments -->
+                                            <div class="modal fade" id="commentsModal-@book.Id" tabindex="-1" aria-labelledby="commentsModalLabel-@book.Id" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="commentsModalLabel-@book.Id">Review Comments - @book.Title</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            @Html.Raw(book.AdminReviewComments.Replace("\n", "<br />"))
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No comments</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a asp-controller="Book" asp-action="Detail" asp-route-id="@book.Id" class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            @if (book.Status == BookStatus.Draft || book.Status == BookStatus.Rejected)
+                                            {
+                                                <a asp-controller="Book" asp-action="Edit" asp-route-id="@book.Id" class="btn btn-sm btn-outline-secondary" title="Edit Book">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                            }
+                                            
+                                            @* Single unified button logic *@
+                                            @if (book.Status == BookStatus.Draft)
+                                            {
+                                                <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-warning" title="Submit for Review">
+                                                        <i class="fas fa-paper-plane"></i> Submit
+                                                    </button>
+                                                </form>
+                                            }
+                                            @if (book.Status == BookStatus.Rejected && book.Status != BookStatus.ResubmittedForReview)
+                                            {
+                                                @if (book.HasSignificantChanges)
+                                                {
+                                                    <form asp-controller="Book" asp-action="ResubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Resubmit for Review" 
+                                                                onclick="return confirm('This will resubmit your book for review. Are you sure?')">
+                                                            <i class="fas fa-sync-alt"></i> Resubmit
+                                                        </button>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <form asp-controller="Book" asp-action="SubmitForReview" asp-route-id="@book.Id" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-warning" title="Resubmit for Review">
+                                                            <i class="fas fa-redo"></i> Resubmit
+                                                        </button>
+                                                    </form>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Track the progress of your book submissions through our review process.
+                    </small>
+                </div>
+                <a asp-controller="Book" asp-action="Index" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Books
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-refresh page every 30 seconds if there are books under review
+        @if (Model.Any(b => b.Status == BookStatus.UnderReview))
+        {
+            <text>
+            setTimeout(function() {
+                location.reload();
+            }, 30000);
+            </text>
+        }
+
+        function showReviewComments(bookId, bookTitle, comments) {
+            Swal.fire({
+                title: 'Review Comments - ' + bookTitle + ' - #' + bookId,
+                html: comments,
+                icon: 'info',
+                confirmButtonText: 'Close',
+                width: '600px'
+            });
+        }
+    </script>
+}

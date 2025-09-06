@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBooksWeb.Controllers
 {
-	[Authorize(Roles = "admin, author")]
+	[Authorize(Roles = "Admin, Author")]
 	[Route("[controller]")]
 	public class CategoryController(CategoryService categoryService) : Controller
 	{
