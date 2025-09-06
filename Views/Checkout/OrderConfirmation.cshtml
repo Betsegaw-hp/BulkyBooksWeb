@@ -64,6 +64,18 @@
                                             {
                                                 <small class="text-muted">by @item.Author</small>
                                             }
+                                            @if (!string.IsNullOrEmpty(item.PdfFilePath))
+                                            {
+                                                var fileName = System.IO.Path.GetFileName(item.PdfFilePath);
+                                                <div class="mt-1">
+                                                    <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-file-pdf"></i> View PDF
+                                                    </a>
+                                                    <a href="@Url.Action("BookPdf", "File", new { fileName = fileName })" class="btn btn-sm btn-outline-secondary ms-1">
+                                                        <i class="fas fa-download"></i> Download PDF
+                                                    </a>
+                                                </div>
+                                            }
                                         </div>
                                     </div>
                                 </a>

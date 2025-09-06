@@ -62,13 +62,17 @@ namespace BulkyBooksWeb.Services
 				TransactionReference = order.TransactionReference,
 				UserId = order.UserId,
 				OwnerEmail = order.User?.Email ?? "",
-				OrderItems = order.OrderItems.Select(oi => new OrderItemDto
-				{
-					BookId = oi.BookId,
-					BookTitle = oi.BookTitle,
-					Price = oi.Price,
-					Quantity = oi.Quantity
-				}).ToList()
+				   OrderItems = order.OrderItems
+					   .Join(_context.Books, oi => oi.BookId, b => b.Id, (oi, b) => new OrderItemDto
+					   {
+						   BookId = oi.BookId,
+						   BookTitle = oi.BookTitle,
+						   Price = oi.Price,
+						   Quantity = oi.Quantity,
+						   Author =  b.Author?.FullName ?? string.Empty,
+						   PdfFilePath = b.PdfFilePath
+					   })
+					   .ToList()
 			};
 		}
 		public async Task<Order> CreateTempOrderFromCartAsync(List<CartItemDTO> cartItems, string transactionReference, decimal amount)
