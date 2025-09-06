@@ -136,17 +136,21 @@
                                     <label class="form-label">Book PDF File</label>
                                     @if (!string.IsNullOrEmpty(Model.CurrentPdfFilePath))
                                     {
+                                        var fileName = System.IO.Path.GetFileName(Model.CurrentPdfFilePath);
                                         <div class="mb-2">
                                             <div class="alert alert-info d-flex align-items-center">
                                                 <i class="fas fa-file-pdf me-2"></i>
                                                 <div class="flex-grow-1">
                                                     <strong>Current PDF:</strong> 
-                                                    <a href="@Model.CurrentPdfFilePath" target="_blank" class="text-decoration-none">
-                                                        @System.IO.Path.GetFileName(Model.CurrentPdfFilePath)
+                                                    <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="text-decoration-none">
+                                                        @fileName
                                                     </a>
                                                 </div>
-                                                <a href="@Model.CurrentPdfFilePath" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="btn btn-sm btn-outline-primary">
                                                     <i class="fas fa-eye me-1"></i>View
+                                                </a>
+                                                <a href="@Url.Action("BookPdf", "File", new { fileName = fileName })" class="btn btn-sm btn-outline-secondary ms-2">
+                                                    <i class="fas fa-download me-1"></i>Download
                                                 </a>
                                             </div>
                                         </div>

@@ -93,6 +93,25 @@
                 </div>
                 }
             </div>
+            
+            <!-- PDF Links Section -->
+            <div class="mt-4">
+                <h3>PDF Files</h3>
+                @if (!string.IsNullOrEmpty(Model.PdfFilePath))
+                {
+                    var fileName = System.IO.Path.GetFileName(Model.PdfFilePath);
+                    <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="btn btn-outline-primary">
+                        View PDF (inline)
+                    </a>
+                    <a href="@Url.Action("BookPdf", "File", new { fileName = fileName })" class="btn btn-outline-secondary">
+                        Download PDF
+                    </a>
+                }
+                else
+                {
+                    <p class="text-muted">No PDF files available for this book.</p>
+                }
+            </div>
         </div>
     </div>
 </div>

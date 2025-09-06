@@ -27,7 +27,8 @@
             <label>ID Proof</label>
             @if (!string.IsNullOrEmpty(Model.ExistingIdProofPath))
             {
-                <a href="@Model.ExistingIdProofPath" target="_blank">View Existing</a>
+                var fileName = System.IO.Path.GetFileName(Model.ExistingIdProofPath);
+                <a href="@Url.Action("KycDoc", "File", new { fileName = fileName, type = "idproofs", inline = true })" target="_blank">View Existing</a>
             }
             <input type="file" name="IdProof" class="form-control" />
         </div>
@@ -35,7 +36,8 @@
             <label>Address Proof</label>
             @if (!string.IsNullOrEmpty(Model.ExistingAddressProofPath))
             {
-                <a href="@Model.ExistingAddressProofPath" target="_blank">View Existing</a>
+                var fileName = System.IO.Path.GetFileName(Model.ExistingAddressProofPath);
+                <a href="@Url.Action("KycDoc", "File", new { fileName = fileName, type = "addressproofs", inline = true })" target="_blank">View Existing</a>
             }
             <input type="file" name="AddressProof" class="form-control" />
         </div>
@@ -43,7 +45,8 @@
             <label>Author Photo</label>
             @if (!string.IsNullOrEmpty(Model.ExistingAuthorPhotoPath))
             {
-                <a href="@Model.ExistingAuthorPhotoPath" target="_blank">View Existing</a>
+                var fileName = System.IO.Path.GetFileName(Model.ExistingAuthorPhotoPath);
+                <a href="@Url.Action("KycDoc", "File", new { fileName = fileName, type = "authorphotos", inline = true })" target="_blank">View Existing</a>
             }
             <input type="file" name="AuthorPhoto" class="form-control" />
         </div>

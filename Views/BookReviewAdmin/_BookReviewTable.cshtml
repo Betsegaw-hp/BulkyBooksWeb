@@ -39,8 +39,12 @@
         <td>
             @if (!string.IsNullOrEmpty(book.PdfFilePath))
             {
-                <a href="@book.PdfFilePath" target="_blank" class="btn btn-outline-primary btn-sm">
-                    <i class="fas fa-file-pdf"></i> View PDF
+                var fileName = System.IO.Path.GetFileName(book.PdfFilePath);
+                <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="btn btn-outline-primary btn-sm">
+                    View PDF (inline)
+                </a>
+                <a href="@Url.Action("BookPdf", "File", new { fileName = fileName })" class="btn btn-outline-secondary btn-sm">
+                    Download PDF
                 </a>
             }
             else

@@ -20,10 +20,14 @@
                 
                 @if (!string.IsNullOrEmpty(Model.PdfFilePath))
                 {
+                    var fileName = System.IO.Path.GetFileName(Model.PdfFilePath);
                     <div class="mt-3">
                         <h6>PDF Document:</h6>
-                        <a href="@Model.PdfFilePath" target="_blank" class="btn btn-outline-primary">
-                            <i class="fas fa-file-pdf"></i> View Book PDF
+                        <a href="@Url.Action("BookPdf", "File", new { fileName = fileName, inline = true })" target="_blank" class="btn btn-outline-primary">
+                            <i class="fas fa-file-pdf"></i> View PDF (inline)
+                        </a>
+                        <a href="@Url.Action("BookPdf", "File", new { fileName = fileName })" class="btn btn-outline-secondary">
+                            <i class="fas fa-download"></i> Download PDF
                         </a>
                     </div>
                 }
@@ -56,19 +60,22 @@
                                 <div class="btn-group" role="group">
                                     @if (!string.IsNullOrEmpty(Model.Author.IdProofPath))
                                     {
-                                        <a href="@Model.Author.IdProofPath" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        var idProofFileName = System.IO.Path.GetFileName(Model.Author.IdProofPath);
+                                        <a href="@Url.Action("KycDoc", "File", new { fileName = idProofFileName, type = "idproofs", inline = true })" target="_blank" class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-id-card"></i> ID Proof
                                         </a>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.Author.AddressProofPath))
                                     {
-                                        <a href="@Model.Author.AddressProofPath" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        var addressProofFileName = System.IO.Path.GetFileName(Model.Author.AddressProofPath);
+                                        <a href="@Url.Action("KycDoc", "File", new { fileName = addressProofFileName, type = "addressproofs", inline = true })" target="_blank" class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-home"></i> Address Proof
                                         </a>
                                     }
                                     @if (!string.IsNullOrEmpty(Model.Author.AuthorPhotoPath))
                                     {
-                                        <a href="@Model.Author.AuthorPhotoPath" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        var authorPhotoFileName = System.IO.Path.GetFileName(Model.Author.AuthorPhotoPath);
+                                        <a href="@Url.Action("KycDoc", "File", new { fileName = authorPhotoFileName, type = "authorphotos", inline = true })" target="_blank" class="btn btn-sm btn-outline-secondary">
                                             <i class="fas fa-user"></i> Author Photo
                                         </a>
                                     }
