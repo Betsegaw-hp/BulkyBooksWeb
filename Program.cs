@@ -32,20 +32,41 @@ builder.Services.AddScoped<DataSeedService>();
 builder.Services.AddScoped<ICartService, CartService>();
 
 // Configure Azure Blob Storage
-builder.Services.Configure<AzureConfiguration>(
-    builder.Configuration.GetSection(AzureConfiguration.SectionName));
+builder.Services.Configure<AzureConfiguration>(options =>
+{
+    builder.Configuration.GetSection(AzureConfiguration.SectionName).Bind(options);
+    
+    // Override with environment variable if available (more secure for production)
+    var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        options.BlobStorage.ConnectionString = connectionString;
+    }
+});
 
 // Register AzureConfiguration as singleton
 builder.Services.AddSingleton<AzureConfiguration>(serviceProvider =>
 {
     var azureConfig = builder.Configuration.GetSection(AzureConfiguration.SectionName).Get<AzureConfiguration>();
-    return azureConfig ?? new AzureConfiguration();
+    if (azureConfig == null)
+    {
+        azureConfig = new AzureConfiguration();
+    }
+    
+    // Override with environment variable if available
+    var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING");
+    if (!string.IsNullOrEmpty(connectionString))
+    {
+        azureConfig.BlobStorage.ConnectionString = connectionString;
+    }
+    
+    return azureConfig;
 });
 
 builder.Services.AddSingleton(x =>
 {
-    var azureConfig = builder.Configuration.GetSection(AzureConfiguration.SectionName).Get<AzureConfiguration>();
-    return new BlobServiceClient(azureConfig?.BlobStorage?.ConnectionString);
+    var azureConfig = x.GetRequiredService<AzureConfiguration>();
+    return new BlobServiceClient(azureConfig.BlobStorage.ConnectionString);
 });
 
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
