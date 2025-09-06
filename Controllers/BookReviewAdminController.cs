@@ -11,11 +11,13 @@ namespace BulkyBooksWeb.Controllers
     {
         private readonly BookService _bookService;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMailgunEmailService _emailService;
 
-        public BookReviewAdminController(BookService bookService, UserManager<ApplicationUser> userManager)
+        public BookReviewAdminController(BookService bookService, UserManager<ApplicationUser> userManager, IMailgunEmailService emailService)
         {
             _bookService = bookService;
             _userManager = userManager;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -69,6 +71,15 @@ namespace BulkyBooksWeb.Controllers
             {
                 await _bookService.ApproveBook(id, user.Id, comments);
                 TempData["Message"] = "Book approved successfully.";
+                // Notify author
+                var book = await _bookService.GetBookById(id);
+                if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+                {
+                    var html = $@"<h2>Your Book Was Approved</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' has been approved by the admin.</p>";
+                    if (!string.IsNullOrEmpty(comments))
+                        html += $"<p><strong>Admin Comments:</strong> {comments}</p>";
+                    await _emailService.SendEmailAsync(book.Author.Email, $"Book Approved: {book.Title}", html);
+                }
             }
             return RedirectToAction("Dashboard");
         }
@@ -82,6 +93,15 @@ namespace BulkyBooksWeb.Controllers
             {
                 await _bookService.RejectBook(id, user.Id, comments);
                 TempData["Message"] = "Book rejected.";
+                // Notify author
+                var book = await _bookService.GetBookById(id);
+                if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+                {
+                    var html = $@"<h2>Your Book Was Rejected</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' was rejected by the admin.</p>";
+                    if (!string.IsNullOrEmpty(comments))
+                        html += $"<p><strong>Admin Comments:</strong> {comments}</p>";
+                    await _emailService.SendEmailAsync(book.Author.Email, $"Book Rejected: {book.Title}", html);
+                }
             }
             return RedirectToAction("Dashboard");
         }
@@ -92,6 +112,13 @@ namespace BulkyBooksWeb.Controllers
         {
             await _bookService.PublishBook(id);
             TempData["Message"] = "Book published successfully.";
+            // Notify author
+            var book = await _bookService.GetBookById(id);
+            if (book != null && book.Author != null && !string.IsNullOrEmpty(book.Author.Email))
+            {
+                var html = $@"<h2>Your Book Was Published</h2><p>Dear {book.Author.FullName},</p><p>Your book '<strong>{book.Title}</strong>' is now published and available to customers.</p>";
+                await _emailService.SendEmailAsync(book.Author.Email, $"Book Published: {book.Title}", html);
+            }
             return RedirectToAction("Dashboard");
         }
 

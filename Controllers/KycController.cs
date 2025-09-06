@@ -14,15 +14,18 @@ namespace BulkyBooksWeb.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IFileUploadService _fileUploadService;
         private readonly AzureConfiguration _azureConfig;
+        private readonly IMailgunEmailService _emailService;
 
         public KycController(
             UserManager<ApplicationUser> userManager, 
             IFileUploadService fileUploadService,
-            AzureConfiguration azureConfig)
+            AzureConfiguration azureConfig,
+            IMailgunEmailService emailService)
         {
             _userManager = userManager;
             _fileUploadService = fileUploadService;
             _azureConfig = azureConfig;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -66,6 +69,20 @@ namespace BulkyBooksWeb.Controllers
             user.KycAdminNotes = null;
             await _userManager.UpdateAsync(user);
             TempData["Message"] = "KYC submitted. Awaiting admin review.";
+
+            // Send KYC submission email
+            try
+            {
+                if (!string.IsNullOrEmpty(user.Email))
+                {
+                    var html = $@"<h2>KYC Submitted</h2><p>Dear {user.FullName},</p><p>Your KYC has been submitted and is pending admin review. We will notify you once it is reviewed.</p>";
+                    await _emailService.SendEmailAsync(user.Email, "KYC Submitted - BulkyBooks", html);
+                }
+            }
+            catch
+            {
+                // Log but do not block user
+            }
             return RedirectToAction("Submit");
         }
 

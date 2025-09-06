@@ -29,13 +29,14 @@ namespace BulkyBooksWeb.Controllers
 		private readonly IConfiguration _configuration;
 		private readonly IUserContext _userContext;
 		private readonly ICartService _cartService;
-
+		private readonly IMailgunEmailService _emailService;
 
 		public CheckoutController(
 			Chapa chapa, ApplicationDbContext context,
 			OrderService orderService, ILogger<CheckoutController> logger,
 			IAuthorizationService authorizationService, IConfiguration configuration,
-			IUserContext userContext, ICartService cartService)
+			IUserContext userContext, ICartService cartService,
+			IMailgunEmailService emailService)
 		{
 			_chapa = chapa;
 			_context = context;
@@ -45,6 +46,7 @@ namespace BulkyBooksWeb.Controllers
 			_authorizationService = authorizationService;
 			_userContext = userContext;
 			_cartService = cartService;
+			_emailService = emailService;
 		}
 
 		[HttpGet]
@@ -127,6 +129,32 @@ namespace BulkyBooksWeb.Controllers
 				}
 				HttpContext.Session.Remove("Cart"); // Clear any remaining session cart
 
+				// Send order confirmation email
+				try
+				{
+					var orderItemsHtml = string.Join("", orderDto.OrderItems.Select(item => $"<li>{item.BookTitle} (x{item.Quantity})</li>"));
+					var downloadLinksHtml = string.Join("<br>", orderDto.OrderItems.Where(i => !string.IsNullOrEmpty(i.PdfFilePath)).Select(item => {
+						var fileName = System.IO.Path.GetFileName(item.PdfFilePath);
+						var url = Url.Action("BookPdf", "File", new { fileName = fileName }, protocol: Request.Scheme);
+						return $"<a href='{url}'>Download {item.BookTitle} PDF</a>";
+					}));
+					var html = $@"
+						<h2>Thank you for your order!</h2>
+						<p>Your order #{orderDto.Id} has been confirmed.</p>
+						<p><strong>Order Items:</strong></p>
+						<ul>{orderItemsHtml}</ul>
+						<p><strong>Total:</strong> {orderDto.OrderTotal:C}</p>
+						<p>You can download your purchased books here:</p>
+						{downloadLinksHtml}
+						<br><br>
+						<p>If you have any questions, contact support@bulkybooks.com.</p>
+					";
+					await _emailService.SendEmailAsync(orderDto.OwnerEmail, $"Order Confirmation - BulkyBooks #{orderDto.Id}", html);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Failed to send order confirmation email.");
+				}
 				return View(orderDto);
 			}
 			catch (Exception ex)
