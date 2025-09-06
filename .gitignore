@@ -14,6 +14,11 @@ appsettings.*.json
 *.userosscache
 *.sln.docstates
 
+# Azurite development storage files
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
