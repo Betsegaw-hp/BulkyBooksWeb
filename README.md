@@ -178,7 +178,7 @@ file: "appsettings.json"
 
 - [x] Core E-commerce Features
 - [x] Azure Deployment Pipeline
-- [ ] S3 Image Storage Integration
+- [x] Used Azurite blob storage for file and images
 - [x] Social Auth (Google/Apple)
 - [ ] Book Rental System
 - [ ] Community Review System
