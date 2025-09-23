@@ -295,6 +295,8 @@ namespace BulkyBooksWeb.Controllers
 				_logger.LogInformation("Verifying payment with raw request body: {rawBody}", rawBody);
 			}
 
+			_logger.LogInformation("Received Chapa transaction response: {@TrxResponse}", trxRes);
+
 			try
 			{
 				var trx_ref = trxRes.trx_ref;

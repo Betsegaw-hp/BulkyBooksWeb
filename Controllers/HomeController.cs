@@ -301,6 +301,79 @@ public class HomeController : Controller
     }
 
     [Authorize(Roles = "User,Admin,Author")]
+    [HttpPost]
+    public async Task<IActionResult> UpdateCartAjax(int id, int quantity)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Json(new { success = false, message = "User not authenticated" });
+        }
+
+        var result = await _cartService.UpdateCartItemQuantityAsync(userId, id, quantity);
+        if (result)
+        {
+            var totalItems = await _cartService.GetCartCountAsync(userId);
+            var cartItems = await _cartService.GetCartItemDTOsAsync(userId);
+            var item = cartItems.FirstOrDefault(i => i.BookId == id);
+            
+            // Calculate subtotal, tax, and total
+            decimal subtotal = cartItems.Sum(i => i.Price * i.Quantity);
+            decimal taxRate = 0.08m; // 8% tax rate
+            decimal taxAmount = subtotal * taxRate;
+            decimal orderTotal = subtotal + taxAmount;
+            
+            return Json(new { 
+                success = true, 
+                message = quantity > 0 ? "Cart updated successfully!" : "Item removed from cart",
+                cartCount = totalItems,
+                itemSubtotal = item != null ? (item.Price * item.Quantity) : 0,
+                subtotal = subtotal,
+                taxAmount = taxAmount,
+                orderTotal = orderTotal,
+                removed = quantity <= 0
+            });
+        }
+
+        return Json(new { success = false, message = "Failed to update cart" });
+    }
+
+    [Authorize(Roles = "User,Admin,Author")]
+    [HttpPost]
+    public async Task<IActionResult> RemoveFromCartAjax(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Json(new { success = false, message = "User not authenticated" });
+        }
+
+        var result = await _cartService.RemoveFromCartAsync(userId, id);
+        if (result)
+        {
+            var totalItems = await _cartService.GetCartCountAsync(userId);
+            var cartItems = await _cartService.GetCartItemDTOsAsync(userId);
+            
+            // Calculate subtotal, tax, and total
+            decimal subtotal = cartItems.Sum(i => i.Price * i.Quantity);
+            decimal taxRate = 0.08m; // 8% tax rate
+            decimal taxAmount = subtotal * taxRate;
+            decimal orderTotal = subtotal + taxAmount;
+            
+            return Json(new { 
+                success = true, 
+                message = "Item removed from cart successfully!",
+                cartCount = totalItems,
+                subtotal = subtotal,
+                taxAmount = taxAmount,
+                orderTotal = orderTotal
+            });
+        }
+
+        return Json(new { success = false, message = "Failed to remove item from cart" });
+    }
+
+    [Authorize(Roles = "User,Admin,Author")]
     public IActionResult RemoveFromCart(int id)
     {
         var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
@@ -319,6 +392,7 @@ public class HomeController : Controller
     [Authorize(Roles = "User,Admin,Author")]
     public IActionResult UpdateCart(int id, [FromQuery] int Quantity)
     {
+        Console.Write(Quantity);
         var cart = HttpContext.Session.Get<List<CartItemDTO>>("Cart") ?? new List<CartItemDTO>();
 
         var cartItem = cart.FirstOrDefault(i => i.BookId == id);

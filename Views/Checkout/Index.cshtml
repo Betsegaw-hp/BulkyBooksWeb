@@ -74,11 +74,12 @@
                                 </div>
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@(item.Quantity - 1)" class="btn btn-sm btn-outline-secondary">-</a>
-                                        <a asp-controller="Home" asp-action="UpdateCart" asp-route-id="@item.BookId" asp-route-quantity="@(item.Quantity + 1)" class="btn btn-sm btn-outline-secondary">+</a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary cart-decrease" data-book-id="@item.BookId" data-current-quantity="@item.Quantity">-</button>
+                                        <span class="quantity-display mx-2">@item.Quantity</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary cart-increase" data-book-id="@item.BookId" data-current-quantity="@item.Quantity">+</button>
                                     </div>
                                     <div class="text-end">
-                                        <a asp-controller="Home" asp-action="RemoveFromCart" asp-route-id="@item.BookId" class="text-danger">Remove</a>
+                                        <button type="button" class="btn btn-sm text-danger cart-remove" data-book-id="@item.BookId">Remove</button>
                                     </div>
                                 </div>
                             </div>
@@ -108,4 +109,199 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    
+    <script>
+        $(document).ready(function() {
+            // Handle decrease quantity button
+            $('.cart-decrease').click(function() {
+                const bookId = $(this).data('book-id');
+                const currentQuantity = parseInt($(this).data('current-quantity'));
+                const newQuantity = Math.max(currentQuantity - 1, 0);
+                updateCartItem(bookId, newQuantity);
+            });
+
+            // Handle increase quantity button
+            $('.cart-increase').click(function() {
+                const bookId = $(this).data('book-id');
+                const currentQuantity = parseInt($(this).data('current-quantity'));
+                const newQuantity = currentQuantity + 1;
+                updateCartItem(bookId, newQuantity);
+            });
+
+            // Handle remove button
+            $('.cart-remove').click(function() {
+                const bookId = $(this).data('book-id');
+                removeCartItem(bookId);
+            });
+
+            // Function to update cart item quantity
+            function updateCartItem(bookId, quantity) {
+                $.ajax({
+                    url: '@Url.Action("UpdateCartAjax", "Home")',
+                    type: 'POST',
+                    data: { id: bookId, quantity: quantity },
+                    success: function(response) {
+                        if (response.success) {
+                            // Update UI
+                            if (response.removed) {
+                                $(`[data-book-id="${bookId}"]`).closest('.list-group-item').fadeOut(300, function() {
+                                    $(this).remove();
+                                    
+                                    // If no items left, show empty cart message
+                                    if ($('.list-group-item').length === 0) {
+                                        $('.list-group').html('<div class="text-center p-3">Your cart is empty</div>');
+                                    }
+                                });
+                            } else {
+                                // Update quantity display
+                                $(`[data-book-id="${bookId}"]`).closest('.list-group-item').find('.quantity-display').text(quantity);
+                                
+                                // Update buttons data attribute
+                                $(`.cart-increase[data-book-id="${bookId}"]`).data('current-quantity', quantity);
+                                $(`.cart-decrease[data-book-id="${bookId}"]`).data('current-quantity', quantity);
+                                
+                                // Update item subtotal
+                                const formattedSubtotal = new Intl.NumberFormat('en-US', { 
+                                    style: 'currency', 
+                                    currency: 'USD' 
+                                }).format(response.itemSubtotal);
+                                
+                                $(`.cart-decrease[data-book-id="${bookId}"]`).closest('.list-group-item')
+                                    .find('.text-success')
+                                    .text(formattedSubtotal);
+                                
+                                $(`.cart-decrease[data-book-id="${bookId}"]`).closest('.list-group-item')
+                                    .find('.text-muted.text-end')
+                                    .text(` x ${quantity}`);
+                            }
+
+                            // Update totals
+                            updateOrderTotals(response);
+                            
+                            // Update cart count in navigation
+                            if (window.updateCartCount) {
+                                window.updateCartCount();
+                            }
+                            
+                            // Show success message
+                            Swal.fire({
+                                title: 'Success!',
+                                text: response.message,
+                                icon: 'success',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        } else {
+                            // Show error message
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.message,
+                                icon: 'error',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to update cart',
+                            icon: 'error',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                });
+            }
+
+            // Function to remove cart item
+            function removeCartItem(bookId) {
+                $.ajax({
+                    url: '@Url.Action("RemoveFromCartAjax", "Home")',
+                    type: 'POST',
+                    data: { id: bookId },
+                    success: function(response) {
+                        if (response.success) {
+                            // Remove the item from UI
+                            $(`[data-book-id="${bookId}"]`).closest('.list-group-item').fadeOut(300, function() {
+                                $(this).remove();
+                                
+                                // If no items left, show empty cart message
+                                if ($('.list-group-item').length === 0) {
+                                    $('.list-group').html('<div class="text-center p-3">Your cart is empty</div>');
+                                }
+                            });
+
+                            // Update totals
+                            updateOrderTotals(response);
+                            
+                            // Update cart count in navigation
+                            if (window.updateCartCount) {
+                                window.updateCartCount();
+                            }
+                            
+                            // Show success message
+                            Swal.fire({
+                                title: 'Success!',
+                                text: response.message,
+                                icon: 'success',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        } else {
+                            // Show error message
+                            Swal.fire({
+                                title: 'Error!',
+                                text: response.message,
+                                icon: 'error',
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to remove item from cart',
+                            icon: 'error',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    }
+                });
+            }
+            
+            // Function to update order totals
+            function updateOrderTotals(response) {
+                // Format currency values
+                const formatCurrency = (value) => {
+                    return new Intl.NumberFormat('en-US', { 
+                        style: 'currency', 
+                        currency: 'USD' 
+                    }).format(value);
+                };
+                
+                // Update subtotal
+                $('.d-flex.justify-content-between').find('span:contains("Subtotal:")').next().text(formatCurrency(response.subtotal));
+                
+                // Update tax amount
+                $('.d-flex.justify-content-between').find('span:contains("Tax:")').next().text(formatCurrency(response.taxAmount));
+                
+                // Update total
+                $('.d-flex.justify-content-between.fw-bold').find('span:contains("Total:")').next().text(formatCurrency(response.orderTotal));
+            }
+        });
+    </script>
 }
